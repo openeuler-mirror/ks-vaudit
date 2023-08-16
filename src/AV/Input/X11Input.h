@@ -19,9 +19,11 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 #include "Global.h"
+#include "Config.h"
 
 #include "SourceSink.h"
 #include "MutexDataPair.h"
+#include <cairo/cairo.h>
 
 class X11Input : public QObject, public VideoSource {
 	Q_OBJECT
@@ -55,6 +57,11 @@ private:
 	XImage *m_x11_image;
 	XShmSegmentInfo m_x11_shm_info;
 	bool m_x11_shm_server_attached;
+    
+    //判断是否开启水印
+    bool m_is_use_watermarking;
+    QString watermark_content;
+    
 
 	Rect m_screen_bbox;
 	std::vector<Rect> m_screen_rects;
@@ -65,14 +72,14 @@ private:
 	std::atomic<bool> m_should_stop, m_error_occurred;
 
 public:
-	X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_fullscreen);
+	X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_fullscreen, bool is_use_watermarking = true);
 	~X11Input();
 
 	// Reads the current recording rectangle.
 	// This function is thread-safe.
 	void GetCurrentRectangle(unsigned int* x, unsigned int* y, unsigned int* width, unsigned int* height);
 
-	// Reads the current size of the stream.
+    // Reads the current size of the stream.
 	// This function is thread-safe.
 	void GetCurrentSize(unsigned int* width, unsigned int* height);
 

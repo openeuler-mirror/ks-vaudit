@@ -43,7 +43,15 @@ https://git.libav.org/?p=libav.git;a=blob;f=libavdevice/x11grab.c
 I am doing the recording myself instead of just using x11grab (as I originally planned) because this is more flexible.
 */
 
-// Converts a X11 image format to a format that libav/ffmpeg understands.
+/**
+ * @brief 获取XImage 原始数据格式, 水印功能目前只支持 PBGRA格式
+ * Converts a X11 image format to a format that libav/ffmpeg understands.
+ *
+ * @param image
+ *
+ * @return
+ */
+
 static AVPixelFormat X11ImageGetPixelFormat(XImage* image) {
 	switch(image->bits_per_pixel) {
 		case 8: return AV_PIX_FMT_PAL8;
@@ -71,7 +79,16 @@ static AVPixelFormat X11ImageGetPixelFormat(XImage* image) {
 	throw X11Exception();
 }
 
-// clears a rectangular area of an image (i.e. sets the memory to zero, which will most likely make the image black)
+ /**
+ * @brief 清理Ximage 指定区域的图像
+ * clears a rectangular area of an image (i.e. sets the memory to zero, which will most likely make the image black)
+ *
+ * @param image
+ * @param x
+ * @param y
+ * @param w
+ * @param h
+ */
 static void X11ImageClearRectangle(XImage* image, unsigned int x, unsigned int y, unsigned int w, unsigned int h) {
 
 	// check the image format
@@ -161,7 +178,30 @@ static void X11ImageDrawCursor(Display* dpy, XImage* image, int recording_area_x
 
 }
 
-X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_full_screen) {
+/**
+ * @brief 设置水印
+ */
+static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_content , unsigned int grab_width, unsigned int grab_height){
+    //水印处理, pixel format为PBGRA格式
+    cairo_surface_t * surface;
+    cairo_t* cr;
+    surface = cairo_image_surface_create_for_data(image_data, CAIRO_FORMAT_RGB24, grab_width, grab_height, grab_width * 4);
+    cr = cairo_create(surface);
+    cairo_set_source_rgb(cr, 0, 1, 0);
+    cairo_set_line_width(cr, 8);
+    cairo_select_font_face(cr, "STSong", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, 40);
+    cairo_move_to(cr, grab_width/2 - 150, grab_height -70);
+    //cairo_show_text(cr, "湖南麒麟信安科技股份有限公司!");
+    cairo_show_text(cr, watermark_content.toStdString().c_str());
+    cairo_surface_flush(surface);
+    uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
+
+    return imagedata_front;
+}
+
+
+X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_full_screen, bool is_use_watermarking) {
 
 	m_x = x;
 	m_y = y;
@@ -178,6 +218,8 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
 	m_x11_shm_info.shmaddr = (char*) -1;
 	m_x11_shm_info.readOnly = false;
 	m_x11_shm_server_attached = false;
+    
+    m_is_use_watermarking = is_use_watermarking;
 
 	m_screen_bbox = Rect(m_x, m_y, m_x + m_width, m_y + m_height);
 
@@ -286,6 +328,21 @@ void X11Input::Init() {
 	m_fps_last_timestamp = hrt_time_micro();
 	m_fps_last_counter = 0;
 	m_fps_current = 0.0;
+
+    //initialize the watermark_content
+    if(m_is_use_watermarking){
+        if(access(CONFIG_FILE, F_OK) == 0){
+            Config config(CONFIG_FILE);
+            std::string watermark_content2;
+            watermark_content2 = config.Read("watermark-content", watermark_content2);
+            watermark_content = QString::fromStdString(watermark_content2);
+        }else{
+            watermark_content = "湖南麒麟信安科技股份有限公司!";
+        }
+        
+    }else{
+        watermark_content = "";
+    }
 
 	// start input thread
 	m_should_stop = false;
@@ -577,7 +634,15 @@ void X11Input::InputThread() {
 			uint8_t *image_data = (uint8_t*) m_x11_image->data;
 			int image_stride = m_x11_image->bytes_per_line;
 			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image);
-			PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+           
+            //开启水印 
+            if(m_is_use_watermarking){
+                uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
+                PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+            }else{
+                PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+            }
+                
 			last_timestamp = timestamp;
 
 		}

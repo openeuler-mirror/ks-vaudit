@@ -220,6 +220,8 @@ extern "C" {
 // Maximum allowed image size (to avoid 32-bit integer overflow)
 #define SSR_MAX_IMAGE_SIZE 20000
 
+#define CONFIG_FILE "/etc/ks-vaudit/ks-vaudit.conf"
+
 // generic macro to test version numbers
 #define TEST_MAJOR_MINOR(major, minor, required_major, required_minor) (major > required_major || (major == required_major && minor >= required_minor))
 

@@ -99,6 +99,8 @@ set(sources
 	common/ScreenScaling.cpp
 	common/ScreenScaling.h
 	common/TempBuffer.h
+	common/Config.h
+	common/Config.cpp
 	GUI/AudioPreviewer.cpp
 	GUI/AudioPreviewer.h
 	GUI/DialogGLInject.cpp
@@ -207,6 +209,7 @@ target_include_directories(simplescreenrecorder PRIVATE
 )
 
 target_link_libraries(simplescreenrecorder PRIVATE
+    -lcairo
 	-lrt
 	${AVFORMAT_LIBRARIES}
 	${AVCODEC_LIBRARIES}

@@ -12,7 +12,8 @@
 #include <QLineEdit>
 #include <dialog.h>
 #include <QProcess>
-#include "../../../configure_interface.h"
+#include "configure_interface.h"
+#include "kiran-log/qt5-log-i.h"
 
 namespace Ui {
 class Widget;

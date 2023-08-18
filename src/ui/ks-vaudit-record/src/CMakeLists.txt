@@ -20,17 +20,6 @@ foreach (interface_item ${CONFIGUREINTERFACE_SRC})
     set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
 endforeach ()
 
-#message("[]...... " ${TARGET_NAME})
-#message("[]...... " ${CMAKE_BINARY_DIR})
-#message("[]...... " ${CMAKE_CURRENT_BINARY_DIR})
-
-
-#set(VAUDITCONFIGURE_SRC /home/flw/github/build-ks-vaudit-Desktop_Qt_5_7_1_GCC_64bit-Release/src/configure_interface.cpp;/home/flw/github/build-ks-vaudit-Desktop_Qt_5_7_1_GCC_64bit-Release/src/configure_interface.h)
-message("VAUDITCONFIGURE_SRC${CONFIGUREINTERFACE_SRC}")
-message("CPP: ${KS_UI_SRC_LIST_CPP}")
-message("H: ${KS_UI_SRC_LIST_H}")
-message("UI: ${KS_UI_SRC_LIST_UI}")
-message("RESOURCE: ${KS_UI_SRC_LIST_RESOURCES}")
 ADD_EXECUTABLE(${TARGET_NAME}
     ${KS_UI_SRC_LIST_CPP}
     ${KS_UI_SRC_LIST_H}
@@ -47,6 +36,7 @@ target_link_libraries(${TARGET_NAME}
     -lavformat
     -lavcodec
     -lavutil
+    -lklog-qt5
     Qt5::Gui
     Qt5::Widgets
     Qt5::DBus

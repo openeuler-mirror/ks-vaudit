@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
         file.close();
     }else{
-        qDebug("No qss found!");
+        KLOG_DEBUG("No qss found!");
     }
     return a.exec();
 }

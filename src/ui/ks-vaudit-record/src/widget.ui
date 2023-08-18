@@ -346,17 +346,17 @@ border-radius: 4px;
       </property>
       <item>
        <property name="text">
-        <string>录制麦克风和扬声器声音</string>
+        <string>录制麦克风和扬声器</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>只录制扬声器声音</string>
+        <string>仅录制扬声器</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>只录制麦克风声音</string>
+        <string>仅录制麦克风</string>
        </property>
       </item>
       <item>
@@ -461,7 +461,7 @@ QCheckBox#waterprintCheck::indicator:unchecked{
        <string notr="true"/>
       </property>
       <property name="text">
-       <string>确定</string>
+       <string>修改</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="waterprintText">
@@ -1267,9 +1267,9 @@ border-radius:4px;
     </widget>
     <zorder>SideBar</zorder>
     <zorder>ListBody</zorder>
-    <zorder>ConfigBody</zorder>
     <zorder>NormalBody</zorder>
     <zorder>NormalFooterBar</zorder>
+    <zorder>ConfigBody</zorder>
    </widget>
   </widget>
  </widget>

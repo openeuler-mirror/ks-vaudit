@@ -17,6 +17,7 @@
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
 
+
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -56,7 +57,12 @@ Widget::~Widget()
 
 void Widget::init_ui()
 {
-    qDebug("here");
+    int ret = klog_qt5_init("", "kylinsec-session", "ks-vaudit", "ks-vaudit-record");
+    if (ret != 0){
+        KLOG_DEBUG() << "init failed: " << ret;
+    }else{
+        KLOG_DEBUG() << "succeed";
+    }
     ui->NormalBody->show();
     ui->NormalFooterBar->show();
     ui->ListBody->hide();
@@ -229,7 +235,7 @@ void Widget::on_pushButton_clicked()
         ui->pathLabel->setToolTip(dirPath);
         refreshList(m_regName);
     }else{
-        qDebug("Invalid path, abort!");
+        KLOG_DEBUG("Invalid path, abort!");
     }
 
 }
@@ -258,7 +264,7 @@ void Widget::on_waterprintCheck_stateChanged(int arg1)
     QString ret;
     if (arg1 == 0){
         ret = QString("%1").arg(arg1);
-        qDebug("hide waterprint");
+        KLOG_DEBUG("hide waterprint");
         ui->waterprintText->hide();
         ui->waterprintConfirm->hide();
         ui->label_6->hide();
@@ -266,7 +272,7 @@ void Widget::on_waterprintCheck_stateChanged(int arg1)
         // QT的checkbox勾选是2，半勾选是1。
         // 所以这里2需要改成1传到配置中心去
         ret = QString("%1").arg(1);
-        qDebug("show waterprint");
+        KLOG_DEBUG("show waterprint");
         ui->waterprintText->show();
         ui->waterprintConfirm->show();
         ui->label_6->show();
@@ -328,17 +334,21 @@ void Widget::on_playBtn_clicked()
         m_needRestart = false;
         Widget::showMinimized();
         ui->playBtn->setStyleSheet("image:url(:/images/pauseRecord.svg);border:none;");
-        qDebug("Start record screen!");
-//        ui->waterprintConfirm->setDisabled(true);
-        ui->waterprintCheck->setDisabled(true);
+        ui->audioBox->setDisabled(true);
+        ui->resolutionBox->setDisabled(true);
+        ui->clarityBox->setDisabled(true);
+        ui->fpsEdit->setDisabled(true);
+        ui->pushButton_2->setDisabled(true);
+        ui->pushButton_3->setDisabled(true);
+        ui->remainderBox->setDisabled(true);
+        ui->typeBox->setDisabled(true);
+        KLOG_DEBUG("Start record screen!");
     }else{
         sendSwitchControl(m_selfPID, m_recordPID, "pause");
         m_needRestart = true;
         ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
-//        ui->waterprintConfirm->setDisabled(false);
-        ui->waterprintCheck->setDisabled(false);
+        KLOG_DEBUG("Pause record screen!");
 
-        qDebug("Pause record screen!");
     }
 }
 
@@ -473,13 +483,20 @@ void Widget::on_searchBar_returnPressed()
 
 void Widget::on_waterprintConfirm_clicked()
 {
-    ui->waterprintConfirm->setDisabled(true);
     ui->waterprintText->clearFocus();
-    m_waterText = ui->waterprintText->text();
-    setConfig(QString("WaterPrint"), QString("%1").arg(ui->waterprintCheck->isChecked()));
-    setConfig(QString("WaterPrintText"), ui->waterprintText->text());
+    if (ui->waterprintConfirm->text() == QString("修改")){
+        ui->waterprintText->setDisabled(false);
+        ui->waterprintConfirm->setText("确定");
+        KLOG_DEBUG() << __func__ << "waterprintText Revising ...";
+    }else{
+        ui->waterprintText->setDisabled(true);
+        ui->waterprintConfirm->setText("修改");
+        m_waterText = ui->waterprintText->text();
+        setConfig(QString("WaterPrint"), QString("%1").arg(ui->waterprintCheck->isChecked()));
+        setConfig(QString("WaterPrintText"), ui->waterprintText->text());
+        KLOG_DEBUG() << __func__ << "waterprintText Confirmed ...";
+    }
 
-    qDebug() << __func__ << "waterprintConfirm Confirmed ...";
 }
 
 void Widget::on_waterprintText_textChanged(const QString &arg1)
@@ -493,12 +510,17 @@ void Widget::on_waterprintText_textChanged(const QString &arg1)
 
 void Widget::on_resolutionBox_currentIndexChanged(int index)
 {
-    qDebug() << "index:" << index;
+    QVariant v(1|32);
+    if (index == 1){
+        v.setValue(0);
+    }
+    ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
     setConfig(QString("RecordVideo"), QString("%1").arg(index));
 }
 
 void Widget::on_audioBox_currentIndexChanged(int index)
 {
+    QVariant v(1|32);
     QString setValue = QString("all");
     if (index == 0){
         setValue = QString("all");
@@ -508,7 +530,9 @@ void Widget::on_audioBox_currentIndexChanged(int index)
         setValue = QString("mic");
     }else if(index == 3){
         setValue = QString("none");
+        v.setValue(0);
     }
+    ui->resolutionBox->setItemData(1, v, Qt::UserRole -1 );
     setConfig(QString("RecordAudio"), setValue);
 }
 
@@ -553,7 +577,7 @@ void Widget::openAbout()
 void Widget::renameVideo()
 {
     QString oldName = sender()->property("S_OLDNAME").toString();
-//    qDebug() << oldName;
+//    KLOG_DEBUG() << oldName;
     if (m_renameDialog != NULL){
         delete m_renameDialog;
         m_renameDialog = NULL;
@@ -568,10 +592,10 @@ void Widget::realRename()
     QString oldName = m_renameDialog->getOldName();
     QString newName = m_renameDialog->getNewName();
     for (int i = 0; i < m_fileList->size(); ++i){
-        qDebug() << m_fileList->at(i).fileName() << ":" << oldName;
+        KLOG_DEBUG() << m_fileList->at(i).fileName() << ":" << oldName;
         if (m_fileList->at(i).fileName() == oldName){
             QFile file(m_fileList->at(i).filePath());
-            qDebug() << "is ok: " << file.rename(QString("%1/%2").arg(m_fileList->at(i).absolutePath()).arg(newName));
+            KLOG_DEBUG() << "is ok: " << file.rename(QString("%1/%2").arg(m_fileList->at(i).absolutePath()).arg(newName));
             refreshList();
         }
     }
@@ -608,11 +632,11 @@ void Widget::realDelete()
     QString filePath = m_deleteAction->property("S_FILEPATH").toString();
     if (QDir().exists(filePath)){
         QFileInfo fileInfo(filePath);
-//        qDebug() << "isFile: " << fileInfo.isFile();
+//        KLOG_DEBUG() << "isFile: " << fileInfo.isFile();
         QFile::remove(filePath);
         refreshList(m_regName);
     }else{
-        qDebug() << "No such file";
+        KLOG_DEBUG() << "No such file";
     }
 }
 
@@ -666,7 +690,7 @@ QString Widget::getVideoDuration(QString absPath)
     int hours = 0;
     AVFormatContext* pCtx = NULL;
     if (avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL) < 0){
-        qDebug() << "No such file!";
+        KLOG_DEBUG() << "No such file!";
     }else{
         if (pCtx->duration != AV_NOPTS_VALUE){
             int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
@@ -675,9 +699,9 @@ QString Widget::getVideoDuration(QString absPath)
             secs %= 60;
             hours = mins / 60;
             mins %= 60;
-//            qDebug() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
+//            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
         }else{
-            qDebug() << "No duration";
+            KLOG_DEBUG() << "No duration";
         }
     }
     if (pCtx != NULL){
@@ -847,7 +871,7 @@ QJsonDocument Widget::readConfig()
             }
         }
     }
-    ui->waterprintConfirm->setDisabled(true);
+    ui->waterprintText->setDisabled(true);
     return doc;
 }
 
@@ -858,15 +882,17 @@ void Widget::setConfig(QString key, QString value)
     QJsonDocument doc(jsonObj);
     QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
     m_dbusInterface->SetRecordItemValue(a);
-    qDebug() << __func__ << "key: " << key << "value: " << value;
+    KLOG_DEBUG() << __func__ << "key: " << key << "value: " << value;
 }
 
 int Widget::startRecrodProcess()
 {
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
-    pp->start("/home/flw/github/ks-vaudit/build-release/src/simplescreenrecorder");
-    qDebug() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid();
+    QStringList arg;
+//    arg << "--type=record";
+    pp->start("/usr/bin/ks-vaudit",arg);
+    KLOG_DEBUG() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid();
     m_recordP = pp;
 
     return pp->pid();
@@ -875,7 +901,7 @@ int Widget::startRecrodProcess()
 void Widget::sendSwitchControl(int from_pid, int to_pid, QString op)
 {
     m_dbusInterface->SwitchControl(from_pid, to_pid, op);
-    qDebug() << __func__ << "from: " << from_pid << "to: " << to_pid << "op: " << op;
+    KLOG_DEBUG() << __func__ << "from: " << from_pid << "to: " << to_pid << "op: " << op;
 }
 
 
@@ -885,8 +911,14 @@ void Widget::on_stopBtn_clicked()
     m_isRecording = false;
     m_needRestart = false;
     ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
-//    ui->waterprintConfirm->setDisabled(false);
-    ui->waterprintCheck->setDisabled(false);
+    ui->audioBox->setDisabled(false);
+    ui->resolutionBox->setDisabled(false);
+    ui->clarityBox->setDisabled(false);
+    ui->fpsEdit->setDisabled(false);
+    ui->pushButton_2->setDisabled(false);
+    ui->pushButton_3->setDisabled(false);
+    ui->remainderBox->setDisabled(false);
+    ui->typeBox->setDisabled(false);
 }
 
 void Widget::realClose()

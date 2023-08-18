@@ -46,11 +46,11 @@ bool SQLConfigure::deleteUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
-         return false;
+        return false;
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_USER) || !jsonObj.contains(PARAM_USER_PASSWD))
-         return false;
+        return false;
 
     return deleteUser(jsonObj[PARAM_USER].toString(), jsonObj[PARAM_USER_PASSWD].toString());
 }
@@ -60,11 +60,11 @@ bool SQLConfigure::updateUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
-         return false;
+        return false;
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_USER) || !jsonObj.contains(PARAM_USER_OLD_PASSWD))
-         return false;
+        return false;
 
     QString newpwd{}, role{};
     if (jsonObj.contains(PARAM_USER_PASSWD))
@@ -117,7 +117,7 @@ SQLConfigure::~SQLConfigure()
 
 bool SQLConfigure::initDB()
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&m_mutex);
 #ifdef SUPPOORT_SQLITECIPHER
     m_db = QSqlDatabase::addDatabase("SQLITECIPHER", SQLITE_NAME);
     m_db.setDatabaseName(SQLITE_PATH);
@@ -221,7 +221,7 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
     if (!isNameLegal(name))
         return false;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&m_mutex);
     QString sql = "insert into user_infos values (null, ?, ?, ?)";
     m_query->prepare(sql);
     m_query->addBindValue(name);
@@ -232,7 +232,7 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
     if (!m_query->exec())
     {
         qWarning() << "insert user " << name << " failed: " << m_query->lastError().text();
-         return false;
+        return false;
     }
 
     return true;
@@ -240,9 +240,9 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
 
 bool SQLConfigure::deleteUser(const QString name, const QString pwd)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&m_mutex);
     if (!checkUserPasswd(name, pwd))
-         return false;
+        return false;
 
     QString sql = "delete from user_infos where name = ?";
     m_query->prepare(sql);
@@ -250,7 +250,7 @@ bool SQLConfigure::deleteUser(const QString name, const QString pwd)
     if (!m_query->exec())
     {
         qWarning() << "delete user " << name << " failed: " << m_query->lastError().text();
-         return false;
+        return false;
     }
 
     return true;
@@ -258,12 +258,12 @@ bool SQLConfigure::deleteUser(const QString name, const QString pwd)
 
 bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QString newpwd, const QString role)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&m_mutex);
     if (!checkUserPasswd(name, oldpwd))
-         return false;
+        return false;
 
     if (newpwd.isEmpty() && role.isEmpty())
-         return false;
+        return false;
     else if (newpwd.isEmpty())
     {
         QString sql = "update user_infos set role = :role where name = :name";
@@ -292,7 +292,7 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
     if (!m_query->exec())
     {
         qWarning() << "update user " << name << " failed: " << m_query->lastError().text();
-         return false;
+        return false;
     }
 
     return true;
@@ -327,9 +327,9 @@ QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
     while (m_query->next())
     {
         QJsonObject jsonObj;
-        jsonObj["user"] = m_query->value(1).toString();
-        jsonObj["role"] = m_query->value(2).toString();
-        jsonObj["passwd"] = QByteArray::fromBase64(m_query->value(3).toByteArray()).toStdString().data();
+        jsonObj[PARAM_USER] = m_query->value(1).toString();
+        jsonObj[PARAM_USER_ROLE] = m_query->value(2).toString();
+        jsonObj[PARAM_USER_PASSWD] = QByteArray::fromBase64(m_query->value(3).toByteArray()).toStdString().data();
         jsonarr.append(jsonObj);
     }
 

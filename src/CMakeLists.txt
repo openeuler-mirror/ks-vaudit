@@ -163,7 +163,7 @@ set_source_files_properties(${VAUDITCONFIGURE_DBUS_XML}
         NO_NAMESPACE true)
 qt5_add_dbus_interface(VAUDITCONFIGURE_SRC ${VAUDITCONFIGURE_DBUS_XML} configure_interface)
 foreach (interface_item ${VAUDITCONFIGURE_SRC})
-    set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN OFF)
+    set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
 endforeach ()
 
 add_executable(simplescreenrecorder

@@ -27,6 +27,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "X11Input.h"
 #include "SimpleSynth.h"
 
+
 ENUMSTRINGS(Recording::enum_video_area) = {
     {Recording::VIDEO_AREA_SCREEN, "screen"},
     {Recording::VIDEO_AREA_FIXED, "fixed"},
@@ -172,6 +173,10 @@ Recording::Recording(QSettings* qsettings){
 		m_audio_enabled = false;
 	}
 	settings = qsettings;
+
+	m_configure_interface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
+	connect(m_configure_interface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(updateData(QString, QString)));
+	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int, QString)), this, SLOT(switchControl(int, QString)));
 }
 
 Recording::~Recording() {}
@@ -196,7 +201,6 @@ void Recording::StartPage() {
 		
 	m_video_area = VIDEO_AREA_SCREEN;
 	m_video_area_follow_fullscreen = true;
-
 
 	//从QSetting 配置中读取x y width height 等相关参数
 	m_video_x = settings->value("input/video_x", 0).toUInt();
@@ -296,6 +300,7 @@ void Recording::StartPage() {
 std::vector<QRect> Recording::GetScreenGeometries() {
 	std::vector<QRect> screen_geometries;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+	//QApplication::sync();
 	for(QScreen *screen :  QApplication::screens()) {
 		QRect geometry = screen->geometry();
 		qreal ratio = screen->devicePixelRatio();
@@ -321,7 +326,23 @@ QRect Recording::CombineScreenGeometries(const std::vector<QRect>& screen_geomet
  * 保存录屏相关 QSettings 配置
  **/
 void Recording::SaveSettings(QSettings* settings) {
-	//这些配置项后续通过DBus 接口从配置中心读取
+
+	//通过DBus 接口从配置中心读取
+	QString value = m_configure_interface->GetRecordInfo();
+	QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+
+	if(!doc.isObject()){
+		Logger::LogError("Cann't get the DBus configure!");
+		return;
+	}
+
+	QJsonObject jsonObj = doc.object();
+	for(auto key:jsonObj.keys()){
+		Logger::LogInfo(" --------------keys and value is ---------------------------------"  + jsonObj[key].toString());
+	}
+
+	//bool ret = m_configure_interface->SetRecordItemValue("{\"Fps\": \"7\", \"FileType\":\"mp4\"}");
+
 
 	//略过欢迎界面
 	settings->setValue("welcome/skip_page", true);
@@ -337,21 +358,36 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/video_w", rect.width()); //width
 	settings->setValue("input/video_h", rect.height()); //height
 
-	settings->setValue("input/video_frame_rate", 10); //帧率
+	//Fps
+	QString key("Fps");	
+	settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt()); //帧率
 	settings->setValue("input/video_scale", false);
 	settings->setValue("input/video_scaled_w", 854);
 	settings->setValue("input/video_scaled_h", 480);
 	settings->setValue("input/video_record_cursor", false);
-	settings->setValue("input/audio_enabled",false); //音频录制
+
+	key = "RecordAudio";
+	settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt()); //音频录制
 	settings->setValue("input/audio_backend", EnumToString(Recording::AUDIO_BACKEND_PULSEAUDIO));
 	//settings.setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
 
 	//输出页面配置参数
-	settings->setValue("output/file", "yefeng.mp4");
+	key = "FilePath";
+	QString sys_user(getenv("USER"));
+	QString file_path(jsonObj[key].toString());
+	QString file_suffix;
+	if(jsonObj["FileType"].toString() == "mp4"){
+		file_suffix = ".mp4";
+	}else{
+		file_suffix = ".ogv";
+	}
+	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
-	settings->setValue("output/container_av", "mp4"); //mp4 格式
+
+	key = "FileType";
+	settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
 	settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
 	settings->setValue("output/video_codec_av", "libx264");
 	settings->setValue("output/video_kbit_rate", 128);
@@ -360,7 +396,6 @@ void Recording::SaveSettings(QSettings* settings) {
 	//settings.setValue("output/video_vp8_cpu_used", GetVP8CPUUsed());
 	//settings->setValue("output/video_options", GetVideoOptions());
 	settings->setValue("output/video_allow_frame_skipping", true);
-
 
 	settings->setValue("record/hotkey_enable", false); //禁用快捷键
 	settings->setValue("record/hotkey_ctrl", false);
@@ -407,7 +442,6 @@ void Recording::StopPage(bool save) {
 	Logger::LogInfo("[PageRecord::StopPage] " + tr("Stopped page."));
 
 	m_page_started = false;
-	exit(0);
 }
 
 void Recording::StartOutput() {
@@ -435,8 +469,8 @@ void Recording::StartOutput() {
 			}
 
 			// for X11 recording, update the video size (if possible)
-			if(m_x11_input != NULL)
-				m_x11_input->GetCurrentSize(&m_video_in_width, &m_video_in_height);
+			//if(m_x11_input != NULL)
+			//	m_x11_input->GetCurrentSize(&m_video_in_width, &m_video_in_height);
 
 			// calculate the output width and height
 		
@@ -444,18 +478,14 @@ void Recording::StartOutput() {
 				// One missing row/column of pixels is probably better than a blurry video (and scaling is SLOW).
 			//m_video_in_width = m_video_in_width / 2 * 2;
 			//m_video_in_height = m_video_in_height / 2 * 2;
-			m_video_in_width = 3840;
-			m_video_in_height = 2160;   
 			m_output_settings.video_width = m_video_in_width;
 			m_output_settings.video_height = m_video_in_height;
 
 			// start the output
             //m_output_settings.container_avname
-            Logger::LogInfo("the m_output_settings.container_avname is --->" + m_output_settings.container_avname);
-			Logger::LogInfo("the m_output_settings.video_codec_avname  is --->" + m_output_settings.video_codec_avname);
-			
+            //Logger::LogInfo("the m_output_settings.container_avname is --->" + m_output_settings.container_avname);
+			//Logger::LogInfo("the m_output_settings.video_codec_avname  is --->" + m_output_settings.video_codec_avname);
 			m_output_manager.reset(new OutputManager(m_output_settings));
-		
 
 		} else {
 
@@ -692,5 +722,93 @@ void Recording::OnRecordSave(bool confirm) {
 		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
         return;
     }
-    StopPage(true);   
+    StopPage(true);
+
+}
+
+void Recording::OnRecordSaveAndExit(bool confirm) {
+    if(!m_page_started)
+        return;
+    if(m_wait_saving)
+        return;
+    if(!m_recorded_something && confirm) {
+		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
+        return;
+    }
+    StopPage(true);
+	exit(0);
+}
+
+void Recording::UpdateResolutionParameter(){
+	std::vector<QRect> screen_geometries = GetScreenGeometries();
+	QRect rect = CombineScreenGeometries(screen_geometries); //录制屏幕的矩形区域
+	//m_video_in_width = 2560;
+	//m_video_in_height = 1440;
+	m_output_settings.video_width = m_video_in_width;
+	m_output_settings.video_height = m_video_in_height;
+}
+
+void Recording::OnRecordRestart(){
+	OnRecordPause(); //暂停录屏
+	UpdateResolutionParameter(); //更新分辨率相关参数参数
+	OnRecordStart(); //重新开始录制
+}
+
+
+/**
+ * 配置发生改变
+ **/
+void Recording::updateData(QString key, QString value){
+	Logger::LogInfo("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% updateData 信号槽函数 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+	//Logger::LogInfo("the first is " + key + "the second is " + value);
+	if(key == "record"){	
+		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+		if(!doc.isObject()){
+			Logger::LogError("Cann't get the DBus configure!");
+			return;
+		}
+
+		QJsonObject jsonObj = doc.object();
+		for(auto key:jsonObj.keys()){
+			Logger::LogInfo(" --------------keys and value is ---------------------------------" + key + "==========" + jsonObj[key].toString());
+			
+			//修改settings
+			if(key == "Fps"){
+				settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
+			}else if(key == "RecordAudio"){
+				settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt());
+			}else if(key == "FilePath"){
+				QString file_path(jsonObj[key].toString());
+				QString file_suffix;
+				if(jsonObj["FileType"].toString() == "mp4"){
+					file_suffix = ".mp4";
+				}else{
+					file_suffix = ".ogv";
+				}
+			}else if(key == "FileType"){
+				settings->setValue("output/container_av", jsonObj[key].toString()); 
+			}
+		}
+	}
+}
+
+/**
+ *
+ **/
+void Recording::switchControl(int to_pid, QString op){
+	Logger::LogInfo("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% switchControl 信号槽函数 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+	//Logger::LogInfo("the first is " + QString::number(a) + "the second is " + b);
+	if(to_pid != getpid()){
+		return;
+	}
+	//start stop restart exit
+	if(op == "start"){
+		//已经开始录制了， 这个先不处理
+	}else if(op == "pause"){
+		OnRecordPause();		
+	}else if(op == "restart"){
+		OnRecordStartPause();
+	}else if(op == "stop"){
+		OnRecordSaveAndExit(true);
+	}
 }

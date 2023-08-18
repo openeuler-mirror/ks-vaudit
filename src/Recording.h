@@ -23,6 +23,8 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "OutputSettings.h"
 #include "OutputManager.h"
 #include "PulseAudioInput.h"
+#include "configure_interface.h"
+#include "daemon/configure/include/ksvaudit-configure_global.h"
 
 class MainWindow;
 class Muxer;
@@ -147,18 +149,35 @@ private:
 
 	QString m_file_base;
 	QString m_file_protocol;
-	bool m_separate_files, m_add_timestamp;
+	bool m_separate_files; //暂停录制时， 录屏mp4文件是否分开
+	bool m_add_timestamp;  //视频中添加时间戳
 
 	std::unique_ptr<X11Input> m_x11_input;
 	std::unique_ptr<PulseAudioInput> m_pulseaudio_input;
 	QSettings* settings;
+	ConfigureInterface* m_configure_interface;
 
 public:
 	Recording(QSettings* qsettings);
 	~Recording();
 
-	// Called when the user tries to close the program. If this function returns true, the command will be blocked.
-	// This is used to display a warning if the user is about to close the program during a recording.
+	void OnRecordStartPause(); //暂停后再次开始录制
+	void OnRecordStart();  //开始录制
+	void OnRecordPause(); //暂停录制
+	void OnRecordCancel(bool confirm = true); //取消录制
+	void OnRecordSave(bool confirm = true); //结束录制并刷新mp4容器
+	void OnRecordSaveAndExit(bool confirm);  //保存并退出
+	void OnRecordRestart(); //屏幕分辨率出现变化， 更新分辨率参数后重新开始录频
+	QString GetPulseAudioSourceName() {	return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
+	std::vector<QRect> GetScreenGeometries();
+	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
+	void SaveSettings(QSettings* settings);
+	
+
+private:
+	void FinishOutput();
+	void UpdateInput();
+	void UpdateResolutionParameter(); //更新分辨率相关参数
 	bool TryStartPage();
 	void StartPage();
 	void StopPage(bool save);
@@ -166,17 +185,8 @@ public:
 	void StopOutput(bool final);
 	void StartInput();
 	void StopInput();
-	void OnRecordStartPause();
-	void OnRecordStart(); //record-start
-	void OnRecordPause(); //record-pause
-	void OnRecordCancel(bool confirm = true); //record-cancel
-	void OnRecordSave(bool confirm = true); //record-save
-	QString GetPulseAudioSourceName() {	return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
-	static std::vector<QRect> GetScreenGeometries();
-	static QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
-	static void SaveSettings(QSettings* settings);
 
-private:
-	void FinishOutput();
-	void UpdateInput();
+public slots:
+	void updateData(QString, QString);
+	void switchControl(int, QString);
 };

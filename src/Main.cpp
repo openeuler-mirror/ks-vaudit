@@ -29,19 +29,30 @@ extern "C" {
 #include<signal.h>
 }
 
-static Recording *recording_screen = NULL;
 
-/**
- * 录制视频相关信号处理
- **/
-static void stop_recordscreen_handler(int sig){
+
+static std::unique_ptr<Recording> recording_screen = NULL;
+static QSettings* settings_ptr = NULL;
+
+
+static void sig_handler(int sig){
+	static int sigusr_cout = 1;
 	if(sig == SIGINT){
+		recording_screen->OnRecordSaveAndExit(true);
+	}else if(sig == SIGUSR1 && sigusr_cout == 1){
 		recording_screen->OnRecordSave();
+		recording_screen.reset();
+		settings_ptr->clear();
+		recording_screen.reset(new Recording(settings_ptr));
+		recording_screen->SaveSettings(settings_ptr);
+		recording_screen->OnRecordStart(); //开始录屏
+		sigusr_cout++;
 	}
 }
 
 int main(int argc, char* argv[]) {
-	signal(SIGINT, stop_recordscreen_handler);
+	signal(SIGINT, sig_handler);
+	signal(SIGUSR1, sig_handler);
 	XInitThreads();
 
 	// Workarounds for broken screen scaling.
@@ -123,12 +134,12 @@ int main(int argc, char* argv[]) {
 		Benchmark();
 	}
 
-	//默认配置
-	QSettings settings(CommandLineOptions::GetSettingsFile(), QSettings::IniFormat);
+	static QSettings settings(CommandLineOptions::GetSettingsFile(), QSettings::IniFormat);
+	settings_ptr = &settings;
 	settings.clear();
-	Recording::SaveSettings(&settings);
 
-	recording_screen = new Recording(&settings);	
+	recording_screen.reset(new Recording(&settings));
+	recording_screen->SaveSettings(&settings);
 	recording_screen->OnRecordStart(); //开始录屏
 	
 	// stop main program

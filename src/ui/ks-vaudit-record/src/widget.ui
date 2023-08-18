@@ -191,7 +191,7 @@ image:none;
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/菜单栏icon.svg</normaloff>:/images/菜单栏icon.svg</iconset>
+        <normaloff>:/images/menuicon.svg</normaloff>:/images/menuicon.svg</iconset>
       </property>
       <property name="iconSize">
        <size>
@@ -403,10 +403,10 @@ border-radius: 4px;
 		height:30px;
 }
 QCheckBox#waterprintCheck::indicator:checked{
-		image: url(:/images/switch-开.svg);
+		image: url(:/images/switch-on.svg);
 }
 QCheckBox#waterprintCheck::indicator:unchecked{
-		image: url(:/images/switch-关.svg);
+		image: url(:/images/switch-off.svg);
 }
 </string>
       </property>
@@ -690,7 +690,7 @@ padding-left:10px;
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/常规icon.svg</normaloff>:/images/常规icon.svg</iconset>
+        <normaloff>:/images/normalicon.svg</normaloff>:/images/normalicon.svg</iconset>
       </property>
      </widget>
      <widget class="QPushButton" name="ListBtn">
@@ -724,7 +724,7 @@ padding-left:10px;
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/列表icon.svg</normaloff>:/images/列表icon.svg</iconset>
+        <normaloff>:/images/listicon.svg</normaloff>:/images/listicon.svg</iconset>
       </property>
      </widget>
      <widget class="QPushButton" name="ConfigBtn">
@@ -756,7 +756,7 @@ padding-left:10px;
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/后台设置icon.svg</normaloff>:/images/后台设置icon.svg</iconset>
+        <normaloff>:/images/configicon.svg</normaloff>:/images/configicon.svg</iconset>
       </property>
      </widget>
      <widget class="QLabel" name="normalArrow">
@@ -874,7 +874,7 @@ border-radius: 4px;
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">image: url(:/images/搜索icon.svg);</string>
+       <string notr="true">image: url(:/images/searchicon.svg);</string>
       </property>
       <property name="text">
        <string/>
@@ -1266,10 +1266,10 @@ border-radius:4px;
      </widget>
     </widget>
     <zorder>SideBar</zorder>
-    <zorder>ListBody</zorder>
-    <zorder>NormalBody</zorder>
     <zorder>NormalFooterBar</zorder>
     <zorder>ConfigBody</zorder>
+    <zorder>NormalBody</zorder>
+    <zorder>ListBody</zorder>
    </widget>
   </widget>
  </widget>

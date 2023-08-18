@@ -9,29 +9,26 @@
         <file>images/64px.png</file>
         <file>images/96px.png</file>
         <file>images/128px.png</file>
-        <file>images/常规icon.svg</file>
-        <file>images/二维码icon.svg</file>
-        <file>images/后台列表icon.svg</file>
-        <file>images/后台设置icon.svg</file>
-        <file>images/列表icon.svg</file>
+        <file>images/normalicon.svg</file>
+        <file>images/configicon.svg</file>
+        <file>images/listicon.svg</file>
         <file>images/record.svg</file>
         <file>images/stopRecord.svg</file>
         <file>images/pauseRecord.svg</file>
         <file>images/clear_icon.svg</file>
         <file>images/QC.svg</file>
-        <file>images/resources.qrc</file>
-        <file>images/菜单栏icon.svg</file>
-        <file>images/操作icon.svg</file>
+        <file>images/menuicon.svg</file>
+        <file>images/operationicon.svg</file>
         <file>images/m0.svg</file>
         <file>images/m1.svg</file>
-        <file>images/搜索icon.svg</file>
+        <file>images/searchicon.svg</file>
         <file>images/v0.svg</file>
         <file>images/v1.svg</file>
         <file>images/v2.svg</file>
         <file>images/v3.svg</file>
         <file>images/rightArrow.svg</file>
-        <file>images/switch-关.svg</file>
-        <file>images/switch-开.svg</file>
+        <file>images/switch-off.svg</file>
+        <file>images/switch-on.svg</file>
         <file>images/downarrowicon.svg</file>
         <file>images/minus.svg</file>
         <file>images/plus.svg</file>

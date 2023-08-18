@@ -115,7 +115,7 @@ CommandLineOptions::CommandLineOptions() {
 	m_activate_schedule = false;
 	m_sync_diagram = false;
 	m_benchmark = false;
-	m_gui = true;
+	m_gui = false;
 
 	s_instance = this;
 }

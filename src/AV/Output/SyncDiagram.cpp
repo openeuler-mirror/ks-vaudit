@@ -19,7 +19,6 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "SyncDiagram.h"
 
-#include "MainWindow.h"
 
 constexpr int SyncDiagram::CHANNEL_HEIGHT, SyncDiagram::CHANNEL_SPACING, SyncDiagram::MARGIN_RIGHT;
 constexpr double SyncDiagram::PIXELS_PER_SECOND;
@@ -47,7 +46,7 @@ SyncDiagram::SyncDiagram(size_t channels) {
 	m_font = QFont("Sans");
 	m_font.setPixelSize(12);
 
-	setWindowTitle(tr("Synchronization Diagram") + " - " + MainWindow::WINDOW_CAPTION);
+	//setWindowTitle(tr("Synchronization Diagram") + " - " + MainWindow::WINDOW_CAPTION);
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
 	m_update_timer = new QTimer(this);

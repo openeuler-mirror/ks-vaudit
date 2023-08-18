@@ -2,6 +2,10 @@
 
 set(CMAKE_AUTOMOC ON)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 find_package(Threads REQUIRED)
 find_package(AVFormat REQUIRED)
 find_package(AVCodec REQUIRED)
@@ -101,38 +105,8 @@ set(sources
 	common/TempBuffer.h
 	common/Config.h
 	common/Config.cpp
-	GUI/AudioPreviewer.cpp
-	GUI/AudioPreviewer.h
-	GUI/DialogGLInject.cpp
-	GUI/DialogGLInject.h
-	GUI/DialogRecordSchedule.cpp
-	GUI/DialogRecordSchedule.h
-	GUI/ElidedLabel.cpp
-	GUI/ElidedLabel.h
-	GUI/HiddenScrollArea.cpp
-	GUI/HiddenScrollArea.h
-	GUI/HotkeyListener.h
-	GUI/HotkeyListener.cpp
-	GUI/Icons.cpp
-	GUI/Icons.h
-	GUI/MainWindow.cpp
-	GUI/MainWindow.h
-	GUI/PageDone.cpp
-	GUI/PageDone.h
-	GUI/PageInput.cpp
-	GUI/PageInput.h
-	GUI/PageOutput.cpp
-	GUI/PageOutput.h
-	GUI/PageRecord.cpp
-	GUI/PageRecord.h
-	GUI/PageWelcome.cpp
-	GUI/PageWelcome.h
-	GUI/ProfileBox.cpp
-	GUI/ProfileBox.h
-	GUI/VideoPreviewer.cpp
-	GUI/VideoPreviewer.h
-	GUI/WidgetRack.cpp
-	GUI/WidgetRack.h
+	Recording.cpp
+	Recording.h
 	Benchmark.cpp
 	Benchmark.h
 	Global.h
@@ -180,10 +154,22 @@ else()
 endif()
 
 set_property(SOURCE ${res_output} PROPERTY SKIP_AUTOMOC ON)
+find_package(Qt5 COMPONENTS Widgets DBus Core Sql Xml REQUIRED)
+
+set(VAUDITCONFIGURE_DBUS_XML daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml)
+set_source_files_properties(${VAUDITCONFIGURE_DBUS_XML}
+        PROPERTIES
+        CLASSNAME ConfigureInterface
+        NO_NAMESPACE true)
+qt5_add_dbus_interface(VAUDITCONFIGURE_SRC ${VAUDITCONFIGURE_DBUS_XML} configure_interface)
+foreach (interface_item ${VAUDITCONFIGURE_SRC})
+    set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
+endforeach ()
 
 add_executable(simplescreenrecorder
 	${sources}
 	${res_output}
+	${VAUDITCONFIGURE_SRC}
 )
 
 target_include_directories(simplescreenrecorder PRIVATE
@@ -206,11 +192,14 @@ target_include_directories(simplescreenrecorder PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/AV/Output
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/GUI
+	${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(simplescreenrecorder PRIVATE
-    -lcairo
+	-lcairo
 	-lrt
+	Qt5::DBus
+	Qt5::Core
 	${AVFORMAT_LIBRARIES}
 	${AVCODEC_LIBRARIES}
 	${AVUTIL_LIBRARIES}

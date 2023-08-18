@@ -242,3 +242,5 @@ target_compile_definitions(simplescreenrecorder PRIVATE
 )
 
 install(TARGETS simplescreenrecorder RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+
+add_subdirectory(daemon)

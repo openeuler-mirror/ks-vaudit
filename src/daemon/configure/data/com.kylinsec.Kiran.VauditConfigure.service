@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=com.kylinsec.Kiran.VauditConfigure
+Exec=/usr/bin/ks-vaudit-configure
+User=root

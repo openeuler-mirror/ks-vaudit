@@ -482,8 +482,8 @@ void Recording::StartOutput() {
 			m_output_settings.video_height = m_video_in_height;
 
 			// start the output
-            //m_output_settings.container_avname
-            //Logger::LogInfo("the m_output_settings.container_avname is --->" + m_output_settings.container_avname);
+			//m_output_settings.container_avname
+			//Logger::LogInfo("the m_output_settings.container_avname is --->" + m_output_settings.container_avname);
 			//Logger::LogInfo("the m_output_settings.video_codec_avname  is --->" + m_output_settings.video_codec_avname);
 			m_output_manager.reset(new OutputManager(m_output_settings));
 

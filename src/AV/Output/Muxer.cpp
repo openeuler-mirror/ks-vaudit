@@ -192,10 +192,10 @@ unsigned int Muxer::GetQueuedPacketCount(unsigned int stream_index) {
 }
 
 void Muxer::Init() {
-
+	
 	// get the format we want (this is just a pointer, we don't have to free this)
 	AVOutputFormat *format = (AVOutputFormat*)av_guess_format(m_container_name.toUtf8().constData(), NULL, NULL);
-    Logger::LogInfo("the m_container_name is ==============> " + m_container_name);
+	Logger::LogInfo("the m_container_name is ==============> " + m_container_name);
 
 	if(format == NULL) {
 		Logger::LogError("[Muxer::Init] " + Logger::tr("Error: Can't find chosen output format!"));

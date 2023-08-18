@@ -105,8 +105,8 @@ set(sources
 	common/TempBuffer.h
 	common/Config.h
 	common/Config.cpp
-    Recording.cpp
-    Recording.h
+	Recording.cpp
+	Recording.h
 	Benchmark.cpp
 	Benchmark.h
 	Global.h
@@ -169,7 +169,7 @@ endforeach ()
 add_executable(simplescreenrecorder
 	${sources}
 	${res_output}
-    ${VAUDITCONFIGURE_SRC}
+	${VAUDITCONFIGURE_SRC}
 )
 
 target_include_directories(simplescreenrecorder PRIVATE
@@ -196,10 +196,10 @@ target_include_directories(simplescreenrecorder PRIVATE
 )
 
 target_link_libraries(simplescreenrecorder PRIVATE
-    -lcairo
+	-lcairo
 	-lrt
-    Qt5::DBus
-    Qt5::Core
+	Qt5::DBus
+	Qt5::Core
 	${AVFORMAT_LIBRARIES}
 	${AVCODEC_LIBRARIES}
 	${AVUTIL_LIBRARIES}

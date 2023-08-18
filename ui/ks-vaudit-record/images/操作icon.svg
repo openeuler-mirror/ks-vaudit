@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="#fff">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="操作icon" class="cls-1" d="M1943,1738a1,1,0,1,1,1-1A1,1,0,0,1,1943,1738Zm-6,0a1,1,0,1,1,1-1A1,1,0,0,1,1937,1738Zm-6,0a1,1,0,1,1,1-1A1,1,0,0,1,1931,1738Z" transform="translate(-1930 -1730)"/>
+</svg>

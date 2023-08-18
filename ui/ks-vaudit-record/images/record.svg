@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="录制icon" class="cls-1" d="M1367,1537a12,12,0,1,1,12-12A12,12,0,0,1,1367,1537Zm0-21.96a9.96,9.96,0,1,0,9.96,9.96A9.961,9.961,0,0,0,1367,1515.04Zm-2.38,16.06a0.418,0.418,0,0,1-.67-0.34v-11.52a0.418,0.418,0,0,1,.67-0.34l7.94,5.75a0.441,0.441,0,0,1,0,.7Z" transform="translate(-1355 -1513)"/>
+</svg>

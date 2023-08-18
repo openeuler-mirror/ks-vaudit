@@ -177,6 +177,20 @@ Recording::Recording(QSettings* qsettings){
 	m_configure_interface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
 	connect(m_configure_interface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(updateData(QString, QString)));
 	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int, QString)), this, SLOT(switchControl(int, QString)));
+	m_main_screen = qApp->primaryScreen();
+
+	connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)));
+}
+
+
+void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
+	//分辨率变化后的处理
+	OnRecordPause();
+	m_video_in_width = changed_screen_rect.width();
+	m_video_in_height = changed_screen_rect.height();
+	m_output_settings.video_height = m_video_in_height;
+	m_output_settings.video_width = m_video_in_width;
+	OnRecordStartPause();
 }
 
 Recording::~Recording() {}
@@ -234,9 +248,8 @@ void Recording::StartPage() {
 	m_output_settings.video_codec_avname = settings->value("output/video_codec_av", QString()).toString();
 
 	m_output_settings.video_kbit_rate = 128;
-	//m_output_settings.video_options.clear();
-	m_output_settings.video_width = 3840;
-	m_output_settings.video_height = 2160;
+	m_output_settings.video_width = m_video_in_width;
+	m_output_settings.video_height = m_video_in_height;
 	m_output_settings.video_frame_rate = m_video_frame_rate;
 	m_output_settings.video_allow_frame_skipping = true;
 

@@ -18,24 +18,36 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "Global.h"
-
 #include "Benchmark.h"
 #include "CommandLineOptions.h"
 #include "CPUFeatures.h"
-#include "HotkeyListener.h"
-#include "Icons.h"
 #include "Logger.h"
-#include "MainWindow.h"
+#include "Recording.h"
+#include "EnumStrings.h"
 #include "ScreenScaling.h"
+extern "C" {
+#include<signal.h>
+}
+
+static Recording *recording_screen = NULL;
+
+/**
+ * 录制视频相关信号处理
+ **/
+static void stop_recordscreen_handler(int sig){
+	if(sig == SIGINT){
+		recording_screen->OnRecordSave();
+	}
+}
 
 int main(int argc, char* argv[]) {
-
+	signal(SIGINT, stop_recordscreen_handler);
 	XInitThreads();
 
 	// Workarounds for broken screen scaling.
 	ScreenScalingFix();
 
-	QApplication application(argc, argv);
+	QApplication application(argc, argv);	
 
 	// SSR uses two separate character encodings:
 	// - UTF-8: Used for all internal strings.
@@ -68,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 	// Qt doesn't count hidden windows, so if the main window is hidden and a dialog box is closed, Qt thinks the application should quit.
 	// That's not what we want, so disable this and do it manually.
-	QApplication::setQuitOnLastWindowClosed(false);
+	//QApplication::setQuitOnLastWindowClosed(false);
 
 	// create logger
 	Logger logger;
@@ -80,11 +92,6 @@ int main(int argc, char* argv[]) {
 		command_line_options.Parse();
 	} catch(const CommandLineException&) {
 		return 1;
-	}
-
-	// do we need to continue?
-	if(!CommandLineOptions::GetBenchmark() && !CommandLineOptions::GetGui()) {
-		return 0;
 	}
 
 	// configure the logger
@@ -108,29 +115,24 @@ int main(int argc, char* argv[]) {
 	ScreenScalingMessage();
 
 	// load icons
-	LoadIcons();
+	//LoadIcons();
 
 	// start the program
 	int ret = 0;
 	if(CommandLineOptions::GetBenchmark()) {
 		Benchmark();
 	}
-	if(CommandLineOptions::GetGui()) {
 
-		// create hotkey listener
-		HotkeyListener hotkey_listener;
-		Q_UNUSED(hotkey_listener);
+	//默认配置
+	QSettings settings(CommandLineOptions::GetSettingsFile(), QSettings::IniFormat);
+	settings.clear();
+	Recording::SaveSettings(&settings);
 
-		// create main window
-		MainWindow mainwindow;
-
-		// run application
-		ret = application.exec();
-
-	}
-
+	recording_screen = new Recording(&settings);	
+	recording_screen->OnRecordStart(); //开始录屏
+	
 	// stop main program
 	Logger::LogInfo("==================== " + Logger::tr("SSR stopped") + " ====================");
 
-	return ret;
+	return application.exec();
 }

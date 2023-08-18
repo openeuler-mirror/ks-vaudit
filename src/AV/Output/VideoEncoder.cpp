@@ -95,7 +95,7 @@ unsigned int VideoEncoder::GetFrameRate() {
 }
 
 bool VideoEncoder::AVCodecIsSupported(const QString& codec_name) {
-	AVCodec *codec = avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
+	AVCodec *codec = (AVCodec*)avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
 	if(codec == NULL)
 		return false;
 	if(!av_codec_is_encoder(codec))

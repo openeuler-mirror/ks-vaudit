@@ -101,38 +101,8 @@ set(sources
 	common/TempBuffer.h
 	common/Config.h
 	common/Config.cpp
-	GUI/AudioPreviewer.cpp
-	GUI/AudioPreviewer.h
-	GUI/DialogGLInject.cpp
-	GUI/DialogGLInject.h
-	GUI/DialogRecordSchedule.cpp
-	GUI/DialogRecordSchedule.h
-	GUI/ElidedLabel.cpp
-	GUI/ElidedLabel.h
-	GUI/HiddenScrollArea.cpp
-	GUI/HiddenScrollArea.h
-	GUI/HotkeyListener.h
-	GUI/HotkeyListener.cpp
-	GUI/Icons.cpp
-	GUI/Icons.h
-	GUI/MainWindow.cpp
-	GUI/MainWindow.h
-	GUI/PageDone.cpp
-	GUI/PageDone.h
-	GUI/PageInput.cpp
-	GUI/PageInput.h
-	GUI/PageOutput.cpp
-	GUI/PageOutput.h
-	GUI/PageRecord.cpp
-	GUI/PageRecord.h
-	GUI/PageWelcome.cpp
-	GUI/PageWelcome.h
-	GUI/ProfileBox.cpp
-	GUI/ProfileBox.h
-	GUI/VideoPreviewer.cpp
-	GUI/VideoPreviewer.h
-	GUI/WidgetRack.cpp
-	GUI/WidgetRack.h
+    Recording.cpp
+    Recording.h
 	Benchmark.cpp
 	Benchmark.h
 	Global.h

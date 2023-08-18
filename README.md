@@ -1,21 +1,18 @@
 -ks-vaudit
--====================
+
 
 编译安装
+    1. 安装编译依赖
+        yum install ffmpeg-devel cmake3 qt5-qtx11extras-devel qt5-qtbase-devel qt5-linguist libXext-devel libXfixes-devel libXinerama-devel libXi-devel cairo-devel
 
-    1. 安装devtoolset-8-gcc 相关软件包
-
-    2. 安装qt-opensource-linux-x64-5.7.1.run  QT5.7.1 版本
-
-    3. 配置PKG_CONFIG_PATH,PATH 环境变量内容如下:
-        export PKG_CONFIG_PATH=/opt/Qt5.7.1/5.7/gcc_64/lib/pkgconfig:$PKG_CONFIG_PATH
-        export PATH=/opt/Qt5.7.1/5.7/gcc_64/bin:$PATH
-
-    4. 安装编译依赖
-        yum install ffmpeg-devel cmake3 libv4l-devel jack-audio-connection-kit-devel
-
-    5. 执行如下编译命令:
+    2. 进入 ks-vaudit 目录, 执行如下编译命令:
         ENABLE_32BIT_GLINJECT=FALSE ./simple-build-and-install 命令
+
+安装
+    在build-release 目录下执行sudo make install
+
+运行
+    编译安装运行后执行 simplescreenrecorder
 
 
 后端架构
@@ -34,4 +31,3 @@
         Synchronizer 表示音视频同步处理
         VideoEncoder AudioEncoder 音视频编码处理
         Muxer 音视频合成器
-

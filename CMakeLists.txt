@@ -24,7 +24,7 @@ option(WITH_V4L2 "Build with V4L2 support." FALSE)
 option(WITH_ALSA "Build with ALSA support." FALSE)
 option(WITH_PULSEAUDIO "Build with PulseAudio support." TRUE)
 option(WITH_JACK "Build with JACK support." FALSE)
-option(WITH_QT5 "Build with Qt5 (instead of Qt4)." FALSE)
+option(WITH_QT5 "Build with Qt5 (instead of Qt4)." TRUE)
 option(WITH_SIMPLESCREENRECORDER "Build the 'simplescreenrecorder' executable." TRUE)
 option(WITH_GLINJECT "Build the 'libssr-glinject' library. Required for OpenGL recording." TRUE)
 

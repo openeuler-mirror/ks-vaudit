@@ -32,7 +32,7 @@
    <string>麒麟信安录屏</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="src.qrc">
+   <iconset resource="../data/src.qrc">
     <normaloff>:/images/22px.png</normaloff>:/images/22px.png</iconset>
   </property>
   <widget class="QWidget" name="OutterWidget" native="true">
@@ -98,7 +98,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/clear_icon.svg</normaloff>:/images/clear_icon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -164,7 +164,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/minus-tiny.svg</normaloff>:/images/minus-tiny.svg</iconset>
       </property>
      </widget>
@@ -190,7 +190,7 @@ image:none;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/菜单栏icon.svg</normaloff>:/images/菜单栏icon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -235,6 +235,11 @@ image:none;
        <width>676</width>
        <height>414</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
      </property>
      <property name="mouseTracking">
       <bool>true</bool>
@@ -341,12 +346,17 @@ border-radius: 4px;
       </property>
       <item>
        <property name="text">
-        <string>麦和系统声音</string>
+        <string>录制麦克风和扬声器声音</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>只有系统声音</string>
+        <string>只录制扬声器声音</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>只录制麦克风声音</string>
        </property>
       </item>
       <item>
@@ -441,18 +451,14 @@ QCheckBox#waterprintCheck::indicator:unchecked{
       </property>
       <property name="font">
        <font>
+        <family>Sans Serif</family>
         <weight>75</weight>
         <italic>false</italic>
         <bold>true</bold>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">border:0px;
-border-radius: 6px;
-background-color:#2eb3ff;
-color:#fff;
-font:bold;
-</string>
+       <string notr="true"/>
       </property>
       <property name="text">
        <string>确定</string>
@@ -683,7 +689,7 @@ padding-left:10px;
        <string>常规配置</string>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/常规icon.svg</normaloff>:/images/常规icon.svg</iconset>
       </property>
      </widget>
@@ -717,7 +723,7 @@ padding-left:10px;
        <string>录屏列表</string>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/列表icon.svg</normaloff>:/images/列表icon.svg</iconset>
       </property>
      </widget>
@@ -749,7 +755,7 @@ padding-left:10px;
        <string>录屏设置</string>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/后台设置icon.svg</normaloff>:/images/后台设置icon.svg</iconset>
       </property>
      </widget>
@@ -852,11 +858,7 @@ border-radius: 4px;
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">padding-left:40px;
-border:1px solid rgb(57,57,57);
-background:rgb(34,34,34);
-color:#fff;
-border-radius:6px;</string>
+       <string notr="true"/>
       </property>
       <property name="placeholderText">
        <string>请输入视频名称搜索</string>
@@ -1157,7 +1159,7 @@ border-radius:4px;
       </item>
       <item>
        <property name="text">
-        <string>每30分钟</string>
+        <string>每5分钟</string>
        </property>
       </item>
       <item>
@@ -1167,7 +1169,7 @@ border-radius:4px;
       </item>
       <item>
        <property name="text">
-        <string>每5分钟</string>
+        <string>每30分钟</string>
        </property>
       </item>
      </widget>
@@ -1208,11 +1210,7 @@ border-radius:4px;
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color:#222222;
-border:1px solid #393939;
-border-radius:6px;
-color:#fff;
-padding-left:10px;</string>
+       <string notr="true"/>
       </property>
       <property name="inputMethodHints">
        <set>Qt::ImhNone</set>
@@ -1224,10 +1222,10 @@ padding-left:10px;</string>
      <widget class="QPushButton" name="pushButton_2">
       <property name="geometry">
        <rect>
-        <x>616</x>
-        <y>119</y>
-        <width>36</width>
-        <height>36</height>
+        <x>617</x>
+        <y>120</y>
+        <width>34</width>
+        <height>34</height>
        </rect>
       </property>
       <property name="font">
@@ -1242,17 +1240,17 @@ padding-left:10px;</string>
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/plus.svg</normaloff>:/images/plus.svg</iconset>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_3">
       <property name="geometry">
        <rect>
-        <x>579</x>
-        <y>119</y>
-        <width>36</width>
-        <height>36</height>
+        <x>582</x>
+        <y>120</y>
+        <width>34</width>
+        <height>34</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -1262,22 +1260,22 @@ padding-left:10px;</string>
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/minus.svg</normaloff>:/images/minus.svg</iconset>
       </property>
      </widget>
     </widget>
     <zorder>SideBar</zorder>
-    <zorder>NormalFooterBar</zorder>
     <zorder>ListBody</zorder>
     <zorder>ConfigBody</zorder>
     <zorder>NormalBody</zorder>
+    <zorder>NormalFooterBar</zorder>
    </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="src.qrc"/>
+  <include location="../data/src.qrc"/>
  </resources>
  <connections/>
 </ui>

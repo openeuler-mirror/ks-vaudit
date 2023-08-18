@@ -8,7 +8,6 @@
 #include <QMenu>
 #include <QListView>
 #include <QDateTime>
-#include <QProcess>
 #include <QDesktopServices>
 #include <QUrl>
 #include <QHBoxLayout>
@@ -36,7 +35,7 @@ Widget::Widget(QWidget *parent) :
 //    setAttribute(Qt::WA_NoSystemBackground, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
 
-    m_dbusInterface = new  ComKylinsecKiranVauditConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
+    m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     //connect(sf, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(updateData(QString, QString)));
 //    connect(m_dbusInterface, SIGNAL(ConfigureChanged(QString)), this, SLOT(updateData(QString)));
 //    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int, QString)), this, SLOT(switchControl(int, QString)));
@@ -96,6 +95,8 @@ void Widget::init_ui()
     connect(m_deleteAction, SIGNAL(triggered()), this, SLOT(deleteVideo()));
 
     readConfig();
+    m_selfPID = QCoreApplication::applicationPid();
+    m_recordPID = startRecrodProcess();
 }
 
 void Widget::comboboxStyle(){
@@ -135,7 +136,7 @@ void Widget::mouseReleaseEvent(QMouseEvent *event)
 void Widget::on_exit_clicked()
 {
     Dialog *confirm = new Dialog(this, QString("exit"));
-    connect(confirm, SIGNAL(close_window()), this, SLOT(close()));
+    connect(confirm, SIGNAL(close_window()), this, SLOT(realClose()));
     confirm->exec();
 }
 
@@ -254,17 +255,23 @@ void Widget::onTableBtnClicked()
 
 void Widget::on_waterprintCheck_stateChanged(int arg1)
 {
+    QString ret;
     if (arg1 == 0){
+        ret = QString("%1").arg(arg1);
         qDebug("hide waterprint");
         ui->waterprintText->hide();
         ui->waterprintConfirm->hide();
         ui->label_6->hide();
     }else if (arg1 == 2){
+        // QT的checkbox勾选是2，半勾选是1。
+        // 所以这里2需要改成1传到配置中心去
+        ret = QString("%1").arg(1);
         qDebug("show waterprint");
         ui->waterprintText->show();
         ui->waterprintConfirm->show();
         ui->label_6->show();
     }
+    setConfig(QString("WaterPrint"), ret);
 }
 
 void Widget::on_volumnBtn_clicked()
@@ -313,15 +320,24 @@ void Widget::on_playBtn_clicked()
     }
     m_isRecording = !m_isRecording;
     if (m_isRecording){
+        if (m_needRestart){
+            sendSwitchControl(m_selfPID, m_recordPID, "restart");
+        }else{
+            sendSwitchControl(m_selfPID, m_recordPID, "start");
+        }
+        m_needRestart = false;
         Widget::showMinimized();
         ui->playBtn->setStyleSheet("image:url(:/images/pauseRecord.svg);border:none;");
         qDebug("Start record screen!");
-        ui->waterprintConfirm->setDisabled(true);
+//        ui->waterprintConfirm->setDisabled(true);
         ui->waterprintCheck->setDisabled(true);
     }else{
+        sendSwitchControl(m_selfPID, m_recordPID, "pause");
+        m_needRestart = true;
         ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
-        ui->waterprintConfirm->setDisabled(false);
+//        ui->waterprintConfirm->setDisabled(false);
         ui->waterprintCheck->setDisabled(false);
+
         qDebug("Pause record screen!");
     }
 }
@@ -389,11 +405,20 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
         ui->label_11->setStyleSheet("color:#999999");
 //        m_hasError = NULL;
     }else{
-        ui->fpsEdit->setStyleSheet("background-color:#222222;"
+        ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
+                                   "background-color:#222222;"
                                    "border:1px solid #393939;"
                                    "border-radius:6px;"
                                    "color:#fff;"
-                                   "padding-left:10px;");
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:hover{"
+                                   "background-color:#222222;"
+                                   "border:1px solid #2eb3ff;"
+                                   "border-radius:6px;"
+                                   "color:#fff;"
+                                   "padding-left:10px;"
+                                   "}");
         ui->label_11->setStyleSheet("color:#999999");
 //        m_hasError = NULL;
     }
@@ -444,6 +469,78 @@ void Widget::on_searchBar_returnPressed()
     if (ui->searchBar->hasFocus()){
         ui->searchBar->clearFocus();
     }
+}
+
+void Widget::on_waterprintConfirm_clicked()
+{
+    ui->waterprintConfirm->setDisabled(true);
+    ui->waterprintText->clearFocus();
+    m_waterText = ui->waterprintText->text();
+    setConfig(QString("WaterPrint"), QString("%1").arg(ui->waterprintCheck->isChecked()));
+    setConfig(QString("WaterPrintText"), ui->waterprintText->text());
+
+    qDebug() << __func__ << "waterprintConfirm Confirmed ...";
+}
+
+void Widget::on_waterprintText_textChanged(const QString &arg1)
+{
+    if (m_waterText != arg1){
+        ui->waterprintConfirm->setDisabled(false);
+    }else{
+        ui->waterprintConfirm->setDisabled(true);
+    }
+}
+
+void Widget::on_resolutionBox_currentIndexChanged(int index)
+{
+    qDebug() << "index:" << index;
+    setConfig(QString("RecordVideo"), QString("%1").arg(index));
+}
+
+void Widget::on_audioBox_currentIndexChanged(int index)
+{
+    QString setValue = QString("all");
+    if (index == 0){
+        setValue = QString("all");
+    }else if(index == 1){
+        setValue = QString("speaker");
+    }else if(index == 2){
+        setValue = QString("mic");
+    }else if(index == 3){
+        setValue = QString("none");
+    }
+    setConfig(QString("RecordAudio"), setValue);
+}
+
+void Widget::on_clarityBox_currentIndexChanged(int index)
+{
+    setConfig(QString("Quality"), QString("%1").arg(index));
+}
+
+void Widget::on_remainderBox_currentIndexChanged(int index)
+{
+    int setValue = 0;
+    if (index == 0){
+        setValue = 0;
+    }else if (index == 1){
+        setValue = 5;
+    }else if (index == 2){
+        setValue = 10;
+    }else if (index == 3){
+        setValue = 30;
+    }
+    setConfig(QString("TimingReminder"), QString("%1").arg(setValue));
+}
+
+void Widget::on_typeBox_currentIndexChanged(int index)
+{
+    QString setValue = QString("MP4");
+    if (index == 0){
+        setValue = QString("MP4");
+    }else if (index = 1){
+        setValue = QString("OGV");
+    }
+    setConfig(QString("FileType"), setValue);
 }
 
 
@@ -703,37 +800,98 @@ QJsonDocument Widget::readConfig()
         QJsonObject jsonObj = doc.object();
         for (auto k : jsonObj.keys())
         {
-            qWarning() << __func__ << "GetRecordInfo" << k << jsonObj[k].toString();
+//            qWarning() << __func__ << "GetRecordInfo" << k << jsonObj[k].toString();
             if (k == "FilePath"){
                 ui->pathLabel->setText(jsonObj[k].toString());
             }else if(k == "FileType"){
                 int setValue = 0;
-                if (jsonObj[k].toString() == QString("ogv")){
+                if (jsonObj[k].toString() == QString("OGV")){
                     setValue = 1;
                 }
                 ui->typeBox->setCurrentIndex(setValue);
             }else if(k == "Fps"){
                 ui->fpsEdit->setText(jsonObj[k].toString());
             }else if(k == "Quality"){
-                int value = 0;
-                ui->clarityBox->setCurrentIndex(jsonObj[k].toInt(value));
+                ui->clarityBox->setCurrentIndex(jsonObj[k].toString().toInt());
             }else if(k == "RecordAudio"){
-                int value = 0;
-                ui->audioBox->setCurrentIndex(jsonObj[k].toInt(value));
+                int setIndex = 0;
+                if (jsonObj[k].toString() == QString("all")){
+                    setIndex = 0;
+                }else if(jsonObj[k].toString() == QString("speaker")){
+                    setIndex = 1;
+                }else if(jsonObj[k].toString() == QString("mic")){
+                    setIndex = 2;
+                }else if(jsonObj[k].toString() == QString("none")){
+                    setIndex = 3;
+                }
+                ui->audioBox->setCurrentIndex(setIndex);
             }else if(k == "RecordVideo"){
-                int value = 0;
-                ui->resolutionBox->setCurrentIndex(jsonObj[k].toInt(value));
+                ui->resolutionBox->setCurrentIndex(jsonObj[k].toString().toInt());
             }else if(k == "TimingReminder"){
-                int value = 0;
-                ui->remainderBox->setCurrentIndex(jsonObj[k].toInt(value));
+                int setIndex = 0;
+                if (jsonObj[k].toString().toInt() == 0){
+                    setIndex = 0;
+                }else if (jsonObj[k].toString().toInt() == 5){
+                    setIndex = 1;
+                }else if (jsonObj[k].toString().toInt() == 10){
+                    setIndex = 2;
+                }else if (jsonObj[k].toString().toInt() == 30){
+                    setIndex = 3;
+                }
+                ui->remainderBox->setCurrentIndex(setIndex);
             }else if(k == "WaterPrint"){
-                int value = 0;
-                ui->waterprintCheck->setChecked(jsonObj[k].toInt(value));
+                ui->waterprintCheck->setChecked((bool)jsonObj[k].toString().toInt());
             }else if(k == "WaterPrintText"){
                 ui->waterprintText->setText(jsonObj[k].toString());
+                m_waterText = jsonObj[k].toString();
             }
         }
     }
+    ui->waterprintConfirm->setDisabled(true);
     return doc;
-//    printf("%s, %d\n", __func__, __LINE__);
+}
+
+void Widget::setConfig(QString key, QString value)
+{
+    QJsonObject jsonObj;
+    jsonObj[key] = QString("%1").arg(value);
+    QJsonDocument doc(jsonObj);
+    QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
+    m_dbusInterface->SetRecordItemValue(a);
+    qDebug() << __func__ << "key: " << key << "value: " << value;
+}
+
+int Widget::startRecrodProcess()
+{
+    QProcess *pp = new QProcess();
+    pp->setProcessChannelMode(QProcess::MergedChannels);
+    pp->start("/home/flw/github/ks-vaudit/build-release/src/simplescreenrecorder");
+    qDebug() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid();
+    m_recordP = pp;
+
+    return pp->pid();
+}
+
+void Widget::sendSwitchControl(int from_pid, int to_pid, QString op)
+{
+    m_dbusInterface->SwitchControl(from_pid, to_pid, op);
+    qDebug() << __func__ << "from: " << from_pid << "to: " << to_pid << "op: " << op;
+}
+
+
+void Widget::on_stopBtn_clicked()
+{
+    sendSwitchControl(m_selfPID, m_recordPID, "stop");
+    m_isRecording = false;
+    m_needRestart = false;
+    ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
+//    ui->waterprintConfirm->setDisabled(false);
+    ui->waterprintCheck->setDisabled(false);
+}
+
+void Widget::realClose()
+{
+    // 目前采用kill，不知道后端是否处理了kill或者exit信号
+    m_recordP->kill();
+    close();
 }

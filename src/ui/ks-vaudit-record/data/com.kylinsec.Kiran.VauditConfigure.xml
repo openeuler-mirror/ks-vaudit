@@ -96,13 +96,15 @@
         </method>
 
         <method name="SwitchControl">
-          <arg name="pid" direction="in" type="i">
-            <summary>The progess id.</summary>
+          <arg name="from_pid" direction="in" type="i">
+            <summary>The sender progess id.</summary>
+          </arg>
+          <arg name="to_pid" direction="in" type="i">
+            <summary>The receiver progess id.</summary>
             <description>The process to be controlled.</description>
           </arg>
           <arg name="operate" direction="in" type="s">
             <summary>The operation.</summary>
-            <description>Start, Stop, Pause can be set.</description>
           </arg>
           <summary>Receives operations on the process and sends them to the background.</summary>
         </method>
@@ -111,14 +113,6 @@
             <arg name="which" type="s">
                 <summary>The configuration type.</summary>
             </arg>
-            <arg name="config_info" type="s">
-                <summary>All configuration items corresponding to the configuration type.</summary>
-            </arg>
-            <summary>Notify configuration changes</summary>.
-            <description>The configuration information is changed, update background configuration.</description>
-        </signal>
-
-        <signal name="ConfigureChanged">
             <arg name="changed_config" type="s">
                 <summary>The changed configuration.</summary>
             </arg>
@@ -127,8 +121,11 @@
         </signal>
 
         <signal name="SignalSwitchControl">
-            <arg name="pid" type="i">
-                <summary>The progess id.</summary>
+            <arg name="from_pid" type="i">
+                <summary>The sender progess id.</summary>
+            </arg>
+            <arg name="to_pid" type="i">
+                <summary>The receiver progess id.</summary>
             </arg>
             <arg name="operate" type="s">
                 <summary>The operations on processes.</summary>

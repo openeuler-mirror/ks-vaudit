@@ -11,7 +11,8 @@
 #include <QAction>
 #include <QLineEdit>
 #include <dialog.h>
-#include "vauditconfigure_interface.h"
+#include <QProcess>
+#include "../../../configure_interface.h"
 
 namespace Ui {
 class Widget;
@@ -38,6 +39,9 @@ protected:
     void refreshList(QString regName = QString(""));
     QLineEdit *createVideoNameEdit(QString fileName);
     QJsonDocument readConfig();
+    void setConfig(QString key, QString value);
+    int startRecrodProcess();
+    void sendSwitchControl(int from_pid, int to_pid, QString op);
 
 private slots:
     void on_exit_clicked();
@@ -94,6 +98,24 @@ private slots:
 
     void realRename();
 
+    void on_waterprintConfirm_clicked();
+
+
+    void on_waterprintText_textChanged(const QString &arg1);
+
+    void on_resolutionBox_currentIndexChanged(int index);
+
+    void on_audioBox_currentIndexChanged(int index);
+
+    void on_clarityBox_currentIndexChanged(int index);
+
+    void on_remainderBox_currentIndexChanged(int index);
+
+    void on_typeBox_currentIndexChanged(int index);
+
+    void on_stopBtn_clicked();
+
+    void realClose();
 
 signals:
 
@@ -103,7 +125,7 @@ private:
     bool m_bDrag = false;
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
-    int m_isRecording = 0;
+    bool m_isRecording = false;
     QString m_fps = "10";
     QIntValidator *m_intValidator;
     QStandardItemModel *m_model = NULL;
@@ -119,7 +141,12 @@ private:
     QLineEdit *m_videoNameEditor = NULL;
 
     Dialog *m_renameDialog = NULL;
-    ComKylinsecKiranVauditConfigureInterface *m_dbusInterface;
+    ConfigureInterface *m_dbusInterface;
+    QString m_waterText;
+    int m_recordPID = 0;
+    int m_selfPID = 0;
+    bool m_needRestart = false;
+    QProcess *m_recordP;
 };
 
 #endif // WIDGET_H

@@ -4,7 +4,6 @@ set(CMAKE_AUTOMOC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Threads REQUIRED)
 find_package(AVFormat REQUIRED)
@@ -156,14 +155,15 @@ endif()
 set_property(SOURCE ${res_output} PROPERTY SKIP_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Widgets DBus Core Sql Xml REQUIRED)
 
-set(VAUDITCONFIGURE_DBUS_XML daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml)
+set(VAUDITCONFIGURE_DBUS_XML ${CMAKE_CURRENT_SOURCE_DIR}/daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml)
+
 set_source_files_properties(${VAUDITCONFIGURE_DBUS_XML}
         PROPERTIES
         CLASSNAME ConfigureInterface
         NO_NAMESPACE true)
 qt5_add_dbus_interface(VAUDITCONFIGURE_SRC ${VAUDITCONFIGURE_DBUS_XML} configure_interface)
 foreach (interface_item ${VAUDITCONFIGURE_SRC})
-    set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
+    set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN OFF)
 endforeach ()
 
 add_executable(simplescreenrecorder
@@ -233,3 +233,4 @@ target_compile_definitions(simplescreenrecorder PRIVATE
 install(TARGETS simplescreenrecorder RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
 
 add_subdirectory(daemon)
+add_subdirectory(ui)

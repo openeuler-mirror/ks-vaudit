@@ -29,7 +29,7 @@ private:
     QString m_pwd;
     QSqlDatabase m_db;
     QSqlQuery *m_query;
-    QMutex mutex;
+    QMutex m_mutex;
 };
 
 

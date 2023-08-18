@@ -1,13 +1,18 @@
 #ifndef GENERALCONFIGURE_H
 #define GENERALCONFIGURE_H
 
+#include <QMutex>
+#include <QObject>
+#include <QVector>
 #include <QSettings>
 #include <QSharedPointer>
+#include <QFileSystemWatcher>
 
-class GeneralConfigure
+class GeneralConfigure : public QObject
 {
+    Q_OBJECT
 public:
-    GeneralConfigure();
+    GeneralConfigure(QObject *parent = 0);
     static GeneralConfigure &Instance();
     bool setRecordConfigure(const QString &param);
     bool setAuditConfigure(const QString &param);
@@ -15,7 +20,9 @@ public:
     QString readAuditConf();
 
 private:
+    ~GeneralConfigure();
     void initConfig();
+    void initData();
     QString readGroupConfig(QString group);
     bool checkRecordParam(QString, QString, bool *pIn = nullptr);
     bool checkAuditParam(QString, QString);
@@ -24,8 +31,15 @@ private:
     inline bool checkEnable(QString);
     inline bool checkInteger(QString, int min, int max);
     inline bool checkULongLong(QString, unsigned long long min, unsigned long long max);
-    inline bool checkQuality(QString);
+    inline bool checkRecordAudio(QString value);
     inline bool checkWaterPrint(QString);
+    void rewriteConfig();
+
+private slots:
+    void onDirectoryChanged(QString);
+
+signals:
+    void ConfigureChanged(const QString &which, const QString &changed_config);
 
 private:
     enum ConfigureItem {
@@ -50,7 +64,11 @@ private:
 
     QString m_confFile;
     QSharedPointer<QSettings> m_confSettings;
+    QFileSystemWatcher *m_fileWatcher;
     QMap<ConfigureItem, QString> m_itemMap;
+    QMap<QString, QString> m_lastMap;
+    QVector<QString> m_data;
+    QMutex m_mutex;
 };
 
 #endif // GENERALCONFIGURE_H

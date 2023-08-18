@@ -35,8 +35,10 @@ VauditConfigureDbus::VauditConfigureDbus(QObject *parent) : QObject(parent)
         exit(3);
     }
 
-    GeneralConfigure::Instance();
+//    GeneralConfigure::Instance();
     SQLConfigure::Instance();
+
+    connect(&GeneralConfigure::Instance(), SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(externalConfigureChanged(QString, QString)));
 }
 
 
@@ -92,4 +94,10 @@ void VauditConfigureDbus::SwitchControl(int from_pid, int to_pid, const QString 
 {
     qWarning() << __func__ << from_pid << to_pid << operate;
     this->SignalSwitchControl(from_pid, to_pid, operate);
+}
+
+void VauditConfigureDbus::externalConfigureChanged(QString which, QString changed_config)
+{
+    qWarning() << __func__ << which << changed_config;
+    this->ConfigureChanged(which, changed_config);
 }

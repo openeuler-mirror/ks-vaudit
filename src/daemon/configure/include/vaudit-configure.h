@@ -24,6 +24,9 @@ public slots:
 signals:
     void ConfigureChanged(const QString &which, const QString &changed_config);
     void SignalSwitchControl(int from_pid, int to_pid, const QString &operate);
+
+private slots:
+    void externalConfigureChanged(QString which, QString changed_config);
 };
 
 #endif // VAUDITCONFIGURE_H

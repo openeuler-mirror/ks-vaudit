@@ -647,7 +647,7 @@ QPushButton *Widget::createOperationBtn(int index)
     aBtn->setStyleSheet("QPushButton{"
                         "border:none;"
                         "background-color:transparent;"
-                        "image:url(:/images/操作icon.svg);"
+                        "image:url(:/images/operationicon.svg);"
                         "padding-left:4px;"
                         "margin-top:7px;"
                         "}");

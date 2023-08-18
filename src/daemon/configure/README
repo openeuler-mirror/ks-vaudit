@@ -7,9 +7,11 @@ scl
 sudo make install
 
 ##运行
-需要先安装
-sudo ./build-release/src/daemon/configure/ks-vaudit-configure
-（sudo /usr/bin/ks-vaudit-configure后运行加载不到链接库）
+sudo chkconfig ks-vaudit-configure on
+
+#需要先安装
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/Qt5.7.1/5.7/gcc_64/lib
+#sudo /usr/bin/ks-vaudit-configure
 
 ##关于数据库加密
 先注释SUPPOORT_SQLITECIPHER宏，关闭数据库加密

@@ -42,64 +42,54 @@ VauditConfigureDbus::VauditConfigureDbus(QObject *parent) : QObject(parent)
 
 QString VauditConfigureDbus::GetRecordInfo()
 {
-    qWarning() << __func__;
     return GeneralConfigure::Instance().readRecordConf();
 }
 
 QString VauditConfigureDbus::GetAuditInfo()
 {
-    qWarning() << __func__;
     return GeneralConfigure::Instance().readAuditConf();
 }
 
 QString VauditConfigureDbus::GetUserInfo(const QString value)
 {
-    qWarning() << __func__ << value;
     return SQLConfigure::Instance().queryUser(value);
 }
 
 bool VauditConfigureDbus::SetAuditItemValue(const QString &item_value)
 {
-    qWarning() << __func__ << item_value;
     if (!GeneralConfigure::Instance().setAuditConfigure(item_value))
         return false;
 
-    this->ConfigureChanged(item_value);
-    this->ConfigureChanged("audit", GeneralConfigure::Instance().readAuditConf());
+    this->ConfigureChanged("audit", item_value);
     return true;
 }
 
 bool VauditConfigureDbus::SetRecordItemValue(const QString &item_value)
 {
-    qWarning() << __func__ << item_value;
     if (!GeneralConfigure::Instance().setRecordConfigure(item_value))
         return false;
 
-    this->ConfigureChanged("record", GeneralConfigure::Instance().readRecordConf());
-    this->ConfigureChanged(item_value);
+    this->ConfigureChanged("record", item_value);
     return true;
 }
 
 bool VauditConfigureDbus::CreateUser(const QString info)
 {
-    qWarning() << __func__ << info;
     return SQLConfigure::Instance().createUser(info);
 }
 
 bool VauditConfigureDbus::DeleteUser(const QString info)
 {
-    qWarning() << __func__ << info;
     return SQLConfigure::Instance().deleteUser(info);
 }
 
 bool VauditConfigureDbus::ModifyUserInfo(const QString info)
 {
-    qWarning() << __func__ << info;
     return SQLConfigure::Instance().updateUser(info);
 }
 
-void VauditConfigureDbus::SwitchControl(int pid, const QString &operate)
+void VauditConfigureDbus::SwitchControl(int from_pid, int to_pid, const QString &operate)
 {
-    qWarning() << __func__ << pid << operate;
-    this->SignalSwitchControl(pid, operate);
+    qWarning() << __func__ << from_pid << to_pid << operate;
+    this->SignalSwitchControl(from_pid, to_pid, operate);
 }

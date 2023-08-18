@@ -19,12 +19,11 @@ public slots:
     bool CreateUser(const QString);
     bool DeleteUser(const QString);
     bool ModifyUserInfo(const QString);
-    void SwitchControl(int pid, const QString &operate);
+    void SwitchControl(int from_pid, int to_pid, const QString &operate);
 
-signals: // SIGNALS
-    void ConfigureChanged(const QString &which, const QString &config_info);
-    void ConfigureChanged(const QString &changed_config);
-    void SignalSwitchControl(int pid, const QString &operate);
+signals:
+    void ConfigureChanged(const QString &which, const QString &changed_config);
+    void SignalSwitchControl(int from_pid, int to_pid, const QString &operate);
 };
 
 #endif // VAUDITCONFIGURE_H

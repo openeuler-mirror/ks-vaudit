@@ -36,23 +36,13 @@ static QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){
-	static int sigusr_cout = 1;
 	if(sig == SIGINT){
 		recording_screen->OnRecordSaveAndExit(true);
-	}else if(sig == SIGUSR1 && sigusr_cout == 1){
-		recording_screen->OnRecordSave();
-		recording_screen.reset();
-		settings_ptr->clear();
-		recording_screen.reset(new Recording(settings_ptr));
-		recording_screen->SaveSettings(settings_ptr);
-		recording_screen->OnRecordStart(); //开始录屏
-		sigusr_cout++;
 	}
 }
 
 int main(int argc, char* argv[]) {
 	signal(SIGINT, sig_handler);
-	signal(SIGUSR1, sig_handler);
 	XInitThreads();
 
 	// Workarounds for broken screen scaling.

@@ -157,6 +157,8 @@ private:
 	QSettings* settings;
 	ConfigureInterface* m_configure_interface;
 
+	QScreen* m_main_screen; //监测分辨率
+
 public:
 	Recording(QSettings* qsettings);
 	~Recording();
@@ -189,4 +191,5 @@ private:
 public slots:
 	void updateData(QString, QString);
 	void switchControl(int, QString);
+	void ScreenChangedHandler(const QRect&);
 };

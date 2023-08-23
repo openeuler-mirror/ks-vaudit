@@ -388,6 +388,26 @@ void Recording::SaveSettings(QSettings* settings) {
 	key = "FilePath";
 	QString sys_user(getenv("USER"));
 	QString file_path(jsonObj[key].toString());
+
+	//file_path = "~/test/demo/yefeng/women/hello/world/XXXXX/"; //测试用
+	if(file_path.contains('~')){
+		QString home_dir = getenv("HOME");
+		file_path.replace('~', home_dir);
+		//Logger::LogInfo("===============> " + file_path + "XXXXXXXXXXXXXX");
+
+	}
+
+	if(!QFile::exists(file_path)){ //存放目录不存在时创建一个
+		QDir dir;
+		if(!dir.exists(file_path)){
+			if(dir.mkpath(file_path) == false){
+				Logger::LogError("can't mkdir the file path " + file_path);
+				exit(-1);
+			}
+		}
+	}
+
+
 	QString file_suffix;
 	if(jsonObj["FileType"].toString() == "mp4"){
 		file_suffix = ".mp4";
@@ -469,7 +489,6 @@ void Recording::StartOutput() {
 
 			// set the file name
 			m_output_settings.file = GetNewSegmentFile(m_file_base, m_add_timestamp);
-			//m_output_settings.file = QString("/home/yefeng/ks-vaudit/build-release/src/yefeng.mp4"); //调试用
 
 			// log the file name
 			{

@@ -233,6 +233,10 @@ void Widget::on_pushButton_clicked()
         }
         ui->pathLabel->setText(dirPath);
         ui->pathLabel->setToolTip(dirPath);
+        if (dirPath.startsWith("~")){
+            dirPath = dirPath.replace(0,1,QDir::homePath());
+        }
+        setConfig("FilePath", dirPath);
         refreshList(m_regName);
     }else{
         KLOG_DEBUG("Invalid path, abort!");
@@ -342,6 +346,7 @@ void Widget::on_playBtn_clicked()
         ui->pushButton_3->setDisabled(true);
         ui->remainderBox->setDisabled(true);
         ui->typeBox->setDisabled(true);
+        ui->pushButton->setDisabled(true);
         KLOG_DEBUG("Start record screen!");
     }else{
         sendSwitchControl(m_selfPID, m_recordPID, "pause");
@@ -608,10 +613,10 @@ void Widget::playVideo()
     p->setProcessChannelMode(QProcess::MergedChannels);
     QStringList commands;
 //    commands << "-slave";
-    commands << "-quiet";
+//    commands << "-quiet";
     commands << filePath;
-    // 采用分离式启动(startDetached)mplayer，因为和本录屏软件无关
-    p->startDetached("/usr/bin/mplayer", commands);
+    // 采用分离式启动(startDetached)mplayer/ffplay，因为和本录屏软件无关
+    p->startDetached("ffplay", commands);
 }
 
 void Widget::openDir()
@@ -826,7 +831,12 @@ QJsonDocument Widget::readConfig()
         {
 //            qWarning() << __func__ << "GetRecordInfo" << k << jsonObj[k].toString();
             if (k == "FilePath"){
-                ui->pathLabel->setText(jsonObj[k].toString());
+                QString filePath = jsonObj[k].toString();
+                QString homeDir = QDir::homePath();
+                if (filePath.startsWith(homeDir)){
+                    filePath.replace(0,homeDir.size(), "~");
+                }
+                ui->pathLabel->setText(filePath);
             }else if(k == "FileType"){
                 int setValue = 0;
                 if (jsonObj[k].toString() == QString("OGV")){
@@ -881,6 +891,7 @@ void Widget::setConfig(QString key, QString value)
     jsonObj[key] = QString("%1").arg(value);
     QJsonDocument doc(jsonObj);
     QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
+    KLOG_DEBUG()  << "aaaaaaaaaaaaaa: " << a;
     m_dbusInterface->SetRecordItemValue(a);
     KLOG_DEBUG() << __func__ << "key: " << key << "value: " << value;
 }
@@ -890,7 +901,7 @@ int Widget::startRecrodProcess()
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
     QStringList arg;
-//    arg << "--type=record";
+    arg << "--record";
     pp->start("/usr/bin/ks-vaudit",arg);
     KLOG_DEBUG() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid();
     m_recordP = pp;
@@ -919,6 +930,7 @@ void Widget::on_stopBtn_clicked()
     ui->pushButton_3->setDisabled(false);
     ui->remainderBox->setDisabled(false);
     ui->typeBox->setDisabled(false);
+    ui->pushButton->setDisabled(false);
 }
 
 void Widget::realClose()

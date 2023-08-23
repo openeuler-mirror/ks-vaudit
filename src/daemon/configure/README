@@ -1,0 +1,22 @@
+##依赖
+Qt5.7.1
+libsqlitecipher.so
+scl
+
+##安装
+sudo make install
+
+##运行
+sudo chkconfig ks-vaudit-configure on
+
+#需要先安装
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/Qt5.7.1/5.7/gcc_64/lib
+#sudo /usr/bin/ks-vaudit-configure
+
+##关于数据库加密
+先注释SUPPOORT_SQLITECIPHER宏，关闭数据库加密
+数据库加密需要libsqlitecipher.so，在http://qtciphersqliteplugin.galaxyworld.org 下载 devbean-QtCipherSqlitePlugin-v1.3-0-gc72f8da.zip 编译生成
+
+##未解决
+安装二进制到/usr/bin/ks-vaudit-configure后运行加载不到链接库
+libsqlitecipher.so 链接问题

@@ -12,7 +12,7 @@
     在build-release 目录下执行sudo make install
 
 运行
-    编译安装运行后执行 simplescreenrecorder
+    编译安装运行后执行 ks-vaudit
 
 
 后端架构

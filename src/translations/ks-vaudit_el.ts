@@ -43,12 +43,12 @@
 
 &lt;p&gt;Another warning: OpenGL recording is experimental, it may not work or even crash the program you are recording. If you are worried about losing program data, make a backup first!&lt;/p&gt;
 
-&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
+&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
         <translation>&lt;p&gt;*Προειδοποίηση*:Η εγγραφή OpenGL λειτουργεί «εκχύοντας» μια βιβλιοθήκη μέσα στο πρόγραμμα που θα εγγραφεί. Αυτή η βιβλιοθήκη θα παρακάμψει κάποιες λειτουργίες του συστήματος προκειμένου να καταγράψει τα καρέ πριν εμφανιστούν στην οθόνη. Αν προσπαθείτε να εγγράψετε ένα παιχνίδι το οποίο προσπαθεί να εντοπίσει απόπειρες «σπασίματος»(hacking), θεωρητικά είναι δυνατόν το παιχνίδι να εκλάβει την ενέργεια ως «πειρατεία». Αυτό μπορεί να έχει ως αποτέλεσμα την απομάκρυνσή σας από το παιχνίδι(ban). Οπότε είναι καλό να σιγουρέψετε πρώτα ότι το παιχνίδι που προσπαθείτε να εγγράψετε δεν θα σας απαγορεύσει την πρόσβαση(ban). Έχετε προειδοποιηθεί :).&lt;/p&gt;
 
 &lt;p&gt;Άλλη μια προειδοποίηση: Η εγγραφή μέσω OpenGL είναι πειραματική και μπορεί να μην λειτουργήσει σωστά ή ακόμη και να σπάσει(crash) το πρόγραμμα που προσπαθείτε να εγγράψετε. Αν ανησυχείτε για την απώλεια δεδομένων, καλό θα είναι να πάρετε ένα αντίγραφο ασφαλείας πρώτα!&lt;/p&gt;
 
-&lt;p&gt;Αν θέλετε να εγγράψετε παιχνίδια από το Steam,  &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;διαβάστε πρώτα εδώ&lt;/a&gt;.&lt;/p&gt;</translation>
+&lt;p&gt;Αν θέλετε να εγγράψετε παιχνίδια από το Steam,  &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;διαβάστε πρώτα εδώ&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Choose channel</source>

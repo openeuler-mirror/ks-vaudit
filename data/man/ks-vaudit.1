@@ -1,8 +1,8 @@
 .TH SIMPLESCREENRECORDER "1" "May 2020" "SimpleScreenRecorder" "SimpleScreenRecorder Manual"
 .SH NAME
-simplescreenrecorder \- A feature-rich screen recorder that supports X11 and OpenGL.
+ks-vaudit \- A feature-rich screen recorder that supports X11 and OpenGL.
 .SH SYNOPSIS
-.B simplescreenrecorder
+.B ks-vaudit
 [\fI\,OPTIONS\/\fR]
 .SH DESCRIPTION
 SimpleScreenRecorder is a feature-rich screen recorder that supports X11 and
@@ -28,7 +28,7 @@ Write log messages to \fI\,FILE\/\fR. If \fI\,FILE\/\fR is omitted,
 .TP
 \fB\-\-statsfile\fR[=\fI\,FILE\/\fR]
 Write recording statistics to \fI\,FILE\/\fR. If \fI\,FILE\/\fR is omitted,
-\fI\,/dev/shm/simplescreenrecorder\-stats\-PID\/\fP is used. It will
+\fI\,/dev/shm/ks-vaudit\-stats\-PID\/\fP is used. It will
 be updated continuously and deleted when the recording
 page is closed.
 .TP
@@ -92,23 +92,23 @@ Logs:
 .PP
 Input profiles:
 .RS
-/usr/share/simplescreenrecorder/input-profiles/
+/usr/share/ks-vaudit/input-profiles/
 .br
 ~/.ssr/input-profiles/
 .RE
 .PP
 Output profiles:
 .RS
-/usr/share/simplescreenrecorder/output-profiles/
+/usr/share/ks-vaudit/output-profiles/
 .br
 ~/.ssr/output-profiles/
 .RE
 .PP
 Translations:
 .RS
-/usr/share/simplescreenrecorder/translations/
+/usr/share/ks-vaudit/translations/
 .RE
 .SH "SEE ALSO"
 More documentation can be found at:
 .br
-https://www.maartenbaert.be/simplescreenrecorder/
+https://www.maartenbaert.be/ks-vaudit/

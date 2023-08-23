@@ -52,12 +52,12 @@
 
 &lt;p&gt;Another warning: OpenGL recording is experimental, it may not work or even crash the program you are recording. If you are worried about losing program data, make a backup first!&lt;/p&gt;
 
-&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
+&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
         <translation>&lt;p&gt;Upozornění: Nahrávání OpenGL pracuje na principu &quot;injektáže&quot; knihovny do nahrávané aplikace. Tato knihovna nahrazuje některé systémové funkce vlastními za účelem zachycení snímku ještě před jejich zobrazením na obrazovce. Pokud nahráváte hru, která obsahuje funkce pro detekci podvádění (anti-cheat a anti-hack ochrana), hrozí zde teoretické riziko, že hra bude Vaše jednání považovat za formu podvádění. Vzhledem k tomu, že by daná skutečnost mohla vést až k zablokování Vašeho herního účtu, je dobré se *předem* ujistit o tom, že k nečemu takovému nedojde.&lt;/p&gt;
 
 &lt;p&gt;Další upozornění: Nahrávání OpenGL je experimentální a nemusí fungovat správně, případně může vést až k pádu nahrávané aplikace. Pokud se bojíte případné ztráty dat, včas a pravidelně zálohujte!&lt;/p&gt;
 
-&lt;p&gt;Pokud chcete nahrávat hry ze Steamu, přečtěte si, prosím, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;tento návod&lt;/a&gt;.&lt;/p&gt;</translation>
+&lt;p&gt;Pokud chcete nahrávat hry ze Steamu, přečtěte si, prosím, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;tento návod&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../GUI/DialogGLInject.cpp" line="52"/>

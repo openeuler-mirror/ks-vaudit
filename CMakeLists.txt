@@ -7,7 +7,7 @@ endif(POLICY CMP0072)
 
 set(CMAKE_CXX_STANDARD 11)
 
-project(simplescreenrecorder VERSION 0.4.4)
+project(ks-vaudit VERSION 0.4.4)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|i386|i686")
 	set(PROCESSOR_IS_X86 TRUE)
@@ -25,7 +25,7 @@ option(WITH_ALSA "Build with ALSA support." FALSE)
 option(WITH_PULSEAUDIO "Build with PulseAudio support." TRUE)
 option(WITH_JACK "Build with JACK support." FALSE)
 option(WITH_QT5 "Build with Qt5 (instead of Qt4)." TRUE)
-option(WITH_SIMPLESCREENRECORDER "Build the 'simplescreenrecorder' executable." TRUE)
+option(WITH_SIMPLESCREENRECORDER "Build the 'ks-vaudit' executable." TRUE)
 option(WITH_GLINJECT "Build the 'libssr-glinject' library. Required for OpenGL recording." TRUE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -81,18 +81,18 @@ if(WITH_SIMPLESCREENRECORDER)
 	endif()
 	install(
 		DIRECTORY data/output-profiles
-		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/simplescreenrecorder
+		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/ks-vaudit
 	)
 	install(
 		DIRECTORY data/man/
 		DESTINATION ${CMAKE_INSTALL_FULL_MANDIR}/man1
 	)
 	install(
-		FILES data/simplescreenrecorder.desktop
+		FILES data/ks-vaudit.desktop
 		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/applications
 	)
 	install(
-		FILES data/simplescreenrecorder.metainfo.xml
+		FILES data/ks-vaudit.metainfo.xml
 		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/metainfo
 	)
 

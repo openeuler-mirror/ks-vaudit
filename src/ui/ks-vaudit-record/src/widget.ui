@@ -103,8 +103,8 @@ border-top-right-radius: 8px;
       </property>
       <property name="iconSize">
        <size>
-        <width>14</width>
-        <height>14</height>
+        <width>12</width>
+        <height>12</height>
        </size>
       </property>
      </widget>
@@ -167,12 +167,18 @@ border-top-right-radius: 8px;
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/minus-tiny.svg</normaloff>:/images/minus-tiny.svg</iconset>
       </property>
+      <property name="iconSize">
+       <size>
+        <width>13</width>
+        <height>13</height>
+       </size>
+      </property>
      </widget>
      <widget class="QPushButton" name="moreMenuBtn">
       <property name="geometry">
        <rect>
         <x>859</x>
-        <y>8</y>
+        <y>7</y>
         <width>31</width>
         <height>31</height>
        </rect>
@@ -195,8 +201,8 @@ image:none;
       </property>
       <property name="iconSize">
        <size>
-        <width>13</width>
-        <height>13</height>
+        <width>12</width>
+        <height>12</height>
        </size>
       </property>
      </widget>
@@ -570,16 +576,19 @@ border:none;</string>
       <property name="geometry">
        <rect>
         <x>394</x>
-        <y>25</y>
+        <y>26</y>
         <width>100</width>
-        <height>21</height>
+        <height>20</height>
        </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
       </property>
       <property name="maximum">
        <number>100</number>
       </property>
       <property name="value">
-       <number>70</number>
+       <number>0</number>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -589,16 +598,16 @@ border:none;</string>
       <property name="geometry">
        <rect>
         <x>552</x>
-        <y>25</y>
+        <y>26</y>
         <width>100</width>
-        <height>16</height>
+        <height>20</height>
        </rect>
       </property>
       <property name="maximum">
        <number>100</number>
       </property>
       <property name="value">
-       <number>99</number>
+       <number>100</number>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -607,10 +616,10 @@ border:none;</string>
      <widget class="QPushButton" name="audioBtn">
       <property name="geometry">
        <rect>
-        <x>360</x>
-        <y>21</y>
-        <width>24</width>
-        <height>24</height>
+        <x>366</x>
+        <y>26</y>
+        <width>16</width>
+        <height>16</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -625,10 +634,10 @@ border:none;
      <widget class="QPushButton" name="volumnBtn">
       <property name="geometry">
        <rect>
-        <x>518</x>
-        <y>21</y>
-        <width>24</width>
-        <height>24</height>
+        <x>526</x>
+        <y>26</y>
+        <width>16</width>
+        <height>16</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -686,7 +695,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string>常规配置</string>
+       <string> 常规配置</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -720,7 +729,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string>录屏列表</string>
+       <string> 录屏列表</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -752,7 +761,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string>录屏设置</string>
+       <string> 录屏设置</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -868,9 +877,9 @@ border-radius: 4px;
       <property name="geometry">
        <rect>
         <x>36</x>
-        <y>24</y>
-        <width>21</width>
-        <height>21</height>
+        <y>26</y>
+        <width>16</width>
+        <height>16</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -1209,9 +1218,6 @@ border-radius:4px;
         <pointsize>10</pointsize>
        </font>
       </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
       <property name="inputMethodHints">
        <set>Qt::ImhNone</set>
       </property>
@@ -1233,15 +1239,18 @@ border-radius:4px;
         <pointsize>10</pointsize>
        </font>
       </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
       <property name="text">
        <string/>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/plus.svg</normaloff>:/images/plus.svg</iconset>
+        <normaloff>:/images/icon_plus_pre.svg</normaloff>:/images/icon_plus_pre.svg</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>15</width>
+        <height>15</height>
+       </size>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_3">
@@ -1253,22 +1262,25 @@ border-radius:4px;
         <height>34</height>
        </rect>
       </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
       <property name="text">
        <string/>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/minus.svg</normaloff>:/images/minus.svg</iconset>
+        <normaloff>:/images/icon_Less_pre.svg</normaloff>:/images/icon_Less_pre.svg</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>15</width>
+        <height>15</height>
+       </size>
       </property>
      </widget>
     </widget>
     <zorder>SideBar</zorder>
+    <zorder>NormalBody</zorder>
     <zorder>NormalFooterBar</zorder>
     <zorder>ConfigBody</zorder>
-    <zorder>NormalBody</zorder>
     <zorder>ListBody</zorder>
    </widget>
   </widget>

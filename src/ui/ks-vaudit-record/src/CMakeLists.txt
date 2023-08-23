@@ -8,6 +8,7 @@ FILE(GLOB KS_UI_SRC_LIST_UI "./*.ui")
 FILE(GLOB_RECURSE KS_UI_SRC_LIST_RESOURCES "../data/*.qrc")
 
 file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/include/ksvaudit-configure_global.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 set(DBUS_XML_SRC ${CMAKE_CURRENT_BINARY_DIR}/com.kylinsec.Kiran.VauditConfigure.xml)
 set_source_files_properties(${DBUS_XML_SRC}
@@ -16,7 +17,7 @@ set_source_files_properties(${DBUS_XML_SRC}
         NO_NAMESPACE true)
 qt5_add_dbus_interface(CONFIGUREINTERFACE_SRC ${DBUS_XML_SRC} configure_interface)
 foreach (interface_item ${CONFIGUREINTERFACE_SRC})
-    message("INTERFACE_ITEM: " ${interface_item})
+#    message("INTERFACE_ITEM: " ${interface_item})
     set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
 endforeach ()
 

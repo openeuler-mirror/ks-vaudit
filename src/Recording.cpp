@@ -768,7 +768,7 @@ void Recording::OnRecordSaveAndExit(bool confirm) {
         return;
     }
     StopPage(true);
-	exit(0);
+    qApp->quit();
 }
 
 void Recording::UpdateResolutionParameter(){

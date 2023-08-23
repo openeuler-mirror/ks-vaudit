@@ -175,8 +175,8 @@ Recording::Recording(QSettings* qsettings){
 	settings = qsettings;
 
 	m_configure_interface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
-	connect(m_configure_interface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(updateData(QString, QString)));
-	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int, QString)), this, SLOT(switchControl(int, QString)));
+	connect(m_configure_interface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(UpdateConfigureData(QString, QString)));
+	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int,int, QString)), this, SLOT(SwitchControl(int,int,QString)));
 	m_main_screen = qApp->primaryScreen();
 
 	connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)));
@@ -790,8 +790,8 @@ void Recording::OnRecordRestart(){
 /**
  * 配置发生改变
  **/
-void Recording::updateData(QString key, QString value){
-	Logger::LogInfo("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% updateData 信号槽函数 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+void Recording::UpdateConfigureData(QString key, QString value){
+	//Logger::LogInfo("%%%%%%%%%%%%%  UpdateConfigureData 信号槽函数 %%%%%%%%%%%%%%");
 	//Logger::LogInfo("the first is " + key + "the second is " + value);
 	if(key == "record"){	
 		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
@@ -827,15 +827,14 @@ void Recording::updateData(QString key, QString value){
 /**
  *
  **/
-void Recording::switchControl(int to_pid, QString op){
-	Logger::LogInfo("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% switchControl 信号槽函数 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-	//Logger::LogInfo("the first is " + QString::number(a) + "the second is " + b);
+void Recording::SwitchControl(int from_pid,int to_pid,QString op){
+	//Logger::LogInfo("%%%%%%%%% switchControl 信号槽函数 %%%%%%%%%%%%%%%%%%%%%%%%%");	
 	if(to_pid != getpid()){
 		return;
 	}
 	//start stop restart exit
 	if(op == "start"){
-		//已经开始录制了， 这个先不处理
+		OnRecordStart();
 	}else if(op == "pause"){
 		OnRecordPause();		
 	}else if(op == "restart"){

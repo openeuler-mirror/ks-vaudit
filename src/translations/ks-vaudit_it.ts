@@ -52,12 +52,12 @@
 
 &lt;p&gt;Another warning: OpenGL recording is experimental, it may not work or even crash the program you are recording. If you are worried about losing program data, make a backup first!&lt;/p&gt;
 
-&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
+&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
         <translation>&lt;p&gt;Attenzione: la registrazione OpenGL funziona iniettando una libreria nel programma che verrà registrato. Questa biblioteca avrà la precedenza su alcune funzioni di sistema al fine di catturare i fotogrammi prima di essere visualizzati sullo schermo. Se si sta tentando di registrare un gioco che tenta di rilevare tentativi di hacking sul lato client, è (teoricamente) possibile che il gioco consideri questo come un hack. Questo potrebbe anche farti bannare, quindi è una buona idea per assicurarsi che il programma che si desidera registrare non bannerà voi, se * prima * tenta di registrarlo. Siete stati avvertiti:).&lt;/p&gt;
 
 &lt;p&gt;Un altro avvertimento: la registrazione OpenGL è sperimentale, può non funzionare o addirittura mandare in crash il programma che si sta registrando. Se siete preoccupati di perdere i dati del programma, fare un backup prima!&lt;/p&gt;
 
-&lt;p&gt;Se volete registrare giochi Steam, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;leggere questo prima&lt;/a&gt;.&lt;/p&gt;</translation>
+&lt;p&gt;Se volete registrare giochi Steam, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;leggere questo prima&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../GUI/DialogGLInject.cpp" line="52"/>

@@ -52,12 +52,12 @@
 
 &lt;p&gt;Another warning: OpenGL recording is experimental, it may not work or even crash the program you are recording. If you are worried about losing program data, make a backup first!&lt;/p&gt;
 
-&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
+&lt;p&gt;If you want to record Steam games, &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;read this first&lt;/a&gt;.&lt;/p&gt;</source>
         <translation>Varning! OpenGL-inspelning fungerar genom att injicera ett bibliotek i det program som skall spelas in. Detta bibliotek kommer att åsidosätta vissa systemfunktioner, för att fånga upp bildrutorna innan de visas på skärmen. Om du spelar in ett spel som skannar hackniningsförsök på klientsidan, kan spelet möjligen uppfatta detta som ett hack. Det kan till och med få dig avstängd, så du bör säkerställa att du inte blir avstängd/blockerad från programmet du vill spela in, INNAN du försöker spela in det. Du har härmed blivit varnad!
 
 &lt;p&gt;En varning till! OpenGL-inspelning är experimentell så det kanske inte fungerar, eller t.o.m. kraschar programmet du spelar in. Gör först en säkerhetskopia om du är orolig för att förlora data!&lt;/p&gt;
 
-&lt;p&gt;Vill du spela in Steam-spel, bör du läsa &lt;a href=&quot;http://www.maartenbaert.be/simplescreenrecorder/recording-steam-games/&quot;&gt;det här först&lt;/a&gt;!&lt;/p&gt;</translation>
+&lt;p&gt;Vill du spela in Steam-spel, bör du läsa &lt;a href=&quot;http://www.maartenbaert.be/ks-vaudit/recording-steam-games/&quot;&gt;det här först&lt;/a&gt;!&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../GUI/DialogGLInject.cpp" line="52"/>

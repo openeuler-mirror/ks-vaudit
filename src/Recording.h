@@ -189,7 +189,7 @@ private:
 	void StopInput();
 
 public slots:
-	void updateData(QString, QString);
-	void switchControl(int, QString);
+	void UpdateConfigureData(QString, QString); //配置发生变化 响应槽
+	void SwitchControl(int, int, QString); //启动、停止等控制开关 响应槽
 	void ScreenChangedHandler(const QRect&);
 };

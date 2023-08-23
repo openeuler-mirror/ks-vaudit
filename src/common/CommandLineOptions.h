@@ -41,6 +41,7 @@ private:
 	bool m_sync_diagram;
 	bool m_benchmark;
 	bool m_gui;
+	bool m_front_record; //前台录屏
 
 	static CommandLineOptions *s_instance;
 
@@ -63,6 +64,7 @@ public:
 	inline static bool GetSyncDiagram() { return GetInstance()->m_sync_diagram; }
 	inline static bool GetBenchmark() { return GetInstance()->m_benchmark; }
 	inline static bool GetGui() { return GetInstance()->m_gui; }
+	inline static bool GetFrontRecord(){return GetInstance()->m_front_record;}
 
 };
 

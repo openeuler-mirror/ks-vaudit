@@ -116,6 +116,7 @@ CommandLineOptions::CommandLineOptions() {
 	m_sync_diagram = false;
 	m_benchmark = false;
 	m_gui = false;
+	m_front_record = false;// 默认后台审计录屏
 
 	s_instance = this;
 }
@@ -150,7 +151,9 @@ void CommandLineOptions::Parse() {
 				CheckOptionHasNoValue(option, value);
 				PrintOptionHelp();
 				m_gui = false;
-			} else if(option == "--version") {
+			}else if(option == "--record"){
+				m_front_record = true;
+			}else if(option == "--version") {
 				CheckOptionHasNoValue(option, value);
 				Logger::LogInfo(GetVersionInfo());
 				m_gui = false;

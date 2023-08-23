@@ -130,10 +130,12 @@ int main(int argc, char* argv[]) {
 
 	recording_screen.reset(new Recording(&settings));
 	recording_screen->SaveSettings(&settings);
-	recording_screen->OnRecordStart(); //开始录屏
+	if(!CommandLineOptions::GetFrontRecord()){
+		recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
+	}
 	
 	// stop main program
-	Logger::LogInfo("==================== " + Logger::tr("SSR stopped") + " ====================");
+	//Logger::LogInfo("==================== " + Logger::tr("SSR stopped") + " ====================");
 
 	return application.exec();
 }

@@ -337,20 +337,14 @@ void X11Input::Init() {
 	m_fps_current = 0.0;
 
     //initialize the watermark_content
-    if(m_is_use_watermarking){
-        if(access(CONFIG_FILE, F_OK) == 0){
-            Config config(CONFIG_FILE);
-            std::string watermark_content2;
-            watermark_content2 = config.Read("watermark-content", watermark_content2);
-            watermark_content = QString::fromStdString(watermark_content2);
-        }else{
-            watermark_content = "湖南麒麟信安科技股份有限公司!";
-        }
-        
-    }else{
-        watermark_content = "";
-    }
-
+	if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){
+		m_is_use_watermarking = false;
+		watermark_content = settings_ptr ->value("record/water_print_text").toString();
+	}else{
+		m_is_use_watermarking = true;
+		watermark_content = settings_ptr ->value("record/water_print_text").toString();
+	}
+	Logger::LogInfo("the watermark content is " + watermark_content);
 	// start input thread
 	m_should_stop = false;
 	m_error_occurred = false;
@@ -674,6 +668,7 @@ void X11Input::InputThread() {
 			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
 				PushVideoFrame(grab_width, grab_height, NULL, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
 			} else if (m_is_use_watermarking) {
+				watermark_content = settings_ptr ->value("record/water_print_text").toString();
 				// 开启水印
 				uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
 				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);

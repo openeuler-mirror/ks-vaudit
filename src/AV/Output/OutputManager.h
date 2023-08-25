@@ -109,6 +109,11 @@ private:
 
 	void FragmentThread();
 
+	// detect which encode type should be used according to cpu type and gpu type
+	inline int Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt);
+	inline int CheckEncodeType(QString container_name, QString codecname);
+	inline EncodeType ChooseEncodeType(QString container_name);
+
 public:
 	inline const OutputSettings* GetOutputSettings() { return &m_output_settings; }
 	inline const OutputFormat* GetOutputFormat() { return &m_output_format; }

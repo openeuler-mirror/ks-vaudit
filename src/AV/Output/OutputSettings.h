@@ -37,6 +37,7 @@ struct OutputSettings {
 	std::vector<std::pair<QString, QString> > audio_options;
 	unsigned int audio_channels, audio_sample_rate;
 
+	QString encode_quality;
 };
 
 struct OutputFormat {

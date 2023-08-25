@@ -111,6 +111,14 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/syscall.h>
 
+// video encode type
+typedef enum enumEncodeType {
+	EncodeTypeCpu = 0,
+	EncodeTypeVaapi,
+	EncodeTypeQsv,
+	EncodeTypeNv
+} EncodeType;
+
 /*
  * get thread pid to distinct thread
  */

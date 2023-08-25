@@ -276,6 +276,8 @@ void Synchronizer::Init() {
 		InitSegment(lock.get());
 
 		lock->m_warn_drop_video = true;
+		// check if there is voice
+		lock->m_has_voice = -1;
 
 	}
 
@@ -333,19 +335,39 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 	if(videolock->m_next_timestamp != SINK_TIMESTAMP_ASAP && timestamp < videolock->m_next_timestamp - (int64_t) (1000000 / m_output_format->m_video_frame_rate))
 		return;
 
+	// check if there is voice
+	SharedLock lock(&m_shared_data);
+	if (data == NULL && lock->m_last_video_read_data == NULL) {
+		Logger::LogError("[Synchronizer::ReadVideoFrame] image_data is NULL and no last video frame data");
+		return;
+	}
+
 	// update the timestamps
 	videolock->m_last_timestamp = timestamp;
 	videolock->m_next_timestamp = std::max(videolock->m_next_timestamp + (int64_t) (1000000 / m_output_format->m_video_frame_rate), timestamp);
 
-	// create the converted frame
-	std::unique_ptr<AVFrameWrapper> converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, NULL);
+	// statistics changed image count
+	static int image_cnt = 0;
+	static int scale_cnt = 0;
+	static int unchanged_cnt = 0;
+	image_cnt += 1;
+	std::unique_ptr<AVFrameWrapper> converted_frame = NULL;
+	if (data) {
+		scale_cnt += 1;
+		// create the converted frame
+		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, NULL);
 
-	// scale and convert the frame to the right format
-	videolock->m_fast_scaler.Scale(width, height, format, colorspace, &data, &stride,
+		// scale and convert the frame to the right format
+		videolock->m_fast_scaler.Scale(width, height, format, colorspace, &data, &stride,
 			m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, m_output_format->m_video_colorspace,
 			converted_frame->GetFrame()->data, converted_frame->GetFrame()->linesize);
-
-	SharedLock lock(&m_shared_data);
+		lock->m_last_video_read_data = converted_frame->GetFrameData(); 
+	} else {
+		unchanged_cnt += 1;     
+		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, lock->m_last_video_read_data);
+	}
+	if (image_cnt % 100 == 0)
+		Logger::LogInfo(Logger::tr("image count: %1 ").arg(image_cnt) + Logger::tr("unchanged image count: %1 ").arg(unchanged_cnt) + Logger::tr("scale cnt: %1").arg(scale_cnt));
 
 	// avoid memory problems by limiting the video buffer size
 	if(lock->m_video_buffer.size() >= MAX_VIDEO_FRAMES_BUFFERED) {
@@ -832,6 +854,69 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 #else
 				unsigned int planes = 1;
 #endif
+
+				// add by tj to check if there is voice
+				int has_voice = 0;
+				int channels = 0;
+				switch(m_output_format->m_audio_sample_format) {
+					case AV_SAMPLE_FMT_S16: 
+					case AV_SAMPLE_FMT_FLT: {
+						channels = m_output_format->m_audio_channels;
+						lock->m_channel_data.resize(channels);
+						float *data_in = (float*) lock->m_partial_audio_frame.GetData();
+						for(size_t i = 0; i < m_output_format->m_audio_frame_size; ++i) {
+							for(unsigned int c = 0; c < channels; ++c) {
+								lock->m_channel_data[c].Analyze(*(data_in++));
+							}
+						}
+						break;
+					}
+#if SSR_USE_AVUTIL_PLANAR_SAMPLE_FMT
+					case AV_SAMPLE_FMT_S16P: 
+					case AV_SAMPLE_FMT_FLTP: {
+						channels = planes;
+						lock->m_channel_data.resize(channels);
+						for(unsigned int p = 0; p < planes; ++p) {
+							float *data_in = (float*) lock->m_partial_audio_frame.GetData() + p;
+							for(size_t i = 0; i < m_output_format->m_audio_frame_size; ++i) {
+								lock->m_channel_data[p].Analyze(*(data_in++));
+							}
+						}
+						break;
+					}
+#endif
+					default: {
+						assert(false);
+						break;
+					}
+				}       
+
+				// move the low/high values from 'next' to 'current'
+				for(unsigned int c = 0; c < channels; ++c) {
+					lock->m_channel_data[c].m_current_peak = lock->m_channel_data[c].m_next_peak;
+					lock->m_channel_data[c].m_current_rms = sqrt(lock->m_channel_data[c].m_next_rms / (float) m_output_format->m_audio_frame_size);
+					lock->m_channel_data[c].m_next_peak = 0.0f;
+					lock->m_channel_data[c].m_next_rms = 0.0f;
+				}
+
+				std::vector<ChannelData> channel_data = lock->m_channel_data;
+				unsigned int n = channel_data.size();
+				for(unsigned int c = 0; c < n; ++c) {
+					// the scale goes down to 80dB which corresponds to 1.0e-4 (for sound pressure, 20dB = 10x)
+					float val_peak = log10(fmax(1.0e-4f, channel_data[c].m_current_peak)) / 4.0f + 1.0f;
+					float val_rms = log10(fmax(1.0e-4f, channel_data[c].m_current_rms)) / 4.0f + 1.0f;
+					if (val_peak > 0 && val_rms > 0) {
+						has_voice = 1;
+					}
+				}
+				if (lock->m_has_voice == -1 || lock->m_has_voice != has_voice) {
+					lock->m_has_voice = has_voice;
+				}
+				if (!has_voice) {
+					lock->m_partial_audio_frame_samples = 0;
+					continue;
+				}	
+
 				std::unique_ptr<AVFrameWrapper> audio_frame = CreateAudioFrame(m_output_format->m_audio_channels, m_output_format->m_audio_sample_rate,
 																			   m_output_format->m_audio_frame_size, planes, m_output_format->m_audio_sample_format);
 				audio_frame->GetFrame()->pts = lock->m_audio_samples;
@@ -888,7 +973,8 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 void Synchronizer::SynchronizerThread() {
 	try {
 
-		Logger::LogInfo("[Synchronizer::SynchronizerThread] " + Logger::tr("Synchronizer thread started."));
+		pid_t tid = gettid();
+		Logger::LogInfo("[Synchronizer::SynchronizerThread] " + Logger::tr("Synchronizer thread started.") + QString::number(tid));
 
 		while(!m_should_stop) {
 

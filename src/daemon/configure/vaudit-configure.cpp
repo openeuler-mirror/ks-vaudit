@@ -7,6 +7,7 @@
 #include "vaudit-configure.h"
 #include "general-configure.h"
 #include "configure_adaptor.h"
+#include "kiran-log/qt5-log-i.h"
 #include <QDBusConnection>
 #include <QDBusError>
 
@@ -18,20 +19,20 @@ VauditConfigureDbus::VauditConfigureDbus(QObject *parent) : QObject(parent)
     QDBusConnection sysConnection = QDBusConnection::systemBus();
     if (!sysConnection.isConnected())
     {
-        qWarning("Cannot connect to the D-Bus system bus.\n"
+        KLOG_INFO("Cannot connect to the D-Bus system bus.\n"
                  "Please check your system settings and try again.\n");
         exit(1);
     }
 
     if (!sysConnection.registerObject(KSVAUDIT_CONFIGURE_PATH_NAME, KSVAUDIT_CONFIGURE_INTERFACE_NAME, this))
     {
-        qWarning() << "error: register objects failed " << sysConnection.lastError().message();
+        KLOG_INFO() << "error: register objects failed " << sysConnection.lastError().message();
         exit(2);
     }
 
     if (!sysConnection.registerService(KSVAUDIT_CONFIGURE_SERVICE_NAME))
     {
-        qWarning() << "error: register service failed " << sysConnection.lastError().message();
+        KLOG_INFO() << "error: register service failed " << sysConnection.lastError().message();
         exit(3);
     }
 
@@ -92,12 +93,12 @@ bool VauditConfigureDbus::ModifyUserInfo(const QString info)
 
 void VauditConfigureDbus::SwitchControl(int from_pid, int to_pid, const QString &operate)
 {
-    qWarning() << __func__ << from_pid << to_pid << operate;
+    KLOG_INFO() << from_pid << to_pid << operate;
     this->SignalSwitchControl(from_pid, to_pid, operate);
 }
 
 void VauditConfigureDbus::externalConfigureChanged(QString which, QString changed_config)
 {
-    qWarning() << __func__ << which << changed_config;
+    KLOG_INFO() << which << changed_config;
     this->ConfigureChanged(which, changed_config);
 }

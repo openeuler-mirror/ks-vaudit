@@ -366,8 +366,11 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 		unchanged_cnt += 1;     
 		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, lock->m_last_video_read_data);
 	}
+	
+	/*
 	if (image_cnt % 100 == 0)
 		Logger::LogInfo(Logger::tr("image count: %1 ").arg(image_cnt) + Logger::tr("unchanged image count: %1 ").arg(unchanged_cnt) + Logger::tr("scale cnt: %1").arg(scale_cnt));
+	*/
 
 	// avoid memory problems by limiting the video buffer size
 	if(lock->m_video_buffer.size() >= MAX_VIDEO_FRAMES_BUFFERED) {
@@ -974,7 +977,7 @@ void Synchronizer::SynchronizerThread() {
 	try {
 
 		pid_t tid = gettid();
-		Logger::LogInfo("[Synchronizer::SynchronizerThread] " + Logger::tr("Synchronizer thread started.") + QString::number(tid));
+		Logger::LogInfo("[Synchronizer::SynchronizerThread] " + Logger::tr("Synchronizer thread started. tid: ") + QString::number(tid));
 
 		while(!m_should_stop) {
 

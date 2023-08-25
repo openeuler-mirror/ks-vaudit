@@ -588,7 +588,7 @@ out:
 EncodeType OutputManager::ChooseEncodeType(QString container_name) {
 
 	if ((QString::compare(container_name, "mp4", Qt::CaseInsensitive) != 0) && 
-		QString::compare(container_name, "ogv", Qt::CaseInsensitive) != 0) {
+		QString::compare(container_name, "ogg", Qt::CaseInsensitive) != 0) {
 		Logger::LogWarning("[OutputManager::ChooseEncodeType] container name invalid: " + container_name);
 		return EncodeTypeCpu;
 	}

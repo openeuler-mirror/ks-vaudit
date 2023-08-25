@@ -104,6 +104,8 @@ set(sources
 	common/TempBuffer.h
 	common/Config.h
 	common/Config.cpp
+	KyNotify.cpp
+	KyNotifyInterface.cpp
 	Recording.cpp
 	Recording.h
 	Benchmark.cpp
@@ -172,6 +174,10 @@ add_executable(ks-vaudit
 	${VAUDITCONFIGURE_SRC}
 )
 
+set(GLIB_INCLUDE_DIRS "/usr/include/glib-2.0" "/usr/lib64/glib-2.0/include")
+set(GTK_INCLUDE_DIRS "/usr/include/gtk-2.0" "/usr/include/cairo" "/usr/include/pango-1.0" "/usr/lib64/gtk-2.0/include/"
+                     "/usr/include/gdk-pixbuf-2.0/" "/usr/include/atk-1.0/")
+
 target_include_directories(ks-vaudit PRIVATE
 	${AVFORMAT_INCLUDE_DIRS}
 	${AVCODEC_INCLUDE_DIRS}
@@ -182,6 +188,8 @@ target_include_directories(ks-vaudit PRIVATE
 	${X11_Xfixes_INCLUDE_PATH}
 	${X11_Xi_INCLUDE_PATH}
 	${X11_Xinerama_INCLUDE_PATH}
+	${GLIB_INCLUDE_DIRS}
+	${GTK_INCLUDE_DIRS}
 	$<$<BOOL:${WITH_V4L2}>:${V4L2_INCLUDE_DIRS}>
 	$<$<BOOL:${WITH_ALSA}>:${ALSA_INCLUDE_DIRS}>
 	$<$<BOOL:${WITH_PULSEAUDIO}>:${PULSEAUDIO_INCLUDE_DIRS}>
@@ -200,6 +208,10 @@ target_link_libraries(ks-vaudit PRIVATE
 	-lrt
 	Qt5::DBus
 	Qt5::Core
+	glib-2.0
+	gobject-2.0
+	notify
+	klog-qt5
 	${AVFORMAT_LIBRARIES}
 	${AVCODEC_LIBRARIES}
 	${AVUTIL_LIBRARIES}

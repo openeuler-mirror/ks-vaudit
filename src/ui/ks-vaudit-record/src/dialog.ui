@@ -200,7 +200,7 @@ border-top-right-radius:6px;
   </widget>
  </widget>
  <resources>
-  <include location="src.qrc"/>
+  <include location="../data/src.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -553,7 +553,7 @@ border:none;</string>
      <widget class="QLabel" name="timeStamp">
       <property name="geometry">
        <rect>
-        <x>120</x>
+        <x>130</x>
         <y>20</y>
         <width>90</width>
         <height>24</height>
@@ -569,7 +569,7 @@ border:none;</string>
 </string>
       </property>
       <property name="text">
-       <string>00:00:00</string>
+       <string>0:00:00</string>
       </property>
      </widget>
      <widget class="QSlider" name="audioSlider">
@@ -1279,9 +1279,9 @@ border-radius:4px;
     </widget>
     <zorder>SideBar</zorder>
     <zorder>NormalBody</zorder>
-    <zorder>NormalFooterBar</zorder>
     <zorder>ConfigBody</zorder>
     <zorder>ListBody</zorder>
+    <zorder>NormalFooterBar</zorder>
    </widget>
   </widget>
  </widget>

@@ -32,7 +32,7 @@ extern "C" {
 
 
 static std::unique_ptr<Recording> recording_screen = NULL;
-static QSettings* settings_ptr = NULL;
+QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){

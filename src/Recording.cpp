@@ -242,10 +242,15 @@ void Recording::StartPage() {
 
 	// get the output settings
 	m_output_settings.file = QString(""); // will be set later
-	m_output_settings.container_avname = settings->value("output/container_av", QString()).toString();
+	if(settings->value("output/container_av", QString()).toString() == "ogv"){
+		m_output_settings.container_avname = "ogg";
+	}else{
+		m_output_settings.container_avname = settings->value("output/container_av", QString()).toString();
+	}
 	//m_output_settings.container_avname = QString("mp4");   
 
 	m_output_settings.video_codec_avname = settings->value("output/video_codec_av", QString()).toString();
+	Logger::LogInfo("------>the m_output_settings.video_codec_avname is " + m_output_settings.video_codec_avname);
 
 	m_output_settings.video_kbit_rate = 128;
 	m_output_settings.video_width = m_video_in_width;
@@ -341,7 +346,12 @@ QRect Recording::CombineScreenGeometries(const std::vector<QRect>& screen_geomet
 void Recording::SaveSettings(QSettings* settings) {
 
 	//通过DBus 接口从配置中心读取
-	QString value = m_configure_interface->GetRecordInfo();
+	QString value;
+	if(!CommandLineOptions::GetFrontRecord()){ //后台审计
+		value = m_configure_interface->GetAuditInfo();
+	}else{ //前台录屏
+		value = m_configure_interface->GetRecordInfo();
+	}
 	QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
 
 	if(!doc.isObject()){
@@ -351,7 +361,7 @@ void Recording::SaveSettings(QSettings* settings) {
 
 	QJsonObject jsonObj = doc.object();
 	for(auto key:jsonObj.keys()){
-		Logger::LogInfo(" --------------keys and value is ---------------------------------"  + jsonObj[key].toString());
+		Logger::LogInfo(" --------------keys and value is -------------- " + key + "  " + jsonObj[key].toString());
 	}
 
 	//bool ret = m_configure_interface->SetRecordItemValue("{\"Fps\": \"7\", \"FileType\":\"mp4\"}");
@@ -417,17 +427,27 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
-	settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
 
 	key = "FileType";
-	settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
-	settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
-	settings->setValue("output/video_codec_av", "libx264");
-	settings->setValue("output/video_kbit_rate", 128);
-	settings->setValue("output/video_h264_crf", 23);
-	settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	//settings.setValue("output/video_vp8_cpu_used", GetVP8CPUUsed());
-	//settings->setValue("output/video_options", GetVideoOptions());
+	if(jsonObj[key].toString() == "mp4"){
+		settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
+		settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
+		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
+		settings->setValue("output/video_codec_av", "libx264");
+		settings->setValue("output/video_kbit_rate", 128);
+		settings->setValue("output/video_h264_crf", 23);
+		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
+	}else if(jsonObj[key].toString() == "ogv"){
+		settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
+		settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
+		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_VP8));
+		settings->setValue("output/video_codec_av", "libvpx"); //硬件加速用h264_vaapi
+		settings->setValue("output/video_kbit_rate", 128);
+		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
+	}else{
+		Logger::LogError("the video codec error \n");
+		qApp->quit();
+	}
 	settings->setValue("output/video_allow_frame_skipping", true);
 
 	settings->setValue("record/hotkey_enable", false); //禁用快捷键

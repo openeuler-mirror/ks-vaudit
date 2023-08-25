@@ -497,4 +497,6 @@ inline void MultiGroupVisible(std::initializer_list<std::pair<std::initializer_l
 	}
 }
 
+extern QSettings* settings_ptr;
+
 #endif // GLOBAL_H

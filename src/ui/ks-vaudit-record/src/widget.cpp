@@ -17,7 +17,6 @@
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
 
-
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -37,9 +36,6 @@ Widget::Widget(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground, true);
 
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
-    //connect(sf, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(updateData(QString, QString)));
-//    connect(m_dbusInterface, SIGNAL(ConfigureChanged(QString)), this, SLOT(updateData(QString)));
-//    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int, QString)), this, SLOT(switchControl(int, QString)));
 
     init_ui();
 
@@ -48,10 +44,7 @@ Widget::Widget(QWidget *parent) :
 Widget::~Widget()
 {
     delete ui;
-//    if (m_flashTimer){
-//        delete m_flashTimer;
-//        m_flashTimer = nullptr;
-//    }
+
 }
 
 
@@ -103,6 +96,8 @@ void Widget::init_ui()
     readConfig();
     m_selfPID = QCoreApplication::applicationPid();
     m_recordPID = startRecrodProcess();
+
+    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int,QString)), this, SLOT(refreshTime(int, int, QString)));
 }
 
 void Widget::comboboxStyle(){
@@ -303,6 +298,8 @@ void Widget::on_volumnSlider_valueChanged(int value)
     }else if (value >=50){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v1.svg);border:none;");
     }
+    // 滑块值变动，传递给配置中心
+    setConfig("SpeakerVolume", QString("%1").arg(value));
 }
 
 void Widget::on_audioBtn_clicked()
@@ -321,6 +318,8 @@ void Widget::on_audioSlider_valueChanged(int value)
     }else if (value > 0){
         ui->audioBtn->setStyleSheet("image:url(:/images/m1.svg);border:none;");
     }
+    // 滑块值变动，传递给配置中心
+    setConfig("MicVolume", QString("%1").arg(value));
 }
 
 void Widget::on_playBtn_clicked()
@@ -330,12 +329,6 @@ void Widget::on_playBtn_clicked()
     }
     m_isRecording = !m_isRecording;
     if (m_isRecording){
-        if (m_needRestart){
-            sendSwitchControl(m_selfPID, m_recordPID, "restart");
-        }else{
-            sendSwitchControl(m_selfPID, m_recordPID, "start");
-        }
-        m_needRestart = false;
         Widget::showMinimized();
         ui->playBtn->setStyleSheet("image:url(:/images/pauseRecord.svg);border:none;");
         ui->audioBox->setDisabled(true);
@@ -347,6 +340,12 @@ void Widget::on_playBtn_clicked()
         ui->remainderBox->setDisabled(true);
         ui->typeBox->setDisabled(true);
         ui->pushButton->setDisabled(true);
+        if (m_needRestart){
+            sendSwitchControl(m_selfPID, m_recordPID, "restart");
+        }else{
+            sendSwitchControl(m_selfPID, m_recordPID, "start");
+        }
+        m_needRestart = false;
         KLOG_DEBUG("Start record screen!");
     }else{
         sendSwitchControl(m_selfPID, m_recordPID, "pause");
@@ -355,6 +354,25 @@ void Widget::on_playBtn_clicked()
         KLOG_DEBUG("Pause record screen!");
 
     }
+}
+
+
+void Widget::on_stopBtn_clicked()
+{
+    sendSwitchControl(m_selfPID, m_recordPID, "stop");
+    ui->timeStamp->setText("0:00:00");
+    m_isRecording = false;
+    m_needRestart = false;
+    ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
+    ui->audioBox->setDisabled(false);
+    ui->resolutionBox->setDisabled(false);
+    ui->clarityBox->setDisabled(false);
+    ui->fpsEdit->setDisabled(false);
+    ui->pushButton_2->setDisabled(false);
+    ui->pushButton_3->setDisabled(false);
+    ui->remainderBox->setDisabled(false);
+    ui->typeBox->setDisabled(false);
+    ui->pushButton->setDisabled(false);
 }
 
 void Widget::on_ConfigBtn_clicked()
@@ -401,14 +419,17 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
 {
     QString a = arg1;
     if (a == "1"){
-        // 1开头的时候边框置红，不能开始录屏
+        // 1开头的时候边框置红，开始录屏设为10fps
         ui->fpsEdit->setStyleSheet("background-color:#222222;"
                                    "border:1px solid #ff4444;"
                                    "border-radius:6px;"
                                    "color:#fff;"
                                    "padding-left:10px;");
         ui->label_11->setStyleSheet("color:#ff4444");
-//        m_hasError = ui->ConfigBtn;
+        // 这里如果是1，直接点开始录屏
+        // 会先发SwitchControl的信号开始录屏，再修改fps
+        // 所以这里设置一下10fps
+        setConfig("Fps","10");
     }else if (a.startsWith("0") || a.length() == 0){
         // 有种情况是0000000开头，强行设为最低2
         ui->fpsEdit->setText("2");
@@ -418,7 +439,6 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
                                    "color:#fff;"
                                    "padding-left:10px;");
         ui->label_11->setStyleSheet("color:#999999");
-//        m_hasError = NULL;
     }else{
         ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
                                    "background-color:#222222;"
@@ -435,8 +455,9 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
                                    "padding-left:10px;"
                                    "}");
         ui->label_11->setStyleSheet("color:#999999");
-//        m_hasError = NULL;
+        setConfig("Fps",a);
     }
+
 }
 
 void Widget::on_pushButton_2_clicked()
@@ -706,13 +727,16 @@ QString Widget::getVideoDuration(QString absPath)
             mins %= 60;
 //            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
         }else{
-            KLOG_DEBUG() << "No duration";
+            KLOG_DEBUG() << absPath << "No duration";
         }
     }
     if (pCtx != NULL){
         avformat_close_input(&pCtx);
     }
-    // 目前假设单个视频文件不超过99小时
+    // 目前假设单个视频文件超过99小时
+    if (hours > 99){
+        return QString("%1").arg("大于99小时");
+    }
     return QString("%1:%2:%3").arg(hours,2,10,QLatin1Char('0')).arg(mins,2,10,QLatin1Char('0')).arg(secs,2,10,QLatin1Char('0'));
 }
 
@@ -792,9 +816,11 @@ void Widget::refreshList(QString regName)
 
         QDateTime dateTime = testList->at(p).lastModified();
         QString modifyDate = dateTime.toString("yyyy/MM/dd hh:mm");
-
-        m_model->setItem(p, 0, new QStandardItem());
-        ui->videoList->setIndexWidget(m_model->index(p,0), createVideoNameEdit(fileName));
+        QStandardItem *fileNameItem = new QStandardItem(fileName);
+        fileNameItem->setToolTip(fileName);
+        m_model->setItem(p, 0, fileNameItem);
+        m_model->item(p,0)->setFont( QFont("Sans Serif", 10) );
+//        ui->videoList->setIndexWidget(m_model->index(p,0), createVideoNameEdit(fileName));
         m_model->setItem(p, 1, new QStandardItem(duration));
         m_model->item(p,1)->setFont( QFont("Sans Serif", 10) );
         m_model->setItem(p, 2, new QStandardItem(fileSize));
@@ -809,10 +835,13 @@ void Widget::refreshList(QString regName)
 
 QLineEdit *Widget::createVideoNameEdit(QString fileName)
 {
+    // 暂时不用该方法创建列表，文本过长显示有问题
     QLineEdit *fileNameEdit = new QLineEdit();
     fileNameEdit->setText(fileName);
+//    fileNameEdit->setMaximumWidth(302);
+    fileNameEdit->setFixedSize(190,36);
     fileNameEdit->setStyleSheet("QLineEdit{"
-                                "background-color:transparent;"
+                                "background-color:red;"
                                 "color:#fff;"
                                 "font:12px;"
                                 "}");
@@ -820,7 +849,7 @@ QLineEdit *Widget::createVideoNameEdit(QString fileName)
     return fileNameEdit;
 }
 
-QJsonDocument Widget::readConfig()
+void Widget::readConfig()
 {
     QString value = m_dbusInterface->GetRecordInfo();
     QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
@@ -878,11 +907,14 @@ QJsonDocument Widget::readConfig()
             }else if(k == "WaterPrintText"){
                 ui->waterprintText->setText(jsonObj[k].toString());
                 m_waterText = jsonObj[k].toString();
+            }else if(k == "MicVolume"){
+                ui->audioSlider->setValue(jsonObj[k].toString().toInt());
+            }else if(k == "SpeakerVolume"){
+                ui->volumnSlider->setValue(jsonObj[k].toString().toInt());
             }
         }
     }
     ui->waterprintText->setDisabled(true);
-    return doc;
 }
 
 void Widget::setConfig(QString key, QString value)
@@ -891,7 +923,6 @@ void Widget::setConfig(QString key, QString value)
     jsonObj[key] = QString("%1").arg(value);
     QJsonDocument doc(jsonObj);
     QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
-    KLOG_DEBUG()  << "aaaaaaaaaaaaaa: " << a;
     m_dbusInterface->SetRecordItemValue(a);
     KLOG_DEBUG() << __func__ << "key: " << key << "value: " << value;
 }
@@ -917,27 +948,17 @@ void Widget::sendSwitchControl(int from_pid, int to_pid, QString op)
     KLOG_DEBUG() << __func__ << "from: " << from_pid << "to: " << to_pid << "op: " << op;
 }
 
-
-void Widget::on_stopBtn_clicked()
-{
-    sendSwitchControl(m_selfPID, m_recordPID, "stop");
-    m_isRecording = false;
-    m_needRestart = false;
-    ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
-    ui->audioBox->setDisabled(false);
-    ui->resolutionBox->setDisabled(false);
-    ui->clarityBox->setDisabled(false);
-    ui->fpsEdit->setDisabled(false);
-    ui->pushButton_2->setDisabled(false);
-    ui->pushButton_3->setDisabled(false);
-    ui->remainderBox->setDisabled(false);
-    ui->typeBox->setDisabled(false);
-    ui->pushButton->setDisabled(false);
-}
-
 void Widget::realClose()
 {
     // 目前采用kill，不知道后端是否处理了kill或者exit信号
     m_recordP->kill();
-    close();
+    this->close();
+}
+
+void Widget::refreshTime(int from_pid, int to_pid, QString op)
+{
+    if (from_pid == m_recordPID && to_pid == m_selfPID && op.startsWith("totaltime")){
+        QString timeText = op.split(" ")[1];
+        ui->timeStamp->setText(timeText);
+    }
 }

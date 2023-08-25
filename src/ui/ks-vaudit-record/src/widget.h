@@ -10,10 +10,13 @@
 #include <QStandardItemModel>
 #include <QAction>
 #include <QLineEdit>
-#include <dialog.h>
 #include <QProcess>
+#include <QTimer>
+
+#include "dialog.h"
 #include "configure_interface.h"
 #include "kiran-log/qt5-log-i.h"
+
 
 namespace Ui {
 class Widget;
@@ -39,7 +42,7 @@ protected:
     QString getVideoDuration(QString absPath);
     void refreshList(QString regName = QString(""));
     QLineEdit *createVideoNameEdit(QString fileName);
-    QJsonDocument readConfig();
+    void readConfig();
     void setConfig(QString key, QString value);
     int startRecrodProcess();
     void sendSwitchControl(int from_pid, int to_pid, QString op);
@@ -118,6 +121,8 @@ private slots:
 
     void realClose();
 
+    void refreshTime(int, int, QString);
+
 signals:
 
 
@@ -148,6 +153,7 @@ private:
     int m_selfPID = 0;
     bool m_needRestart = false;
     QProcess *m_recordP;
+
 };
 
 #endif // WIDGET_H

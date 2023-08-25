@@ -185,8 +185,8 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 	if (m_hw_device_ctx_ref != NULL) {
 		return;
 	}
-
-	avcodec_register_all();
+	// 函数已过期，不需要调用
+	// avcodec_register_all();
 
 	int ret = 0;
 	if (m_enc_type == EncodeTypeVaapi) {

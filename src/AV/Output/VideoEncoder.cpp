@@ -56,7 +56,10 @@ VideoEncoder::~VideoEncoder() {
 }
 
 AVPixelFormat VideoEncoder::GetPixelFormat() {
-	return GetCodecContext()->pix_fmt;
+	AVPixelFormat fmt = GetCodecContext()->pix_fmt;
+	if (fmt == AV_PIX_FMT_VAAPI || fmt == AV_PIX_FMT_QSV)
+		fmt = AV_PIX_FMT_NV12;
+	return fmt;
 }
 
 int VideoEncoder::GetColorSpace() {
@@ -197,6 +200,19 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 		}
 		break;
 	}
+
+	Logger::LogInfo("[VideoEncoder::PrepareStream] " + Logger::tr("width: %1.").arg(width) + Logger::tr("height: %1.").arg(height));
+
+	if (strstr(codec->name, "vaapi") != NULL) {
+		codec_context->colorspace = AVCOL_SPC_BT709;
+		codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
+		return;
+	} else if (strstr(codec->name, "qsv") != NULL) {
+		codec_context->colorspace = AVCOL_SPC_BT709;
+		codec_context->pix_fmt = AV_PIX_FMT_QSV;
+		return;
+	}
+
 	if(codec_context->pix_fmt == AV_PIX_FMT_NONE) {
 		Logger::LogError("[VideoEncoder::PrepareStream] " + Logger::tr("Error: The pixel format is not supported by the codec!"));
 		throw LibavException();
@@ -206,13 +222,20 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 
 bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
+	if (frame == NULL) {
+		Logger::LogError("ViderEncoder::EncodeFrame frame is NULL");
+		return false;
+	}
+
 	if(frame != NULL) {
 #if SSR_USE_AVFRAME_WIDTH_HEIGHT
 		assert(frame->GetFrame()->width == GetCodecContext()->width);
 		assert(frame->GetFrame()->height == GetCodecContext()->height);
 #endif
 #if SSR_USE_AVFRAME_FORMAT
-		assert(frame->GetFrame()->format == GetCodecContext()->pix_fmt);
+		if (GetCodecContext()->pix_fmt != AV_PIX_FMT_VAAPI && GetCodecContext()->pix_fmt != AV_PIX_FMT_QSV) {
+			assert(frame->GetFrame()->format == GetCodecContext()->pix_fmt);
+		}
 #endif
 #if SSR_USE_AVFRAME_SAR
 		assert(frame->GetFrame()->sample_aspect_ratio.num == GetCodecContext()->sample_aspect_ratio.num);
@@ -224,10 +247,40 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 	// send a frame
 	AVFrame *avframe = (frame == NULL)? NULL : frame->Release();
-	try {
-		if(avcodec_send_frame(GetCodecContext(), avframe) < 0) {
-			Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Sending of video frame failed!"));
+
+	int ret = 0;
+	if (m_enc_type == EncodeTypeVaapi) {
+		if (m_avframe_gpu == NULL) {
+			m_avframe_gpu = av_frame_alloc();
+			assert(m_avframe_gpu != NULL);
+			assert(m_hw_frames_ctx_ref != NULL);
+			ret = av_hwframe_get_buffer( m_hw_frames_ctx_ref, m_avframe_gpu, 0 );
+			assert(ret >= 0);
+		}
+
+		m_avframe_gpu->format = AV_PIX_FMT_VAAPI;
+		m_avframe_gpu->width = avframe->width;
+		m_avframe_gpu->height = avframe->height;
+		m_avframe_gpu->pts = avframe->pts;
+		ret = av_hwframe_transfer_data(m_avframe_gpu, avframe, 0);
+		if (ret < 0) {
+			Logger::LogError("av_hwframe_transfer_data failed");
+			av_frame_free(&avframe);
 			throw LibavException();
+		}
+	}
+
+	try {
+		if (m_enc_type == EncodeTypeVaapi) {
+			if(avcodec_send_frame(GetCodecContext(), m_avframe_gpu) < 0) {
+				Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Sending of vaapi video frame failed!"));
+				throw LibavException();
+			}
+		} else {
+			if(avcodec_send_frame(GetCodecContext(), avframe) < 0) {
+				Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Sending of video frame failed!"));
+				throw LibavException();
+			}
 		}
 	} catch(...) {
 		av_frame_free(&avframe);

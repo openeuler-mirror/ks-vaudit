@@ -182,22 +182,22 @@ static void X11ImageDrawCursor(Display* dpy, XImage* image, int recording_area_x
  * @brief 设置水印
  */
 static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_content , unsigned int grab_width, unsigned int grab_height){
-    //水印处理, pixel format为PBGRA格式
-    cairo_surface_t * surface;
-    cairo_t* cr;
-    surface = cairo_image_surface_create_for_data(image_data, CAIRO_FORMAT_RGB24, grab_width, grab_height, grab_width * 4);
-    cr = cairo_create(surface);
-    cairo_set_source_rgb(cr, 0, 1, 0);
-    cairo_set_line_width(cr, 8);
-    cairo_select_font_face(cr, "STSong", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size(cr, 40);
-    cairo_move_to(cr, grab_width/2 - 150, grab_height -70);
-    //cairo_show_text(cr, "湖南麒麟信安科技股份有限公司!");
-    cairo_show_text(cr, watermark_content.toStdString().c_str());
-    cairo_surface_flush(surface);
-    uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
+	//水印处理, pixel format为PBGRA格式
+	cairo_surface_t * surface;
+	cairo_t* cr;
+	surface = cairo_image_surface_create_for_data(image_data, CAIRO_FORMAT_RGB24, grab_width, grab_height, grab_width * 4);
+	cr = cairo_create(surface);
+	cairo_set_source_rgb(cr, 0, 1, 0);
+	cairo_set_line_width(cr, 8);
+	cairo_select_font_face(cr, "STSong", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_font_size(cr, 40);
+	cairo_move_to(cr, grab_width/2 - 150, grab_height -70);
+	//cairo_show_text(cr, "湖南麒麟信安科技股份有限公司!");
+	cairo_show_text(cr, watermark_content.toStdString().c_str());
+	cairo_surface_flush(surface);
+	uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
 
-    return imagedata_front;
+	return imagedata_front;
 }
 
 
@@ -212,14 +212,21 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
 	m_follow_fullscreen = follow_full_screen;
 
 	m_x11_display = NULL;
-	m_x11_image = NULL;
-	m_x11_shm_info.shmseg = 0;
-	m_x11_shm_info.shmid = -1;
-	m_x11_shm_info.shmaddr = (char*) -1;
-	m_x11_shm_info.readOnly = false;
-	m_x11_shm_server_attached = false;
-    
-    m_is_use_watermarking = is_use_watermarking;
+	// use two image buffer to check whether image changed to prev image
+	m_x11_img_idx = 0;
+	m_x11_image[0] = NULL;
+	m_x11_image[1] = NULL;
+	m_x11_shm_info[0].shmseg = 0;
+	m_x11_shm_info[0].shmid = -1;
+	m_x11_shm_info[0].shmaddr = (char*) -1;
+	m_x11_shm_info[0].readOnly = false;
+	m_x11_shm_info[1].shmseg = 0;
+	m_x11_shm_info[1].shmid = -1;
+	m_x11_shm_info[1].shmaddr = (char*) -1;
+	m_x11_shm_info[1].readOnly = false;
+   	m_x11_shm_server_attached = false;
+ 
+	m_is_use_watermarking = is_use_watermarking;
 
 	m_screen_bbox = Rect(m_x, m_y, m_x + m_width, m_y + m_height);
 
@@ -359,51 +366,74 @@ void X11Input::Free() {
 	}
 }
 
+/*
+ * when use shm to get image, init image object 
+ * width: width of image resolution
+ * height: height of image resolution
+ */
 void X11Input::AllocateImage(unsigned int width, unsigned int height) {
 	assert(m_x11_use_shm);
-	if(m_x11_shm_server_attached && m_x11_image->width == (int) width && m_x11_image->height == (int) height) {
+
+	if(m_x11_shm_server_attached && m_x11_image[0]->width == (int) width && m_x11_image[0]->height == (int) height
+		&& m_x11_image[1]->width == (int) width && m_x11_image[1]->height == (int) height) {
+		// Logger::LogInfo("[X11Input::AllocateImage] reuse image");
 		return; // reuse existing image
 	}
+
+	Logger::LogInfo("[X11Input::AllocateImage] create new image");
 	FreeImage();
-	m_x11_image = XShmCreateImage(m_x11_display, m_x11_visual, m_x11_depth, ZPixmap, NULL, &m_x11_shm_info, width, height);
-	if(m_x11_image == NULL) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't create shared image!"));
-		throw X11Exception();
+
+	for (int i = 0;i < 2; i++) {
+		m_x11_image[i] = XShmCreateImage(m_x11_display, m_x11_visual, m_x11_depth, ZPixmap, NULL, &m_x11_shm_info[i], width, height);
+		if(m_x11_image[i] == NULL) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't create shared image!"));
+			throw X11Exception();
+		}
+
+		m_x11_shm_info[i].shmid = shmget(IPC_PRIVATE, m_x11_image[i]->bytes_per_line * m_x11_image[i]->height, IPC_CREAT | 0700);
+		if(m_x11_shm_info[i].shmid == -1) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't get shared memory!"));
+			throw X11Exception();
+		}
+
+		m_x11_shm_info[i].shmaddr = (char*) shmat(m_x11_shm_info[i].shmid, NULL, SHM_RND);
+		if(m_x11_shm_info[i].shmaddr == (char*) -1) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't attach to shared memory!"));
+			throw X11Exception();
+		}
+
+		m_x11_image[i]->data = m_x11_shm_info[i].shmaddr;
+		if(!XShmAttach(m_x11_display, &m_x11_shm_info[i])) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't attach server to shared memory!"));
+			throw X11Exception();
+		}
 	}
-	m_x11_shm_info.shmid = shmget(IPC_PRIVATE, m_x11_image->bytes_per_line * m_x11_image->height, IPC_CREAT | 0700);
-	if(m_x11_shm_info.shmid == -1) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't get shared memory!"));
-		throw X11Exception();
-	}
-	m_x11_shm_info.shmaddr = (char*) shmat(m_x11_shm_info.shmid, NULL, SHM_RND);
-	if(m_x11_shm_info.shmaddr == (char*) -1) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't attach to shared memory!"));
-		throw X11Exception();
-	}
-	m_x11_image->data = m_x11_shm_info.shmaddr;
-	if(!XShmAttach(m_x11_display, &m_x11_shm_info)) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't attach server to shared memory!"));
-		throw X11Exception();
-	}
+
 	m_x11_shm_server_attached = true;
 }
 
 void X11Input::FreeImage() {
 	if(m_x11_shm_server_attached) {
-		XShmDetach(m_x11_display, &m_x11_shm_info);
+		XShmDetach(m_x11_display, &m_x11_shm_info[0]);
+		XShmDetach(m_x11_display, &m_x11_shm_info[1]);
 		m_x11_shm_server_attached = false;
 	}
-	if(m_x11_shm_info.shmaddr != (char*) -1) {
-		shmdt(m_x11_shm_info.shmaddr);
-		m_x11_shm_info.shmaddr = (char*) -1;
-	}
-	if(m_x11_shm_info.shmid != -1) {
-		shmctl(m_x11_shm_info.shmid, IPC_RMID, NULL);
-		m_x11_shm_info.shmid = -1;
-	}
-	if(m_x11_image != NULL) {
-		XDestroyImage(m_x11_image);
-		m_x11_image = NULL;
+
+	for (int i = 0;i < 2;i ++) {
+		if(m_x11_shm_info[i].shmaddr != (char*) -1) {
+			shmdt(m_x11_shm_info[i].shmaddr);
+			m_x11_shm_info[i].shmaddr = (char*) -1;
+		}
+
+		if(m_x11_shm_info[i].shmid != -1) {
+			shmctl(m_x11_shm_info[i].shmid, IPC_RMID, NULL);
+			m_x11_shm_info[i].shmid = -1;
+		}
+
+		if(m_x11_image[i] != NULL) {
+			XDestroyImage(m_x11_image[i]);
+			m_x11_image[i] = NULL;
+		}
 	}
 }
 
@@ -519,7 +549,8 @@ void X11Input::UpdateScreenConfiguration() {
 void X11Input::InputThread() {
 	try {
 
-		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started."));
+		pid_t tid = gettid();
+		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
 
 		unsigned int grab_x = m_x, grab_y = m_y, grab_width = m_width, grab_height = m_height;
 		bool has_initial_cursor = false;
@@ -586,21 +617,25 @@ void X11Input::InputThread() {
 				}
 			}
 
+			// swap image buffer
+			int old_img_idx = m_x11_img_idx;
+			m_x11_img_idx = m_x11_img_idx == 0 ? 1 : 0;
+
 			// get the image
 			if(m_x11_use_shm) {
 				AllocateImage(grab_width, grab_height);
-				if(!XShmGetImage(m_x11_display, m_x11_root, m_x11_image, grab_x, grab_y, AllPlanes)) {
+				if(!XShmGetImage(m_x11_display, m_x11_root, m_x11_image[m_x11_img_idx], grab_x, grab_y, AllPlanes)) {
 					Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (using shared memory)!\n"
 									 "    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
 					throw X11Exception();
 				}
 			} else {
-				if(m_x11_image != NULL) {
-					XDestroyImage(m_x11_image);
-					m_x11_image = NULL;
-				}
-				m_x11_image = XGetImage(m_x11_display, m_x11_root, grab_x, grab_y, grab_width, grab_height, AllPlanes, ZPixmap);
-				if(m_x11_image == NULL) {
+				if(m_x11_image[m_x11_img_idx] != NULL) {
+					XDestroyImage(m_x11_image[m_x11_img_idx]);
+					m_x11_image[m_x11_img_idx] = NULL;
+                                }
+				m_x11_image[m_x11_img_idx] = XGetImage(m_x11_display, m_x11_root, grab_x, grab_y, grab_width, grab_height, AllPlanes, ZPixmap);
+				if(m_x11_image[m_x11_img_idx] == NULL) {
 					Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (not using shared memory)!\n"
 									 "    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
 					throw X11Exception();
@@ -619,30 +654,34 @@ void X11Input::InputThread() {
 				if(rect.m_y2 > grab_y + grab_height)
 					rect.m_y2 = grab_y + grab_height;
 				if(rect.m_x2 > rect.m_x1 && rect.m_y2 > rect.m_y1)
-					X11ImageClearRectangle(m_x11_image, rect.m_x1 - grab_x, rect.m_y1 - grab_y, rect.m_x2 - rect.m_x1, rect.m_y2 - rect.m_y1);
+					X11ImageClearRectangle(m_x11_image[m_x11_img_idx], rect.m_x1 - grab_x, rect.m_y1 - grab_y, rect.m_x2 - rect.m_x1, rect.m_y2 - rect.m_y1);
 			}
 
 			// draw the cursor
 			if(m_record_cursor) {
-				X11ImageDrawCursor(m_x11_display, m_x11_image, grab_x, grab_y);
+				X11ImageDrawCursor(m_x11_display, m_x11_image[m_x11_img_idx], grab_x, grab_y);
 			}
 
 			// increase the frame counter
 			++m_frame_counter;
 
 			// push the frame
-			uint8_t *image_data = (uint8_t*) m_x11_image->data;
-			int image_stride = m_x11_image->bytes_per_line;
-			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image);
+			uint8_t *image_data = (uint8_t*) m_x11_image[m_x11_img_idx]->data;
+			int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
+			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image[m_x11_img_idx]);
            
-            //开启水印 
-            if(m_is_use_watermarking){
-                uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
-                PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
-            }else{
-                PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
-            }
-                
+			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
+			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
+				PushVideoFrame(grab_width, grab_height, NULL, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+			} else if (m_is_use_watermarking) {
+				// 开启水印
+				uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
+				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+				
+			} else {
+				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+			}
+    
 			last_timestamp = timestamp;
 
 		}

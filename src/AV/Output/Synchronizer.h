@@ -28,6 +28,8 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "TempBuffer.h"
 #include "AVWrapper.h"
 
+#include "SampleCast.h"
+
 class OutputManager;
 class OutputSettings;
 class OutputFormat;
@@ -43,6 +45,17 @@ private:
 		int64_t m_last_timestamp; // the timestamp of the last received video frame (for gap detection)
 		int64_t m_next_timestamp; // the preferred timestamp of the next frame (for rate control)
 
+	};
+	struct ChannelData {
+		float m_current_peak, m_current_rms;
+		float m_next_peak, m_next_rms;
+		inline ChannelData() { m_current_peak = m_current_rms = m_next_peak = m_next_rms = 0.0f; }
+		template<typename IN>
+		inline void Analyze(IN sample) {
+			float val = fabs(SampleCast<IN, float>(sample));
+			m_next_peak = fmax(m_next_peak, val);
+			m_next_rms += val * val;
+		}
 	};
 	struct AudioData {
 
@@ -78,6 +91,10 @@ private:
 		int64_t m_segment_video_accumulated_delay; // sum of all video frame delays that were applied so far
 
 		std::shared_ptr<AVFrameData> m_last_video_frame_data;
+		// to check if image changed
+		std::shared_ptr<AVFrameData> m_last_video_read_data;
+		std::vector<ChannelData> m_channel_data;
+		int m_has_voice;
 
 		bool m_warn_drop_video;
 

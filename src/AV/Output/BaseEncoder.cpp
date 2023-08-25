@@ -65,6 +65,12 @@ BaseEncoder::BaseEncoder(Muxer* muxer, AVStream* stream, AVCodecContext* codec_c
 	m_is_done = false;
 	m_error_occurred = false;
 
+	// 初始化GPU加速相关变量
+	m_enc_type = EncodeTypeCpu;
+	m_hw_device_ctx_ref = NULL;
+	m_hw_frames_ctx_ref = NULL;
+	m_avframe_gpu = NULL;
+
 	try {
 		Init(codec, options);
 	} catch(...) {
@@ -157,13 +163,83 @@ void BaseEncoder::IncrementPacketCounter() {
 	++lock->m_total_packets;
 }
 
+void BaseEncoder::InitGpuEncode(AVCodec* codec) {
+
+	// only for video
+	if (GetCodecContext()->width <= 0 || GetCodecContext()->height <= 0) {
+		return;
+	}
+
+	if (strstr(codec->name, "vaapi")) {
+		SetEncodeType(EncodeTypeVaapi);
+	} else if (strstr(codec->name, "qsv")) {
+		SetEncodeType(EncodeTypeQsv);
+	} else {
+		SetEncodeType(EncodeTypeCpu);
+	} 
+
+	if (m_enc_type == EncodeTypeCpu) {
+		return;
+	}
+
+	if (m_hw_device_ctx_ref != NULL) {
+		return;
+	}
+
+	int ret = 0;
+	if (m_enc_type == EncodeTypeVaapi) {
+		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
+	} else if (m_enc_type == EncodeTypeQsv) {
+		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+	}
+
+	assert(ret >= 0);
+	
+	if (m_enc_type == EncodeTypeVaapi) {
+		m_codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
+
+		m_hw_frames_ctx_ref = av_hwframe_ctx_alloc(m_hw_device_ctx_ref);
+		assert(m_hw_frames_ctx_ref != NULL);
+
+		AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)m_hw_frames_ctx_ref->data;
+		hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
+		hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
+		hw_frames_ctx->initial_pool_size = 0;
+		hw_frames_ctx->width     = GetCodecContext()->width;
+		hw_frames_ctx->height    = GetCodecContext()->height;
+
+		// vaapi编码时需要做转码，需要初始化 frames_ctx
+		ret = av_hwframe_ctx_init(m_hw_frames_ctx_ref);
+		assert(ret >= 0);
+
+		m_codec_context->hw_frames_ctx = av_buffer_ref(m_hw_frames_ctx_ref);
+	} else if (m_enc_type == EncodeTypeQsv) {
+		m_codec_context->pix_fmt = AV_PIX_FMT_NV12;
+	
+		// 将硬件设备关联到编码器
+		m_codec_context->hw_device_ctx = av_buffer_ref(m_hw_device_ctx_ref);
+	}
+
+}
+
 void BaseEncoder::Init(AVCodec* codec, AVDictionary** options) {
 
+	InitGpuEncode(codec);
+
 	// open codec
-	if(avcodec_open2(m_codec_context, codec, options) < 0) {
-		Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
-		throw LibavException();
+	// to do, process options, need more work
+	if (strstr(codec->name, "qsv") != NULL) {
+		if(avcodec_open2(m_codec_context, codec, NULL) < 0) {
+			Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
+			throw LibavException();
+		}
+	} else {
+		if(avcodec_open2(m_codec_context, codec, options) < 0) {
+			Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
+			throw LibavException();
+		}
 	}
+
 	m_codec_opened = true;
 
 	// show a warning for every option that wasn't recognized
@@ -185,7 +261,8 @@ void BaseEncoder::EncoderThread() {
 
 	try {
 
-		Logger::LogInfo("[BaseEncoder::EncoderThread] " + Logger::tr("Encoder thread started."));
+		pid_t tid = gettid();
+		Logger::LogInfo("[BaseEncoder::EncoderThread] " + Logger::tr("Encoder thread started. tid: ") + QString::number(tid));
 
 		// normal encoding
 		while(!m_should_stop) {

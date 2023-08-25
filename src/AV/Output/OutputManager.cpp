@@ -272,9 +272,39 @@ void OutputManager::StartFragment() {
 	std::unique_ptr<Muxer> muxer(new Muxer(m_output_settings.container_avname, filename));
 	VideoEncoder *video_encoder = NULL;
 	AudioEncoder *audio_encoder = NULL;
-	if(!m_output_settings.video_codec_avname.isEmpty())
-		video_encoder = muxer->AddVideoEncoder(m_output_settings.video_codec_avname, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
-											   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
+
+	// check which encode type should be used, 
+	// to do, need more work
+	EncodeType enc_type = EncodeTypeQsv;
+	QString enc_name;
+	
+	if(QString::compare(m_output_settings.container_avname, "mp4", Qt::CaseInsensitive) == 0) {
+		if (enc_type == EncodeTypeVaapi) {
+			enc_name = "h264_vaapi";
+		} else if (enc_type == EncodeTypeQsv) {
+			enc_name = "h264_qsv";	
+		} else {
+			enc_name = "libx264";
+		}
+	} else if(QString::compare(m_output_settings.container_avname, "ogg", Qt::CaseInsensitive) == 0) {
+		if (enc_type == EncodeTypeVaapi) {
+			enc_name = "vp8_vaapi";
+		} else if (enc_type == EncodeTypeQsv) {
+			// enc_name = "vp8_qsv";	
+			Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: vp8_qsv in invalid"));
+			return;
+		} else {
+			enc_name = "libvpx";
+		}
+	} else {
+		Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: container avname only support mp4 or ogg, avname:%1").arg(m_output_settings.container_avname));
+		return;
+	}
+
+	Logger::LogInfo("[OutputManager::StartFragment] " + Logger::tr("codec name: %1").arg(enc_name));
+	video_encoder = muxer->AddVideoEncoder(enc_name, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
+						   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
+
 	if(!m_output_settings.audio_codec_avname.isEmpty())
 		audio_encoder = muxer->AddAudioEncoder(m_output_settings.audio_codec_avname, m_output_settings.audio_options, m_output_settings.audio_kbit_rate * 1000,
 											   m_output_settings.audio_channels, m_output_settings.audio_sample_rate);
@@ -344,7 +374,8 @@ void OutputManager::StopFragment() {
 void OutputManager::FragmentThread() {
 	try {
 
-		Logger::LogInfo("[OutputManager::FragmentThread] " + Logger::tr("Fragment thread started."));
+		pid_t tid = gettid();
+		Logger::LogInfo("[OutputManager::FragmentThread] " + Logger::tr("Fragment thread started. tid: ") + QString::number(tid));
 
 		while(!m_should_stop) {
 

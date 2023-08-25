@@ -25,6 +25,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Recording.h"
 #include "EnumStrings.h"
 #include "ScreenScaling.h"
+#include "kiran-log/qt5-log-i.h"
 extern "C" {
 #include<signal.h>
 }
@@ -42,6 +43,9 @@ static void sig_handler(int sig){
 }
 
 int main(int argc, char* argv[]) {
+	int klog_ret = klog_qt5_init("", "kylinsec-session", "ks-vaudit", "ks-vaudit");
+	if (0 == klog_ret)
+		KLOG_DEBUG() << "init klog succeed";
 	signal(SIGINT, sig_handler);
 	XInitThreads();
 

@@ -26,7 +26,8 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Synchronizer.h"
 #include "X11Input.h"
 #include "SimpleSynth.h"
-
+#include "KyNotifyInterface.h"
+#include "kiran-log/qt5-log-i.h"
 
 ENUMSTRINGS(Recording::enum_video_area) = {
     {Recording::VIDEO_AREA_SCREEN, "screen"},
@@ -481,6 +482,9 @@ void Recording::SaveSettings(QSettings* settings) {
 	// save encode Quality
 	settings->setValue("encode/quality", jsonObj["Quality"].toString());
 	m_output_settings.encode_quality = jsonObj["Quality"].toString();
+
+	key = "TimingReminder";
+	KyNotifyInterface::instance().setTiming( jsonObj[key].toString().toInt());
 }
 
 void Recording::StopPage(bool save) {
@@ -868,6 +872,8 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			}else if(key == "Quality"){
 				settings->setValue("encode/quality", jsonObj[key].toString());
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
+			} else if (key == "TimingReminder") {
+				KyNotifyInterface::instance().setTiming( jsonObj[key].toString().toInt());
 			}
 		}
 	}
@@ -883,16 +889,20 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	}
 	//start stop restart exit
 	if(op == "start"){
-		Logger::LogInfo("[Recording::SwitchControl] start record");	
+		Logger::LogInfo("[Recording::SwitchControl] start record");
 		OnRecordStart();
+		KyNotifyInterface::instance().sendNotify(KSVAUDIT_START);
 	}else if(op == "pause"){
-		Logger::LogInfo("[Recording::SwitchControl] pause record");	
-		OnRecordPause();		
+		Logger::LogInfo("[Recording::SwitchControl] pause record");
+		OnRecordPause();
+		KyNotifyInterface::instance().sendNotify(KSVAUDIT_PAUSE);
 	}else if(op == "restart"){
-		Logger::LogInfo("[Recording::SwitchControl] restart record");	
+		Logger::LogInfo("[Recording::SwitchControl] restart record");
+		KyNotifyInterface::instance().sendNotify(KSVAUDIT_START);
 		OnRecordStartPause();
 	}else if(op == "stop"){
-		Logger::LogInfo("[Recording::SwitchControl] stop record");	
+		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSaveAndExit(true);
+		KyNotifyInterface::instance().sendNotify(KSVAUDIT_STOP);
 	}
 }

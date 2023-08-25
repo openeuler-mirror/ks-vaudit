@@ -900,6 +900,8 @@ int Widget::startRecrodProcess()
 {
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
+    pp->setStandardOutputFile("/var/log/ks-vaudit-record.out");
+    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
     QStringList arg;
     arg << "--record";
     pp->start("/usr/bin/ks-vaudit",arg);

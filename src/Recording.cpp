@@ -180,8 +180,31 @@ Recording::Recording(QSettings* qsettings){
 	m_main_screen = qApp->primaryScreen();
 
 	connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)));
+
+	m_selfPID = getpid();
+	m_recordUiPID = getppid();
+	// 定时向前端发送录屏时间信息
+	m_tm = new QTimer();
+	m_tm->setInterval(1000);
+	connect(m_tm, SIGNAL(timeout()), this, SLOT(OnRecordTimer()));
+	m_tm->start();
 }
 
+
+void Recording::OnRecordTimer() {
+	if (m_output_manager == NULL) {
+		return;
+	}
+
+	uint64_t total_time = (m_output_manager->GetSynchronizer() == NULL)? 0 : m_output_manager->GetSynchronizer()->GetTotalTime();
+	if (total_time == m_last_send_time) {
+		return;
+	}
+	
+	QString msg = QString("totaltime ") + ReadableTime(total_time);
+	m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, msg);
+	Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
+}
 
 void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
 	//分辨率变化后的处理
@@ -381,6 +404,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/video_w", rect.width()); //width
 	settings->setValue("input/video_h", rect.height()); //height
 
+	//Fps
 	QString key("Fps");	
 	settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt()); //帧率
 	settings->setValue("input/video_scale", false);
@@ -416,28 +440,24 @@ void Recording::SaveSettings(QSettings* settings) {
 		}
 	}
 
-
-	QString file_suffix;
-	if(jsonObj["FileType"].toString() == "mp4"){
-		file_suffix = ".mp4";
-	}else{
-		file_suffix = ".ogv";
-	}
-	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
-	settings->setValue("output/separate_files", true);
-	settings->setValue("output/add_timestamp", true);
-
 	key = "FileType";
-	if(jsonObj[key].toString() == "mp4"){
-		settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
+	QString file_type = jsonObj[key].toString().toLower();
+	QString file_suffix;
+
+	if(QString::compare(file_type, "mp4", Qt::CaseInsensitive) == 0) {
+		file_suffix = ".mp4";
+
+		settings->setValue("output/container_av", file_type); //mp4 ogv 格式等
 		settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
 		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
 		settings->setValue("output/video_codec_av", "libx264");
 		settings->setValue("output/video_kbit_rate", 128);
 		settings->setValue("output/video_h264_crf", 23);
 		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(jsonObj[key].toString() == "ogv"){
-		settings->setValue("output/container_av", jsonObj[key].toString()); //mp4 ogv 格式等
+	}else if(QString::compare(file_type, "ogg", Qt::CaseInsensitive) == 0){
+		file_suffix = ".ogv";
+
+		settings->setValue("output/container_av", file_type); //mp4 ogv 格式等
 		settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
 		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_VP8));
 		settings->setValue("output/video_codec_av", "libvpx"); //硬件加速用h264_vaapi
@@ -447,21 +467,10 @@ void Recording::SaveSettings(QSettings* settings) {
 		Logger::LogError("the video codec error \n");
 		qApp->quit();
 	}
+	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
+	settings->setValue("output/separate_files", true);
+	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/video_allow_frame_skipping", true);
-
-	//水印相关设置
-	key = "WaterPrint";
-	if(jsonObj[key].toString().toInt() == 0){
-		settings->setValue("record/is_use_watermark", 0);
-		key = "WaterPrintText";
-		settings->setValue("record/water_print_text", jsonObj[key].toString());
-	}else{
-		settings->setValue("record/is_use_watermark", 1);
-		key = "WaterPrintText";
-		settings->setValue("record/water_print_text", jsonObj[key].toString());
-	}
-
-	//Logger::LogInfo(" --------------the waterprintText is -------------- " + settings ->value("record/water_print_text").toString());
 
 	settings->setValue("record/hotkey_enable", false); //禁用快捷键
 	settings->setValue("record/hotkey_ctrl", false);
@@ -859,46 +868,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			}else if(key == "Quality"){
 				settings->setValue("encode/quality", jsonObj[key].toString());
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
-			}else if(key == "is_use_watermark"){
-				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
 			}
-			else if(key == "WaterPrintText"){
-				settings->setValue("record/water_print_text", jsonObj[key].toString());
-			}
-		}
-	}else { //后台审计
-		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
-		if(!doc.isObject()){
-			Logger::LogError("Cann't get the DBus configure!");
-			return;
-		}
-
-		QJsonObject jsonObj = doc.object();
-		for(auto key:jsonObj.keys()){
-			Logger::LogInfo(" --------------keys and value is ---------------------------------" + key + "==========" + jsonObj[key].toString());
-
-			//修改settings
-			if(key == "Fps"){
-				settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
-			}else if(key == "RecordAudio"){
-				settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt());
-			}else if(key == "FilePath"){
-				QString file_path(jsonObj[key].toString());
-				QString file_suffix;
-				if(jsonObj["FileType"].toString() == "mp4"){
-					file_suffix = ".mp4";
-				}else{
-					file_suffix = ".ogv";
-				}
-			}else if(key == "FileType"){
-				settings->setValue("output/container_av", jsonObj[key].toString());
-			}else if(key == "is_use_watermark"){
-				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}
-			else if(key == "WaterPrintText"){
-				settings->setValue("record/water_print_text", jsonObj[key].toString());
-			}
-
 		}
 	}
 }
@@ -913,12 +883,16 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	}
 	//start stop restart exit
 	if(op == "start"){
+		Logger::LogInfo("[Recording::SwitchControl] start record");	
 		OnRecordStart();
 	}else if(op == "pause"){
+		Logger::LogInfo("[Recording::SwitchControl] pause record");	
 		OnRecordPause();		
 	}else if(op == "restart"){
+		Logger::LogInfo("[Recording::SwitchControl] restart record");	
 		OnRecordStartPause();
 	}else if(op == "stop"){
+		Logger::LogInfo("[Recording::SwitchControl] stop record");	
 		OnRecordSaveAndExit(true);
 	}
 }

@@ -284,7 +284,7 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 
 		error = av_hwframe_transfer_data(avframe_gpu, frame, 0);
 		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_hwframe_transfer_data failed.");
+			Logger::LogInfo("[OutputManager::Encode] av_hwframe_transfer_data failed.");
 			goto out;
 		}
 	
@@ -349,7 +349,8 @@ int OutputManager::CheckEncodeType(QString container_name, QString codecname) {
 	int i = 0;
 	int x = 0, y = 0;
 
-	avcodec_register_all();
+	// 提示函数已经过期，不需要调用了
+	// avcodec_register_all();
 
 	codec = avcodec_find_encoder_by_name(codecname.toLatin1().data());
 	if (!codec) {
@@ -541,7 +542,10 @@ out:
 	}
 
 	if (frame) {
-		av_freep(&frame->data[0]);
+		// 查看文档，av_image_alloc 分配的内存需要手动释放，通过 av_frame_get_buffer 分配的貌似不需要
+		if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+			av_freep(&frame->data[0]);
+		}
 
 #if SSR_USE_AV_FRAME_FREE
 		av_frame_free(&frame);

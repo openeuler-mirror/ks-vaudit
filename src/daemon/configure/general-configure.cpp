@@ -1,6 +1,6 @@
 #include "general-configure.h"
+#include "kiran-log/qt5-log-i.h"
 #include <QDir>
-#include <QDebug>
 #include <QFileInfo>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -11,20 +11,47 @@
 #define FPS_MAX_VALUE               60
 #define BITRATE_MIN_VALUE           1
 #define BITRATE_MAX_VALUE           256
-#define TIMING_REMINDER_MAX_VALUE   60
+#define VOLUME_MAX_VALUE            100
 #define WATER_PRINT_MAX_SIZE        64
-#define SAVE_DAYS_MIN_VALUE         1
-#define SAVE_DAYS_MAX_VALUE         (INT_MAX)
-#define RECORD_PER_USER_MIN_VALUE   1
-#define RECORD_PER_USER_MAX_VALUE   (INT_MAX)
-#define FREE_SPACE_MIN_SIZE         (1*1024*1024*1024ULL)
-#define FREE_SPACE_MAX_SIZE         (ULLONG_MAX)
-#define FILE_MIN_SIZE               (1024ULL)
-#define FILE_MAX_SIZE               (4*1024*1024*1024ULL)
+#define CONFIG_TIME_MINUTE          60
+#define FREE_SPACE_MIN_VALUE        (5*1024*1024*1024ULL)
+#define CONFIG_INT_MAX              (INT_MAX)
+#define CONFIG_ULL_MAX              (ULLONG_MAX)
+#define FILE_MIN_SIZE               (1024*1024ULL)
+#define FILE_MAX_SIZE               (16*1024*1024*1024ULL)
 
 GeneralConfigure::GeneralConfigure(QObject *parent)
 {
     m_confFile = "/etc/ks-vaudit/ks-vaudit.conf";
+    m_itemMap.insert(CONFIG_RECORD, "record");
+    m_itemMap.insert(CONFIG_RECORD_FILEPATH, "record/FilePath");
+    m_itemMap.insert(CONFIG_RECORD_FILETYPE, "record/FileType");
+    m_itemMap.insert(CONFIG_RECORD_RECORD_VIDIO, "record/RecordVideo");
+    m_itemMap.insert(CONFIG_RECORD_FPS, "record/Fps");
+    m_itemMap.insert(CONFIG_RECORD_QUALITY, "record/Quality");
+    m_itemMap.insert(CONFIG_RECORD_RECORD_AUDIO, "record/RecordAudio");
+    m_itemMap.insert(CONFIG_RECORD_BITRATE, "record/Bitrate");
+    m_itemMap.insert(CONFIG_RECORD_WATER_PRINT, "record/WaterPrint");
+    m_itemMap.insert(CONFIG_RECORD_WATER_PRINT_TEXT, "record/WaterPrintText");
+    m_itemMap.insert(CONFIG_RECORD_TIMING_REMINDER, "record/TimingReminder");
+    m_itemMap.insert(CONFIG_RECORD_MIC_VOLUME, "record/MicVolume");
+    m_itemMap.insert(CONFIG_RECORD_SPEAKER_VOLUME, "record/SpeakerVolume");
+    m_itemMap.insert(CONFIG_AUDIT, "audit");
+    m_itemMap.insert(CONFIG_AUDIT_FILEPATH, "audit/FilePath");
+    m_itemMap.insert(CONFIG_AUDIT_FILETYPE, "audit/FileType");
+    m_itemMap.insert(CONFIG_AUDIT_RECORD_VIDIO, "audit/RecordVideo");
+    m_itemMap.insert(CONFIG_AUDIT_FPS, "audit/Fps");
+    m_itemMap.insert(CONFIG_AUDIT_QUALITY, "audit/Quality");
+    m_itemMap.insert(CONFIG_AUDIT_RECORD_AUDIO, "audit/RecordAudio");
+    m_itemMap.insert(CONFIG_AUDIT_BITRATE, "audit/Bitrate");
+    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT, "audit/TimingPause");
+    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT_TEXT, "audit/WaterPrint");
+    m_itemMap.insert(CONFIG_AUDIT_TIMING_PAUSE, "audit/WaterPrintText");
+    m_itemMap.insert(CONFIG_AUDIT_MIN_FREE_SPACE, "audit/MinFreeSpace");
+    m_itemMap.insert(CONFIG_AUDIT_MAX_SAVE_DAYS, "audit/MaxSaveDays");
+    m_itemMap.insert(CONFIG_AUDIT_MAX_FILE_SIZE, "audit/MaxFileSize");
+    m_itemMap.insert(CONFIG_AUDIT_MAX_RECORD_PER_USER, "audit/MaxRecordPerUser");
+
     m_confSettings = QSharedPointer<QSettings>(new QSettings(m_confFile, QSettings::IniFormat));
     initConfig();
 
@@ -42,14 +69,14 @@ GeneralConfigure &GeneralConfigure::Instance()
 bool GeneralConfigure::setRecordConfigure(const QString &param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8());
     if (!jsonDocument.isObject())
         return false;
 
     QJsonObject jsonObj = jsonDocument.object();
     for (auto k : jsonObj.keys())
     {
-        if (!checkRecordParam(k, jsonObj[k].toString()))
+        if (!checkRecordParam(fullKey(m_itemMap[CONFIG_RECORD], k), jsonObj[k].toString()))
             return false;
     }
 
@@ -57,7 +84,10 @@ bool GeneralConfigure::setRecordConfigure(const QString &param)
     for (auto k : jsonObj.keys())
     {
         m_confSettings->setValue(k, jsonObj[k].toString());
-        qWarning() << "write " << k << jsonObj[k].toString();
+        QString key = fullKey(m_itemMap[CONFIG_RECORD], k);
+        m_lastMap[key] = jsonObj[k].toString();
+
+        KLOG_INFO() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
     }
 
     m_confSettings->endGroup();
@@ -68,14 +98,14 @@ bool GeneralConfigure::setRecordConfigure(const QString &param)
 bool GeneralConfigure::setAuditConfigure(const QString &param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8());
     if (!jsonDocument.isObject())
         return false;
 
     QJsonObject jsonObj = jsonDocument.object();
     for (auto k : jsonObj.keys())
     {
-        if (!checkAuditParam(k, jsonObj[k].toString()))
+        if (!checkAuditParam(fullKey(m_itemMap[CONFIG_AUDIT], k), jsonObj[k].toString()))
             return false;
     }
 
@@ -83,7 +113,9 @@ bool GeneralConfigure::setAuditConfigure(const QString &param)
     for (auto k : jsonObj.keys())
     {
         m_confSettings->setValue(k, jsonObj[k].toString());
-        qWarning() << "write " << k << jsonObj[k].toString();
+        QString key = fullKey(m_itemMap[CONFIG_AUDIT], k);
+        m_lastMap[key] = jsonObj[k].toString();
+        KLOG_INFO() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
     }
 
     m_confSettings->endGroup();
@@ -110,27 +142,10 @@ GeneralConfigure::~GeneralConfigure()
 
 void GeneralConfigure::initConfig()
 {
-    m_itemMap.insert(CONFIG_RECORD, "record");
-    m_itemMap.insert(CONFIG_AUDIT, "audit");
-    m_itemMap.insert(CONFIG_FILEPATH, "FilePath");
-    m_itemMap.insert(CONFIG_FILETYPE, "FileType");
-    m_itemMap.insert(CONFIG_RECORD_VIDIO, "RecordVideo");
-    m_itemMap.insert(CONFIG_FPS, "Fps");
-    m_itemMap.insert(CONFIG_QUALITY, "Quality");
-    m_itemMap.insert(CONFIG_RECORD_AUDIO, "RecordAudio");
-    m_itemMap.insert(CONFIG_BITRATE, "Bitrate");
-    m_itemMap.insert(CONFIG_TIMING_REMINDER, "TimingReminder");
-    m_itemMap.insert(CONFIG_WATER_PRINT, "WaterPrint");
-    m_itemMap.insert(CONFIG_WATER_PRINT_TEXT, "WaterPrintText");
-    m_itemMap.insert(CONFIG_AUDIT_MIN_FREE_SPACE, "MinFreeSpace");
-    m_itemMap.insert(CONFIG_AUDIT_MAX_SAVE_DAYS, "MaxSaveDays");
-    m_itemMap.insert(CONFIG_AUDIT_MAX_FILE_SIZE, "MaxFileSize");
-    m_itemMap.insert(CONFIG_AUDIT_MAX_RECORD_PER_USER, "MaxRecordPerUser");
-
     QFileInfo fileinfo(m_confSettings->fileName());
-    qWarning() << m_confSettings->fileName() << fileinfo.isFile();
+    KLOG_INFO() << m_confSettings->fileName() << fileinfo.isFile();
 
-    if (fileinfo.isFile())
+    if (fileinfo.isFile() && fileinfo.size())
     {
         m_confSettings->sync();
         for (auto key : m_confSettings->allKeys())
@@ -147,52 +162,37 @@ void GeneralConfigure::initConfig()
         }
         m_confSettings->sync();
     }
-
-    QFile file(m_confFile);
-    if (file.open(QIODevice::ReadOnly))
-    {
-        m_data.reserve(file.size());
-        QTextStream in(&file);
-        while (1) {
-            QString line = in.readLine();
-            if (line.isNull())
-                break;
-            if (line.isEmpty())
-                continue;
-
-            m_data.push_back(line);
-        }
-        file.close();
-    }
 }
 
 void GeneralConfigure::initData()
 {
-    m_lastMap.insert("record/FilePath", "~/ks-vaudit");
-    m_lastMap.insert("record/FileType", "MP4");
-    m_lastMap.insert("record/RecordVideo", "1");
-    m_lastMap.insert("record/Fps", "15");
-    m_lastMap.insert("record/Quality", "0");
-    m_lastMap.insert("record/RecordAudio", "all");
-    m_lastMap.insert("record/Bitrate", "128");
-    m_lastMap.insert("record/TimingReminder", "0");
-    m_lastMap.insert("record/WaterPrint", "0");
-    m_lastMap.insert("record/WaterPrintText", "kylinsec");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILEPATH], "~/ks-vaudit");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILETYPE], "MP4");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_VIDIO], "1");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FPS], "15");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_QUALITY], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_AUDIO], "all");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_BITRATE], "128");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT_TEXT], "kylinsec");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_TIMING_REMINDER], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIC_VOLUME], "70");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME], "70");
 
-    m_lastMap.insert("audit/FilePath", "~/ks-vaudit");
-    m_lastMap.insert("audit/FileType", "MP4");
-    m_lastMap.insert("audit/RecordVideo", "1");
-    m_lastMap.insert("audit/Fps", "15");
-    m_lastMap.insert("audit/Quality", "0");
-    m_lastMap.insert("audit/RecordAudio", "all");
-    m_lastMap.insert("audit/Bitrate", "128");
-    m_lastMap.insert("audit/TimingReminder", "0");
-    m_lastMap.insert("audit/WaterPrint", "0");
-    m_lastMap.insert("audit/WaterPrintText", "kylinsec");
-    m_lastMap.insert("audit/MinFreeSpace", "10737741824");
-    m_lastMap.insert("audit/MaxSaveDays", "30");
-    m_lastMap.insert("audit/MaxFileSize", "10737741824");
-    m_lastMap.insert("audit/MaxRecordPerUser", "2");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILEPATH], "~/ks-vaudit");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILETYPE], "MP4");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_VIDIO], "1");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FPS], "10");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_QUALITY], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_AUDIO], "all");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_BITRATE], "128");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT_TEXT], "kylinsec");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_TIMING_PAUSE], "5");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MIN_FREE_SPACE], "10737741824");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_SAVE_DAYS], "3");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_FILE_SIZE], "10737741824");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_RECORD_PER_USER], "1");
 }
 
 QString GeneralConfigure::readGroupConfig(QString group)
@@ -210,53 +210,74 @@ QString GeneralConfigure::readGroupConfig(QString group)
     return QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
 }
 
-bool GeneralConfigure::checkRecordParam(QString item, QString value, bool *pIn)
+QString GeneralConfigure::fullKey(QString group, QString key)
 {
-    if (m_itemMap[CONFIG_FILEPATH] == item)
-        return checkPath(value);
-    if (m_itemMap[CONFIG_FILETYPE] == item)
-        return checkType(value);
-    if (m_itemMap[CONFIG_RECORD_VIDIO] == item)
-        return checkEnable(value);
-    if (m_itemMap[CONFIG_FPS] == item)
-        return checkInteger(value, FPS_MIN_VALUE, FPS_MAX_VALUE);
-    if (m_itemMap[CONFIG_QUALITY] == item)
-        return checkInteger(value, 0, 2);
-    if (m_itemMap[CONFIG_RECORD_AUDIO] == item)
-        return checkRecordAudio(value);
-    if (m_itemMap[CONFIG_BITRATE] == item)
-        return checkInteger(value, BITRATE_MIN_VALUE, BITRATE_MAX_VALUE);
-    if (m_itemMap[CONFIG_TIMING_REMINDER] == item)
-        return checkInteger(value, 0, TIMING_REMINDER_MAX_VALUE);
-    if (m_itemMap[CONFIG_WATER_PRINT] == item)
-        return checkEnable(value);
-    if (m_itemMap[CONFIG_WATER_PRINT_TEXT] == item)
-        return checkWaterPrint(value);
+    return group + "/" + key;
+}
 
-    if (pIn)
-        *pIn = false;
-    else
-        qWarning() << item << " is not in the record configure options";
+bool GeneralConfigure::checkRecordParam(QString item, QString value)
+{
+    if (m_itemMap[CONFIG_RECORD_FILEPATH] == item)
+        return checkPath(value);
+    if (m_itemMap[CONFIG_RECORD_FILETYPE] == item)
+        return checkType(value);
+    if (m_itemMap[CONFIG_RECORD_RECORD_VIDIO] == item)
+        return checkEnable(value);
+    if (m_itemMap[CONFIG_RECORD_FPS] == item)
+        return checkInteger(value, FPS_MIN_VALUE, FPS_MAX_VALUE);
+    if (m_itemMap[CONFIG_RECORD_QUALITY] == item)
+        return checkInteger(value, 0, 2);
+    if (m_itemMap[CONFIG_RECORD_RECORD_AUDIO] == item)
+        return checkRecordAudio(value);
+    if (m_itemMap[CONFIG_RECORD_BITRATE] == item)
+        return checkInteger(value, BITRATE_MIN_VALUE, BITRATE_MAX_VALUE);
+    if (m_itemMap[CONFIG_RECORD_WATER_PRINT] == item)
+        return checkEnable(value);
+    if (m_itemMap[CONFIG_RECORD_WATER_PRINT_TEXT] == item)
+        return checkWaterPrint(value);
+    if (m_itemMap[CONFIG_RECORD_TIMING_REMINDER] == item)
+        return checkInteger(value, 0, CONFIG_TIME_MINUTE);
+    if (m_itemMap[CONFIG_RECORD_MIC_VOLUME] == item)
+        return checkInteger(value, 0, VOLUME_MAX_VALUE);
+    if (m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME] == item)
+        return checkInteger(value, 0, VOLUME_MAX_VALUE);
+
+    KLOG_INFO() << item << " is not in the record configure options";
     return false;
 }
 
 bool GeneralConfigure::checkAuditParam(QString item, QString value)
 {
-    bool isRecord = true;
-    bool ret = checkRecordParam(item, value, &isRecord);
-    if (ret || (!ret && isRecord))
-        return ret;
-
+    if (m_itemMap[CONFIG_AUDIT_FILEPATH] == item)
+        return checkPath(value);
+    if (m_itemMap[CONFIG_AUDIT_FILETYPE] == item)
+        return checkType(value);
+    if (m_itemMap[CONFIG_AUDIT_RECORD_VIDIO] == item)
+        return checkEnable(value);
+    if (m_itemMap[CONFIG_AUDIT_FPS] == item)
+        return checkInteger(value, FPS_MIN_VALUE, FPS_MAX_VALUE);
+    if (m_itemMap[CONFIG_AUDIT_QUALITY] == item)
+        return checkInteger(value, 0, 2);
+    if (m_itemMap[CONFIG_AUDIT_RECORD_AUDIO] == item)
+        return checkRecordAudio(value);
+    if (m_itemMap[CONFIG_AUDIT_BITRATE] == item)
+        return checkInteger(value, BITRATE_MIN_VALUE, BITRATE_MAX_VALUE);
+    if (m_itemMap[CONFIG_AUDIT_WATER_PRINT] == item)
+        return checkEnable(value);
+    if (m_itemMap[CONFIG_AUDIT_WATER_PRINT_TEXT] == item)
+        return checkWaterPrint(value);
+    if (m_itemMap[CONFIG_AUDIT_TIMING_PAUSE] == item)
+        return checkInteger(value, 0, CONFIG_TIME_MINUTE);
     if (m_itemMap[CONFIG_AUDIT_MIN_FREE_SPACE] == item)
-        return checkULongLong(value, FREE_SPACE_MIN_SIZE, FREE_SPACE_MAX_SIZE);
+        return checkULongLong(value, FREE_SPACE_MIN_VALUE, CONFIG_ULL_MAX);
     if (m_itemMap[CONFIG_AUDIT_MAX_SAVE_DAYS] == item)
-        return checkInteger(value, SAVE_DAYS_MIN_VALUE, SAVE_DAYS_MAX_VALUE);
+        return checkInteger(value, 0, CONFIG_INT_MAX);
     if (m_itemMap[CONFIG_AUDIT_MAX_FILE_SIZE] == item)
         return checkULongLong(value, FILE_MIN_SIZE, FILE_MAX_SIZE);
     if (m_itemMap[CONFIG_AUDIT_MAX_RECORD_PER_USER] == item)
-        return checkInteger(value, RECORD_PER_USER_MIN_VALUE, RECORD_PER_USER_MAX_VALUE);
+        return checkInteger(value, 0, CONFIG_INT_MAX);
 
-    qWarning() << item << " is not in the audit configure options";
+    KLOG_INFO() << item << " is not in the audit configure options";
     return false;
 }
 
@@ -266,7 +287,7 @@ bool GeneralConfigure::checkPath(QString path)
     if (dir.exists())
         return true;
 
-    qWarning() << "path: " << path << " is not exist";
+    KLOG_INFO() << "path: " << path << " is not exist";
     return false;
 }
 
@@ -275,7 +296,7 @@ bool GeneralConfigure::checkType(QString type)
     if (type == "mp4" || type == "MP4" || type == "ogv" || type == "OGV")
         return true;
 
-    qWarning() << "file type is " << type << ", and needs to be mp4 or ogv";
+    KLOG_INFO() << "file type is " << type << ", and needs to be mp4 or ogv";
     return false;
 }
 
@@ -285,7 +306,7 @@ bool GeneralConfigure::checkEnable(QString enable)
     int tmp = enable.toInt(&ok);
     if (!ok || (tmp != 0 && tmp != 1))
     {
-        qWarning() << enable << " is err, needs to be 0 or 1";
+        KLOG_INFO() << enable << " is err, needs to be 0 or 1";
         return false;
     }
 
@@ -298,7 +319,7 @@ bool GeneralConfigure::checkInteger(QString value, int min, int max)
     int tmp = value.toInt(&ok);
     if (!ok || tmp < min || tmp > max)
     {
-        qWarning() << value << " is err, needs to be " << min << " - " << max;
+        KLOG_INFO() << value << " is err, needs to be " << min << " - " << max;
         return false;
     }
 
@@ -311,7 +332,7 @@ bool GeneralConfigure::checkULongLong(QString value, unsigned long long min, uns
     unsigned long long tmp = value.toULongLong(&ok);
     if (!ok || tmp < min || tmp > max)
     {
-        qWarning() << value << " is err, needs to be " << min << " - " << max;
+        KLOG_INFO() << value << " is err, needs to be " << min << " - " << max;
         return false;
     }
 
@@ -323,7 +344,7 @@ bool GeneralConfigure::checkRecordAudio(QString value)
     if (value == "all" || value == "none" || value == "mic" || value == "speaker")
         return true;
 
-    qWarning() << "record audio is " << value << ", and needs to be all or none or mic or speaker";
+    KLOG_INFO() << "record audio is " << value << ", and needs to be all or none or mic or speaker";
     return false;
 }
 
@@ -331,7 +352,7 @@ bool GeneralConfigure::checkWaterPrint(QString value)
 {
     if (value.size() > WATER_PRINT_MAX_SIZE)
     {
-        qWarning() << "record water print too big";
+        KLOG_INFO() << "record water print too big";
         return false;
     }
 
@@ -341,7 +362,7 @@ bool GeneralConfigure::checkWaterPrint(QString value)
 void GeneralConfigure::rewriteConfig()
 {
     QFile file(m_confFile);
-    file.open(QFile::WriteOnly|QFile::Truncate);
+    file.open(QFile::WriteOnly | QFile::Truncate); //清空文件
     file.close();
 
     for (auto it = m_lastMap.begin(); it != m_lastMap.end(); it++)
@@ -353,97 +374,77 @@ void GeneralConfigure::rewriteConfig()
 
 void GeneralConfigure::onDirectoryChanged(QString)
 {
+    QMutexLocker locker(&m_mutex);
+    int fileSize{};
+    m_confSettings->sync();
     QFile file(m_confFile);
     if (!file.open(QIODevice::ReadOnly))
     {
-        qWarning() << __func__ <<  "fail to open the file: " << m_confFile;
+        KLOG_INFO() <<  "fail to open the file: " << m_confFile;
         return;
     }
-
-    QTextStream in(&file);
-    QVector<QString> data;
-    data.reserve(file.size());
-    while (1) {
-        QString line = in.readLine();
-        if (line.isNull())
-            break;
-        if (line.isEmpty())
-            continue;
-
-        data.push_back(line);
-    }
+    fileSize = file.size();
     file.close();
 
-    QMutexLocker locker(&m_mutex);
-    if (data == m_data)
+    if (fileSize && m_confSettings->allKeys().size() == 0)
         return;
 
-    if (m_data.size() != data.size() || data.indexOf("[audit]") != m_data.indexOf("[audit]") || data.indexOf("[record]") != m_data.indexOf("[record]"))
+    QMap<QString, QString> dataMap;
+    for (auto key : m_confSettings->allKeys())
     {
-        qWarning() << "number of options(line) changed and correction file" << m_data.size() << data.size();
+        dataMap.insert(key,  m_confSettings->value(key).toString());
+    }
+
+    if (dataMap.size() != m_lastMap.size())
+    {
+        KLOG_INFO() << "number of options changed externally, restore file, old:" << m_lastMap.size() << "new:" << dataMap.size() << "fileSize:" << fileSize;
         rewriteConfig();
         return;
     }
 
-    m_confSettings->sync();
-    int recordIndex = data.indexOf("[record]");
-    int auditIndex = data.indexOf("[audit]");
-    int index = recordIndex > auditIndex ? recordIndex : auditIndex;
-    QString maxGroup = recordIndex > auditIndex ? m_itemMap[CONFIG_RECORD] : m_itemMap[CONFIG_AUDIT];
-    QString minGroup = recordIndex < auditIndex ? m_itemMap[CONFIG_RECORD] : m_itemMap[CONFIG_AUDIT];
-    QJsonObject minObj, maxObj;
+    if (dataMap == m_lastMap)
+        return;
 
-    for (int i = 0; i < data.size(); i++)
+    if (dataMap.keys() != m_lastMap.keys())
     {
-        if (data[i] != m_data[i])
+        KLOG_INFO() << "options changed, restore file, old:" << m_lastMap.keys() << "new:" << dataMap.keys();
+        rewriteConfig();
+        return;
+    }
+ 
+    KLOG_INFO() << "data changed";
+    QJsonObject recordObj, auditObj;
+    for (auto k : dataMap.keys())
+    {
+        if (m_lastMap[k] != dataMap[k])
         {
-            auto newData = data[i].split("=");
-            if (newData.size() != 2)
+            auto key = k.split("/");
+            KLOG_INFO() << k << key[0] << key[1] << m_lastMap[k] << dataMap[k];
+            bool ret = (key[0] == m_itemMap[CONFIG_RECORD] ? checkRecordParam(k, dataMap[k]) : checkAuditParam(k, dataMap[k]));
+            if (ret)
             {
-                qWarning() << "file format change and correction file" << data[i];
-                rewriteConfig();
-                return;
-            }
-
-            if (i < index)
-            {
-                if (!checkAuditParam(newData[0], newData[1]))
-                {
-                    QString key = minGroup + "/" + newData[0];
-                    m_confSettings->setValue(key, m_lastMap[key]);
-                    data[i] = newData[0] + "=" + m_lastMap[key];
-                }
+                if (key[0] == m_itemMap[CONFIG_RECORD])
+                    recordObj[k] = dataMap[k];
                 else
-                {
-                    minObj[newData[0]] = newData[1];
-                }
+                    auditObj[k] = dataMap[k];
+                m_lastMap[k] = dataMap[k];
             }
             else
             {
-                if (!checkAuditParam(newData[0], newData[1]))
-                {
-                    QString key = maxGroup + "/" + newData[0];
-                    m_confSettings->setValue(key, m_lastMap[key]);
-                    data[i] = newData[0] + "=" + m_lastMap[key];
-                }
-                else
-                {
-                    maxObj[newData[0]] = newData[1];
-                }
+                m_confSettings->setValue(k, m_lastMap[k]);
             }
         }
     }
 
-    m_data = data;
-    if (minObj.size())
+    if (recordObj.size())
     {
-        QJsonDocument minDoc(minObj);
-        this->ConfigureChanged(minGroup, QString::fromUtf8(minDoc.toJson(QJsonDocument::Compact).constData()));
+        QJsonDocument minDoc(recordObj);
+        this->ConfigureChanged(m_itemMap[CONFIG_RECORD], QString::fromUtf8(minDoc.toJson(QJsonDocument::Compact).constData()));
     }
 
-    if (maxObj.size())
+    if (auditObj.size())
     {
-        QJsonDocument maxDoc(maxObj);
-        this->ConfigureChanged(maxGroup, QString::fromUtf8(maxDoc.toJson(QJsonDocument::Compact).constData()));
+        QJsonDocument maxDoc(auditObj);
+        this->ConfigureChanged(m_itemMap[CONFIG_AUDIT], QString::fromUtf8(maxDoc.toJson(QJsonDocument::Compact).constData()));
     }
 }

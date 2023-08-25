@@ -7,6 +7,8 @@ include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+# set(CMAKE_CXX_FLAGS "-execution-charset:utf-8")
+# set(CMAKE_CXX_FLAGS "-source-charset:utf-8")
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -46,7 +48,8 @@ target_include_directories(${TARGET_NAME} PRIVATE
 target_link_libraries(${TARGET_NAME}
     Qt5::DBus
     Qt5::Core
-    Qt5::Sql)
+    Qt5::Sql
+    klog-qt5)
 
 set(CONFIGURE_BIN_DIR ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
 install(TARGETS ${TARGET_NAME} DESTINATION ${CONFIGURE_BIN_DIR})

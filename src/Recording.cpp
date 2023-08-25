@@ -381,7 +381,6 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/video_w", rect.width()); //width
 	settings->setValue("input/video_h", rect.height()); //height
 
-	//Fps
 	QString key("Fps");	
 	settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt()); //帧率
 	settings->setValue("input/video_scale", false);
@@ -449,6 +448,20 @@ void Recording::SaveSettings(QSettings* settings) {
 		qApp->quit();
 	}
 	settings->setValue("output/video_allow_frame_skipping", true);
+
+	//水印相关设置
+	key = "WaterPrint";
+	if(jsonObj[key].toString().toInt() == 0){
+		settings->setValue("record/is_use_watermark", 0);
+		key = "WaterPrintText";
+		settings->setValue("record/water_print_text", jsonObj[key].toString());
+	}else{
+		settings->setValue("record/is_use_watermark", 1);
+		key = "WaterPrintText";
+		settings->setValue("record/water_print_text", jsonObj[key].toString());
+	}
+
+	//Logger::LogInfo(" --------------the waterprintText is -------------- " + settings ->value("record/water_print_text").toString());
 
 	settings->setValue("record/hotkey_enable", false); //禁用快捷键
 	settings->setValue("record/hotkey_ctrl", false);
@@ -839,7 +852,46 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				}
 			}else if(key == "FileType"){
 				settings->setValue("output/container_av", jsonObj[key].toString()); 
+			}else if(key == "is_use_watermark"){
+				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
 			}
+			else if(key == "WaterPrintText"){
+				settings->setValue("record/water_print_text", jsonObj[key].toString());
+			}
+		}
+	}else { //后台审计
+		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+		if(!doc.isObject()){
+			Logger::LogError("Cann't get the DBus configure!");
+			return;
+		}
+
+		QJsonObject jsonObj = doc.object();
+		for(auto key:jsonObj.keys()){
+			Logger::LogInfo(" --------------keys and value is ---------------------------------" + key + "==========" + jsonObj[key].toString());
+
+			//修改settings
+			if(key == "Fps"){
+				settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
+			}else if(key == "RecordAudio"){
+				settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt());
+			}else if(key == "FilePath"){
+				QString file_path(jsonObj[key].toString());
+				QString file_suffix;
+				if(jsonObj["FileType"].toString() == "mp4"){
+					file_suffix = ".mp4";
+				}else{
+					file_suffix = ".ogv";
+				}
+			}else if(key == "FileType"){
+				settings->setValue("output/container_av", jsonObj[key].toString());
+			}else if(key == "is_use_watermark"){
+				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
+			}
+			else if(key == "WaterPrintText"){
+				settings->setValue("record/water_print_text", jsonObj[key].toString());
+			}
+
 		}
 	}
 }

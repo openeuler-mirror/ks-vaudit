@@ -7,13 +7,13 @@
           <arg name="record_info" direction="out" type="s">
           </arg>
           <summary>Get the record configure info.</summary>
-          <description>Contain FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint and WaterPrintText. return as json.</description>
+          <description>Contain FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint, WaterPrintText, MicVolume and SpeakerVolume. return as json.</description>
         </method>
 
         <method name="SetRecordItemValue">
           <arg name="item_value" direction="in" type="s">
             <summary>Options and their values.</summary>
-            <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint and WaterPrintText can be set.
+            <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint, WaterPrintText, MicVolume and SpeakerVolume can be set.
             Spelling needs to be consistent with those listed above, case sensitive.
             One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps"="10"}</description>
           </arg>
@@ -28,14 +28,14 @@
           <arg name="audit_info" direction="out" type="s">
           </arg>
           <summary>Get the audit configure info.</summary>
-          <description>Contain FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint and WaterPrintText,
+          <description>Contain FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingPause, WaterPrint and WaterPrintText,
           MinFreeSpace, MaxSaveDays, MaxFileSize and MaxRecordPerUser. return as json.</description>
         </method>
 
         <method name="SetAuditItemValue">
           <arg name="item_value" direction="in" type="s">
             <summary>Options and their values.</summary>
-            <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint and WaterPrintText,
+            <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingPause, WaterPrint and WaterPrintText,
             MinFreeSpace, MaxSaveDays, MaxFileSize and MaxRecordPerUser can be set. Spelling needs to be consistent with those listed above, case sensitive.
             One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps"="10"}</description>
           </arg>

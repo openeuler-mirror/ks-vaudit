@@ -18,6 +18,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "OutputManager.h"
+#include "X264Presets.h"
 
 #include "Logger.h"
 
@@ -252,6 +253,380 @@ void OutputManager::Free() {
 
 }
 
+int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt)
+{   
+	int result = -1;
+	int error = 0;
+	
+	assert(enc_ctx != NULL);
+	assert(frame != NULL);
+	assert(pkt != NULL);
+
+	AVFrame * avframe_gpu = NULL;
+
+	if (enc_ctx->pix_fmt == AV_PIX_FMT_VAAPI) {
+		avframe_gpu = av_frame_alloc();
+		if (avframe_gpu == NULL) {
+			Logger::LogInfo("[OutputManager::Encode] av_frame_alloc avframe_gpu failed.");
+			goto out;
+		}
+
+		avframe_gpu->format = AV_PIX_FMT_VAAPI;
+		avframe_gpu->width = frame->width;
+		avframe_gpu->height = frame->height;
+		avframe_gpu->pts = frame->pts;
+
+		error = av_hwframe_get_buffer(enc_ctx->hw_frames_ctx, avframe_gpu, 0);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::Encode] av_hwframe_get_buffer failed.");
+			goto out;
+		}
+
+		error = av_hwframe_transfer_data(avframe_gpu, frame, 0);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_hwframe_transfer_data failed.");
+			goto out;
+		}
+	
+		error = avcodec_send_frame(enc_ctx, avframe_gpu);
+	} else {
+		error = avcodec_send_frame(enc_ctx, frame);
+	}
+
+	if (error < 0) {
+		Logger::LogInfo("[OutputManager::Encode] avcodec_send_frame failed");
+		goto out;
+	}
+    
+	while (error >= 0) {
+		error = avcodec_receive_packet(enc_ctx, pkt);
+		if (error == AVERROR(EAGAIN) || error == AVERROR_EOF) {
+			result = 0;
+			goto out;
+		}
+		else if (error < 0) { 
+			Logger::LogError("[OutputManager::Encode] Error during encoding");
+			result = -1;
+			goto out;
+		}
+        
+		// succeed
+		av_packet_unref(pkt);
+	}
+	
+out:
+
+	if (avframe_gpu) {
+#if SSR_USE_AV_FRAME_FREE
+		av_frame_free(&avframe_gpu);
+#elif SSR_USE_AVCODEC_FREE_FRAME
+		avcodec_free_frame(&avframe_gpu);
+#else
+		av_free(avframe_gpu);
+#endif
+		avframe_gpu = NULL;
+	}
+	
+	return result;
+}
+
+int OutputManager::CheckEncodeType(QString container_name, QString codecname) {
+
+	int result = -1;
+	int error = 0;
+
+	const AVCodec *codec = NULL;
+	AVCodecContext *context = NULL;
+
+        AVBufferRef *hw_device_ctx_ref = NULL;
+        AVBufferRef *hw_frames_ctx_ref = NULL;
+	AVFrame *frame = NULL;
+	// only for vaapi
+	// std::shared_ptr<AVFrameData> frame_data = NULL;
+	AVPacket *pkt = NULL;
+	AVDictionary* options = NULL;
+
+	int i = 0;
+	int x = 0, y = 0;
+
+	avcodec_register_all();
+
+	codec = avcodec_find_encoder_by_name(codecname.toLatin1().data());
+	if (!codec) {
+		Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] cannot fine codec by name: " + codecname);
+		goto out;
+	}
+
+	context = avcodec_alloc_context3(codec);
+	if (!context) {
+		Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] avcodec_alloc_context3 failed, codecname: " + codecname);
+		goto out;
+	}
+
+	pkt = av_packet_alloc();
+	if (!pkt) {
+		Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_packet_alloc failed, codecname: " + codecname);
+		goto out;
+	}
+
+	// context->codec_id = codec->id;
+	// context->codec_type = codec->type;
+
+	context->bit_rate = 10000;
+	/* resolution must be a multiple of two */
+	context->width = 352;
+	context->height = 288;
+	/* frames per second */
+	context->time_base = (AVRational){1, 10};
+	context->framerate = (AVRational){10, 1};
+
+	/* emit one intra frame every ten frames
+	 * check frame pict_type before passing frame
+	 * to encoder, if frame->pict_type is AV_PICTURE_TYPE_I
+	 * then gop_size is ignored and the output of encoder
+	 * will always be I frame irrespective to gop_size
+	 */
+	context->gop_size = 10;
+	context->max_b_frames = 1;
+
+	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
+		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] create qsv device failed, codecname: " + codecname);
+			goto out;
+		}
+
+		context->pix_fmt = AV_PIX_FMT_NV12;	
+		// bind device ref
+		context->hw_device_ctx = av_buffer_ref(hw_device_ctx_ref);
+
+	} else if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+
+#if !SSR_USE_AVCODEC_PRIVATE_PRESET
+		X264Preset(context, "superfast");
+#else
+		av_dict_set(&options, "preset", "superfast", 0);
+#endif
+
+		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] create vaapi device failed, codecname: " + codecname);
+			goto out;
+		}
+
+		context->pix_fmt = AV_PIX_FMT_VAAPI;
+
+                hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
+                assert(hw_frames_ctx_ref != NULL);
+
+                AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)hw_frames_ctx_ref->data;
+                hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
+                hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
+                hw_frames_ctx->initial_pool_size = 0;
+                hw_frames_ctx->width     = context->width;
+                hw_frames_ctx->height    = context->height;
+
+                error = av_hwframe_ctx_init(hw_frames_ctx_ref);
+                if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_hwframe_ctx_init failed, codecname: " + codecname);
+			goto out;
+		}
+
+		// bind frame ref
+                context->hw_frames_ctx = av_buffer_ref(hw_frames_ctx_ref);
+                // context->hw_frames_ctx = hw_frames_ctx_ref;
+	}
+
+	error = avcodec_open2(context, codec, &options);
+	if (error < 0) {
+		Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] avcodec_open2 failed, codecname: " + codecname);
+		goto out;
+	}
+
+#if SSR_USE_AV_FRAME_ALLOC
+	frame = av_frame_alloc();
+#else
+	frame = avcodec_alloc_frame();
+#endif
+	if (!frame) {
+		Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_frame_alloc failed, codecname: " + codecname);
+		goto out;
+	}
+
+	frame->width  = context->width;
+	frame->height = context->height;
+
+	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
+		error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
+                        goto out;
+		}
+
+		frame->format = context->pix_fmt;
+		error = av_frame_get_buffer(frame, 32);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_frame_get_buffer failed, codecname: " + codecname);
+			goto out;
+		}
+		
+		/* make sure the frame data is writabl */
+		error = av_frame_make_writable(frame);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_frame_make_writable failed, codecname: " + codecname);
+			goto out;
+		}
+
+	} else if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+		error = unsetenv("LIBVA_DRIVER_NAME");
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] unsetenv LIBVA_DRIVER_NAME failed, codecname: " + codecname);
+                        goto out;
+		}
+
+		frame->format = AV_PIX_FMT_NV12;
+
+		// another way to alloc frame buffer
+		/*size_t totalsize = grow_align16(context->width) * context->height * 1.5;
+		frame_data = std::make_shared<AVFrameData>(totalsize);
+		uint8_t *raw_data = frame_data->GetData();
+		frame->data[0] = raw_data;
+		frame->data[1] = raw_data + context->width * context->height;*/
+		
+		error = av_image_alloc(frame->data, frame->linesize, context->width, context->height, AV_PIX_FMT_NV12, 16);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] av_image_alloc failed, codecname: " + codecname);
+			goto out;
+		}
+	}
+
+	// prepare yuv image
+	for (i = 0; i < 10; i++) {
+
+		/* prepare a dummy image */
+		/* Y */
+		for (y = 0; y < context->height; y++) {
+			for (x = 0; x < context->width; x++) {
+				frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
+			}
+		}
+
+		/* Cb and Cr */
+		for (y = 0; y < context->height/2; y++) {
+			for (x = 0; x < context->width/2; x++) {
+				frame->data[1][y * frame->linesize[1] + 2 * x] = 128 + y + i * 2;
+				frame->data[1][y * frame->linesize[1] + 2 * x + 1] = 64 + x + i * 5;
+			}
+		}
+
+		frame->pts = i;
+
+		/* encode the image */
+		error = Encode(context, frame, pkt);
+		if (error < 0) {
+			// encode this frame failed, mean that this codec is invalid
+			Logger::LogInfo("[OutputManager::CheckEncodeTypeValid] encode failed, codecname: " + codecname);
+			goto out;
+		}
+	}
+
+	// encode all frames suceed
+	result = 0;
+
+out:
+
+	if (options) {
+		av_dict_free(&options);
+		options = NULL;		
+	}
+
+	if (frame) {
+		av_freep(&frame->data[0]);
+
+#if SSR_USE_AV_FRAME_FREE
+		av_frame_free(&frame);
+#elif SSR_USE_AVCODEC_FREE_FRAME
+		avcodec_free_frame(&frame);
+#else
+		av_free(frame);
+#endif
+		frame = NULL;
+	}
+
+	if (hw_frames_ctx_ref) {
+		av_buffer_unref(&hw_frames_ctx_ref);
+		hw_frames_ctx_ref = NULL;
+	}
+
+	if (hw_device_ctx_ref) {
+		av_buffer_unref(&hw_device_ctx_ref);
+		hw_device_ctx_ref = NULL;
+	}	
+	
+	if (pkt) {
+		av_packet_free(&pkt);
+		pkt = NULL;
+	}
+
+	if (context) {
+		avcodec_free_context(&context);
+		context = NULL;
+	}
+
+	return result;
+}
+
+/*
+ * choose encode type by cpu type and gpu type
+ * container_name: video container name, [mp4|ogv]
+ * ret: enum EncodeType
+ */
+EncodeType OutputManager::ChooseEncodeType(QString container_name) {
+
+	if ((QString::compare(container_name, "mp4", Qt::CaseInsensitive) != 0) && 
+		QString::compare(container_name, "ogv", Qt::CaseInsensitive) != 0) {
+		Logger::LogWarning("[OutputManager::ChooseEncodeType] container name invalid: " + container_name);
+		return EncodeTypeCpu;
+	}
+
+	int ret = 0;
+	if (QString::compare(container_name, "mp4", Qt::CaseInsensitive) == 0) {
+		// first check qsv
+		ret = CheckEncodeType(container_name, "h264_qsv");
+		if (ret >= 0) {
+			return EncodeTypeQsv;
+		}
+
+		// check vaapi
+		ret = CheckEncodeType(container_name, "h264_vaapi");
+		if (ret >= 0) {
+			return EncodeTypeVaapi;
+		}
+		
+		return EncodeTypeCpu;
+	}
+
+	if (QString::compare(container_name, "ogg", Qt::CaseInsensitive) == 0) {
+		// first check qsv
+		/*
+		ret = CheckEncodeType(container_name, "vp8_qsv");
+		if (ret >= 0) {
+			return EncodeTypeQsv;
+		}
+		*/
+
+		// check vaapi
+		ret = CheckEncodeType(container_name, "vp8_vaapi");
+		if (ret >= 0) {
+			return EncodeTypeVaapi;
+		}
+		
+		return EncodeTypeCpu;
+	}
+
+	return EncodeTypeCpu;
+}
+
 void OutputManager::StartFragment() {
 
 	// get fragment number
@@ -275,8 +650,9 @@ void OutputManager::StartFragment() {
 
 	// check which encode type should be used, 
 	// to do, need more work
-	EncodeType enc_type = EncodeTypeQsv;
+	EncodeType enc_type = ChooseEncodeType(m_output_settings.container_avname);
 	QString enc_name;
+	int ret = 0;
 	
 	if(QString::compare(m_output_settings.container_avname, "mp4", Qt::CaseInsensitive) == 0) {
 		if (enc_type == EncodeTypeVaapi) {
@@ -290,9 +666,9 @@ void OutputManager::StartFragment() {
 		if (enc_type == EncodeTypeVaapi) {
 			enc_name = "vp8_vaapi";
 		} else if (enc_type == EncodeTypeQsv) {
-			// enc_name = "vp8_qsv";	
-			Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: vp8_qsv in invalid"));
-			return;
+			enc_name = "vp8_qsv";	
+			// Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: vp8_qsv in invalid"));
+			// return;
 		} else {
 			enc_name = "libvpx";
 		}
@@ -301,7 +677,45 @@ void OutputManager::StartFragment() {
 		return;
 	}
 
-	Logger::LogInfo("[OutputManager::StartFragment] " + Logger::tr("codec name: %1").arg(enc_name));
+	Logger::LogInfo("[OutputManager::StartFragment] check and try to use enc type: " + enc_name);
+
+	// reset encode options according to encode type
+	// preset of libx264 and h264_vaapi: ultrafast superfast veryfast faster fast medium slow slower veryslow placebo
+	// quality of qsv: global_quality [1-51] lower num mean higher quality
+	std::vector<std::pair<QString, QString> >().swap(m_output_settings.video_options);
+	if (enc_type == EncodeTypeQsv) {
+		ret = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
+
+		if (m_output_settings.encode_quality == "0") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(33)));
+		} else if (m_output_settings.encode_quality == "1") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(23)));
+		} else if (m_output_settings.encode_quality == "2") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(13)));
+		}
+	} else { // vaapi and libx264
+		ret = unsetenv("LIBVA_DRIVER_NAME");
+
+		m_output_settings.video_options.push_back(std::make_pair(QString("crf"), QString::number(23)));
+		if (m_output_settings.encode_quality == "0") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("superfast")));
+		} else if (m_output_settings.encode_quality == "1") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("fast")));
+		} else if (m_output_settings.encode_quality == "2") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("veryslow")));
+		}
+	}
+
+	if (ret < 0) {
+		Logger::LogError("setenv/unsetenv LIBVA_DRIVER_NAME failed");
+		return ;
+	}
+	
+	for(unsigned int i = 0; i < m_output_settings.video_options.size(); ++i) {
+                const QString &key = m_output_settings.video_options[i].first, &value = m_output_settings.video_options[i].second;
+		Logger::LogInfo("[OutputManager::StartFragment] video_options key: " + key + " val: " + value);
+	}
+
 	video_encoder = muxer->AddVideoEncoder(enc_name, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
 						   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
 

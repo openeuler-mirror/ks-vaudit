@@ -23,7 +23,7 @@ start(){
                 exit 0
         fi
 
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/Qt5.7.1/5.7/gcc_64/lib
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib
         /usr/bin/${procname} &
         if [ $? -eq 0 ];then
                 echo_success

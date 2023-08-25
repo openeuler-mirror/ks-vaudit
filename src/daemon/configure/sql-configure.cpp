@@ -1,6 +1,6 @@
 #include "sql-configure.h"
+#include "kiran-log/qt5-log-i.h"
 #include <QFile>
-#include <QDebug>
 #include <QRegExp>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -97,7 +97,7 @@ SQLConfigure::SQLConfigure()
 {
     m_usr = "vaudit";
     m_pwd = "12345678";
-    qWarning() << __func__ << "sqldrivers: " << QSqlDatabase::drivers();
+    KLOG_INFO() << "sqldrivers: " << QSqlDatabase::drivers();
     initDB();
 }
 
@@ -135,7 +135,7 @@ bool SQLConfigure::initDB()
 #endif
     if (!m_db.open())
     {
-        qWarning()<<"db open failed:"<<m_db.lastError().text()<< "db name :"<< SQLITE_NAME << m_usr << m_pwd;
+        KLOG_INFO()<<"db open failed:"<<m_db.lastError().text()<< "db name :"<< SQLITE_NAME << m_usr << m_pwd;
         return false;
     }
 
@@ -143,7 +143,7 @@ bool SQLConfigure::initDB()
     m_query = new QSqlQuery(m_db);
     if (!m_query->exec(str))
     {
-        qWarning()<<"db foreign_keys failed:"<<m_db.lastError().text();
+        KLOG_INFO()<<"db foreign_keys failed:"<<m_db.lastError().text();
         return false;
     }
 
@@ -158,7 +158,7 @@ bool SQLConfigure::initDB()
             m_query->prepare(create_sql);
             if (!m_query->exec())
             {
-                qWarning() << "Error: Fail to create table." << m_query->lastError();
+                KLOG_INFO() << "Error: Fail to create table." << m_query->lastError();
             }
         }
     }
@@ -175,7 +175,7 @@ bool SQLConfigure::initDB()
             m_query->prepare(create_sql);
             if (!m_query->exec())
             {
-                qWarning() << "Error: Fail to create table." << m_query->lastError();
+                KLOG_INFO() << "Error: Fail to create table." << m_query->lastError();
             }
         }
     }
@@ -192,14 +192,14 @@ bool SQLConfigure::checkUserPasswd(const QString name, const QString pwd)
     m_query->addBindValue(byteArr.toBase64());
     if (!m_query->exec())
     {
-        qWarning() <<  __func__ << __LINE__  << "query user " << name << " failed: " << m_query->lastError();
+        KLOG_INFO()  << "query user " << name << " failed: " << m_query->lastError();
         return false;
     }
 
     while (m_query->next())
         return true;
 
-    qWarning() << __func__ << __LINE__ << "user or passwd err";
+    KLOG_INFO() << "user or passwd err";
     return false;
 }
 
@@ -209,7 +209,7 @@ bool SQLConfigure::isNameLegal(QString name)
     if (rxp.exactMatch(name))
         return true;
 
-    qWarning() << name << " is illegal";
+    KLOG_INFO() << name << " is illegal";
     return false;
 }
 
@@ -231,7 +231,7 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
 
     if (!m_query->exec())
     {
-        qWarning() << "insert user " << name << " failed: " << m_query->lastError().text();
+        KLOG_INFO() << "insert user " << name << " failed: " << m_query->lastError().text();
         return false;
     }
 
@@ -249,7 +249,7 @@ bool SQLConfigure::deleteUser(const QString name, const QString pwd)
     m_query->addBindValue(name);
     if (!m_query->exec())
     {
-        qWarning() << "delete user " << name << " failed: " << m_query->lastError().text();
+        KLOG_INFO() << "delete user " << name << " failed: " << m_query->lastError().text();
         return false;
     }
 
@@ -291,7 +291,7 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
 
     if (!m_query->exec())
     {
-        qWarning() << "update user " << name << " failed: " << m_query->lastError().text();
+        KLOG_INFO() << "update user " << name << " failed: " << m_query->lastError().text();
         return false;
     }
 
@@ -319,7 +319,7 @@ QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
 
     if (!m_query->exec())
     {
-        qWarning() << "query user infos failed: " << m_query->lastError();
+        KLOG_INFO() << "query user infos failed: " << m_query->lastError();
         return "";
     }
 

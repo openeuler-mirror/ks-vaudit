@@ -1,4 +1,4 @@
-# 'simplescreenrecorder' executable
+# 'ks-vaudit' executable
 
 set(CMAKE_AUTOMOC ON)
 
@@ -166,13 +166,13 @@ foreach (interface_item ${VAUDITCONFIGURE_SRC})
     set_property(SOURCE ${interface_item} PROPERTY SKIP_AUTOGEN ON)
 endforeach ()
 
-add_executable(simplescreenrecorder
+add_executable(ks-vaudit
 	${sources}
 	${res_output}
 	${VAUDITCONFIGURE_SRC}
 )
 
-target_include_directories(simplescreenrecorder PRIVATE
+target_include_directories(ks-vaudit PRIVATE
 	${AVFORMAT_INCLUDE_DIRS}
 	${AVCODEC_INCLUDE_DIRS}
 	${AVUTIL_INCLUDE_DIRS}
@@ -195,7 +195,7 @@ target_include_directories(simplescreenrecorder PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(simplescreenrecorder PRIVATE
+target_link_libraries(ks-vaudit PRIVATE
 	-lcairo
 	-lrt
 	Qt5::DBus
@@ -217,7 +217,7 @@ target_link_libraries(simplescreenrecorder PRIVATE
 	$<$<BOOL:${WITH_JACK}>:${JACK_LIBRARIES}>
 )
 
-target_compile_definitions(simplescreenrecorder PRIVATE
+target_compile_definitions(ks-vaudit PRIVATE
 	-DSSR_USE_X86_ASM=$<BOOL:${ENABLE_X86_ASM}>
 	-DSSR_USE_FFMPEG_VERSIONS=$<BOOL:${ENABLE_FFMPEG_VERSIONS}>
 	-DSSR_USE_JACK_METADATA=$<BOOL:${ENABLE_JACK_METADATA}>
@@ -226,11 +226,11 @@ target_compile_definitions(simplescreenrecorder PRIVATE
 	-DSSR_USE_ALSA=$<BOOL:${WITH_ALSA}>
 	-DSSR_USE_PULSEAUDIO=$<BOOL:${WITH_PULSEAUDIO}>
 	-DSSR_USE_JACK=$<BOOL:${WITH_JACK}>
-	-DSSR_SYSTEM_DIR="${CMAKE_INSTALL_FULL_DATADIR}/simplescreenrecorder"
+	-DSSR_SYSTEM_DIR="${CMAKE_INSTALL_FULL_DATADIR}/ks-vaudit"
 	-DSSR_VERSION="${PROJECT_VERSION}"
 )
 
-install(TARGETS simplescreenrecorder RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+install(TARGETS ks-vaudit RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
 
 add_subdirectory(daemon)
 add_subdirectory(ui)

@@ -186,6 +186,8 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 		return;
 	}
 
+	avcodec_register_all();
+
 	int ret = 0;
 	if (m_enc_type == EncodeTypeVaapi) {
 		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
@@ -227,17 +229,9 @@ void BaseEncoder::Init(AVCodec* codec, AVDictionary** options) {
 	InitGpuEncode(codec);
 
 	// open codec
-	// to do, process options, need more work
-	if (strstr(codec->name, "qsv") != NULL) {
-		if(avcodec_open2(m_codec_context, codec, NULL) < 0) {
-			Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
-			throw LibavException();
-		}
-	} else {
-		if(avcodec_open2(m_codec_context, codec, options) < 0) {
-			Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
-			throw LibavException();
-		}
+	if(avcodec_open2(m_codec_context, codec, options) < 0) {
+		Logger::LogError("[BaseEncoder::Init] " + Logger::tr("Error: Can't open codec!"));
+		throw LibavException();
 	}
 
 	m_codec_opened = true;

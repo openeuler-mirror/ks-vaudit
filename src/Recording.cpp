@@ -468,6 +468,10 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("record/hotkey_shift", false);
 	settings->setValue("record/hotkey_alt",false);
 	settings->setValue("record/hotkey_super",false);
+
+	// save encode Quality
+	settings->setValue("encode/quality", jsonObj["Quality"].toString());
+	m_output_settings.encode_quality = jsonObj["Quality"].toString();
 }
 
 void Recording::StopPage(bool save) {
@@ -852,6 +856,9 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				}
 			}else if(key == "FileType"){
 				settings->setValue("output/container_av", jsonObj[key].toString()); 
+			}else if(key == "Quality"){
+				settings->setValue("encode/quality", jsonObj[key].toString());
+				m_output_settings.encode_quality = jsonObj["Quality"].toString();
 			}else if(key == "is_use_watermark"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
 			}

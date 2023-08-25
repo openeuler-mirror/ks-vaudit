@@ -332,7 +332,9 @@ void PulseAudioInput::MovedCallback(pa_stream* stream, void* userdata) {
 void PulseAudioInput::InputThread() {
 	try {
 
-		Logger::LogInfo("[PulseAudioInput::InputThread] " + Logger::tr("Input thread started."));
+		// print thread id to statistics cpu usage
+		pid_t tid = gettid();
+		Logger::LogInfo("[PulseAudioInput::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
 
 		std::vector<uint8_t> buffer;
 		bool has_first_samples = false;

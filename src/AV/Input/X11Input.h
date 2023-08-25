@@ -54,8 +54,11 @@ private:
 	Visual *m_x11_visual;
 	int m_x11_depth;
 	bool m_x11_use_shm;
-	XImage *m_x11_image;
-	XShmSegmentInfo m_x11_shm_info;
+
+	int m_x11_img_idx = 0;
+	XImage *m_x11_image[2];
+	XShmSegmentInfo m_x11_shm_info[2];
+
 	bool m_x11_shm_server_attached;
     
     //判断是否开启水印

@@ -86,7 +86,8 @@ Muxer::~Muxer() {
 }
 
 VideoEncoder* Muxer::AddVideoEncoder(const QString& codec_name, const std::vector<std::pair<QString, QString> >& codec_options,
-									 unsigned int bit_rate, unsigned int width, unsigned int height, unsigned int frame_rate) {
+					 unsigned int bit_rate, unsigned int width, unsigned int height, unsigned int frame_rate) {
+
 	AVCodec *codec = FindCodec(codec_name);
 	AVCodecContext *codec_context = NULL;
 	AVStream *stream = AddStream(codec, &codec_context);
@@ -266,7 +267,7 @@ void Muxer::Free() {
 AVCodec* Muxer::FindCodec(const QString& codec_name) {
 	AVCodec *codec = (AVCodec*)avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
 	if(codec == NULL) {
-		Logger::LogError("[Muxer::FindCodec] " + Logger::tr("Error: Can't find codec!"));
+		Logger::LogError("[Muxer::FindCodec] " + Logger::tr("Error: Can't find codec, codec name: %1").arg(codec_name));
 		throw LibavException();
 	}
 	return codec;

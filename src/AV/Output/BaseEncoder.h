@@ -23,6 +23,20 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "AVWrapper.h"
 #include "MutexDataPair.h"
 
+// GPU硬件编码加速
+extern "C"
+{
+	#include <libavutil/opt.h>
+	#include <libavcodec/avcodec.h>
+	#include <libavutil/channel_layout.h>
+	#include <libavutil/common.h>
+	#include <libavutil/imgutils.h>
+	#include <libavutil/mathematics.h>
+	#include <libavutil/samplefmt.h>
+	#include <libavutil/time.h>
+	#include <libavutil/hwcontext.h>
+}
+
 int ParseCodecOptionInt(const QString& key, const QString& value, int min, int max, int multiply = 1);
 double ParseCodecOptionDouble(const QString& key, const QString& value, double min, double max, double multiply = 1.0);
 
@@ -49,6 +63,19 @@ private:
 	std::thread m_thread;
 	MutexDataPair<SharedData> m_shared_data;
 	std::atomic<bool> m_should_stop, m_should_finish, m_is_done, m_error_occurred;
+
+public:
+	// GPU 硬件加速用到的变量
+	EncodeType m_enc_type;
+	AVBufferRef *m_hw_device_ctx_ref;
+	AVBufferRef *m_hw_frames_ctx_ref;
+	AVFrame *m_avframe_gpu;
+
+	void InitGpuEncode(AVCodec* codec);
+	void SetEncodeType(EncodeType enc_type) {
+		assert(enc_type >= EncodeTypeCpu && enc_type <= EncodeTypeNv);
+		m_enc_type = enc_type;
+	}
 
 protected:
 	BaseEncoder(Muxer* muxer, AVStream* stream, AVCodecContext* codec_context, AVCodec* codec, AVDictionary** options);

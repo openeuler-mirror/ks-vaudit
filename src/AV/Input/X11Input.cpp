@@ -361,7 +361,7 @@ void X11Input::Free() {
 }
 
 /*
- * when use shm to get image, init image object 
+ * when use shm to get image, init image object
  * width: width of image resolution
  * height: height of image resolution
  */
@@ -664,6 +664,13 @@ void X11Input::InputThread() {
 			int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
 			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image[m_x11_img_idx]);
            
+			//TODO: 这地方以后优化一下, 每10帧检测一次, QSetting内部用的读写锁
+			if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){//动态检测水印是否开启
+				m_is_use_watermarking = false;
+			}else{
+				m_is_use_watermarking = true;
+			}
+
 			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
 			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
 				PushVideoFrame(grab_width, grab_height, NULL, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);

@@ -35,5 +35,6 @@
         <file>images/minus-tiny.svg</file>
         <file>images/icon_Less_pre.svg</file>
         <file>images/icon_plus_pre.svg</file>
+        <file>images/stopRecord_disabled.svg</file>
     </qresource>
 </RCC>

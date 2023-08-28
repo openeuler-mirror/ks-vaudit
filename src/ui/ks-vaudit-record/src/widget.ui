@@ -543,8 +543,14 @@ border:none;</string>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-image: url(:/images/stopRecord.svg);
-border:none;</string>
+       <string notr="true">QPushButton#stopBtn{
+background-image: url(:/images/stopRecord.svg);
+border:none;
+}
+QPushButton#stopBtn:disabled{
+background-image: url(:/images/stopRecord_disabled.svg);
+border:none;
+}</string>
       </property>
       <property name="text">
        <string/>
@@ -1311,16 +1317,15 @@ border-radius:4px;
      </widget>
     </widget>
     <zorder>SideBar</zorder>
-    <zorder>NormalFooterBar</zorder>
-    <zorder>NormalBody</zorder>
     <zorder>ConfigBody</zorder>
     <zorder>ListBody</zorder>
+    <zorder>NormalBody</zorder>
+    <zorder>NormalFooterBar</zorder>
    </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../data/src.qrc"/>
   <include location="../data/src.qrc"/>
  </resources>
  <connections/>

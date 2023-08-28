@@ -62,7 +62,7 @@ void Widget::init_ui()
     ui->listArrow->hide();
     ui->configArrow->hide();
     ui->ConfigBody->hide();
-    refreshList(m_regName);
+    ui->stopBtn->setDisabled(true);
     comboboxStyle();
     m_fps = ui->fpsEdit->text();
     m_intValidator = new QIntValidator(2, 60, this);
@@ -94,6 +94,7 @@ void Widget::init_ui()
     connect(m_deleteAction, SIGNAL(triggered()), this, SLOT(deleteVideo()));
 
     readConfig();
+    refreshList(m_regName);
     m_selfPID = QCoreApplication::applicationPid();
     m_recordPID = startRecrodProcess();
 
@@ -352,10 +353,9 @@ void Widget::on_playBtn_clicked()
         m_needRestart = true;
         ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
         KLOG_DEBUG("Pause record screen!");
-
     }
+    ui->stopBtn->setDisabled(false);
 }
-
 
 void Widget::on_stopBtn_clicked()
 {
@@ -373,6 +373,7 @@ void Widget::on_stopBtn_clicked()
     ui->remainderBox->setDisabled(false);
     ui->typeBox->setDisabled(false);
     ui->pushButton->setDisabled(false);
+    ui->stopBtn->setDisabled(true);
 }
 
 void Widget::on_ConfigBtn_clicked()
@@ -736,23 +737,30 @@ QString Widget::getVideoDuration(QString absPath)
     int mins = 0;
     int hours = 0;
     AVFormatContext* pCtx = NULL;
-    if (avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL) < 0){
-        KLOG_DEBUG() << "No such file!";
+    int ret = avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL);
+    int ret1 = avformat_find_stream_info(pCtx,NULL);
+    if (ret < 0 || ret1 < 0){
+        KLOG_DEBUG() << "avformat_open_input():" << ret << "avformat_find_stream_info():" << ret1;
     }else{
-        if (pCtx->duration != AV_NOPTS_VALUE){
-            int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
-            secs = duration / AV_TIME_BASE;
-            mins = secs / 60;
-            secs %= 60;
-            hours = mins / 60;
-            mins %= 60;
-//            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
+        if (pCtx != NULL){
+            if (pCtx->duration != AV_NOPTS_VALUE){
+                int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
+                secs = duration / AV_TIME_BASE;
+                mins = secs / 60;
+                secs %= 60;
+                hours = mins / 60;
+                mins %= 60;
+    //            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
+            }else{
+                KLOG_DEBUG() << absPath << "has no duration";
+            }
         }else{
-            KLOG_DEBUG() << absPath << "No duration" << ":" << pCtx->duration;
+            KLOG_DEBUG() << "No such file:"<< absPath << "pCtx is NULL" ;
         }
     }
     if (pCtx != NULL){
         avformat_close_input(&pCtx);
+        pCtx=NULL;
     }
     // 目前假设单个视频文件超过99小时
     if (hours > 99){

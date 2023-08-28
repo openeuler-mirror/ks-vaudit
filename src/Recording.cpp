@@ -979,6 +979,8 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			}
 			else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
+			}else if(key == "RecordVideo"){ //更新是否开启视频配置
+				settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
 			}
 		}
 	}else { //后台审计

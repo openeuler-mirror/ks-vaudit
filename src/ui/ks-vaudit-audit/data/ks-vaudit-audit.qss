@@ -37,9 +37,7 @@ color:black;
 }
 
 
-
-
-QWidget#NormalBody{
+QWidget#UserBody{
 background-color: rgb(45, 45, 45);
 border-radius: 4px;
 }
@@ -51,7 +49,7 @@ border: 1px solid #393939;
 color: #ffffff;
 border-radius: 4px;
 combobox-popup: 0;
-padding-left:10px;
+padding:10px 10px 10px 10px;
 }
 
 QComboBox:hover{
@@ -61,32 +59,9 @@ border: 1px solid #393939;
 }
 
 QComboBox:disabled{
-color:#919191;
+color:#FFFFFF;
 background-color:#393939;
-}
-
-/* 下拉后*/
-QComboBox QAbstractItemView{
 border: 1px solid #393939;
-color:#ffffff;
-background:#222222;
-border-radius:4px;
-}
-
-/*设置QListView()后生效*/
-QComboBox QAbstractItemView::item{
-height:30px;
-font: 13px;
-}
-
-QComboBox QAbstractItemView::item:hover{
-color:#fff;
-background-color:#393939;
-}
-
-QComboBox QAbstractItemView::item:selected{
-color:#fff;
-background-color:#393939;
 }
 
 /* 下拉箭头*/
@@ -102,7 +77,32 @@ background-color: transparent;
 image: url(:/images/downarrowicon.svg);
 }
 
-#NormalBody QLineEdit#waterprintText{
+/*设置QListView()后生效 下拉后*/
+QComboBox QAbstractItemView{
+border: 1px solid #393939;
+color:#ffffff;
+background:#222222;
+border-radius:4px;
+}
+
+QComboBox QAbstractItemView::item{
+height:30px;
+font: 13px;
+}
+
+QComboBox QAbstractItemView::item:hover{
+color:#fff;
+background-color:#393939;
+}
+
+QComboBox QAbstractItemView::item:selected{
+color:#fff;
+background-color:#393939;
+}
+
+
+
+#UserBody QLineEdit#waterprintText{
 background-color:rgb(34,34,34);
 border: 1px solid #393939;
 border-radius:4px;
@@ -111,20 +111,13 @@ padding-left:10px;
 font-size:13px;
 }
 
-#NormalBody QLineEdit#waterprintText:hover{
+#UserBody QLineEdit#waterprintText:hover{
 background-color:rgb(34,34,34);
 border: 1px solid #2eb3ff;
 border-radius:4px;
 color:#fff;
 padding-left:10px;
 font-size:13px;
-}
-
-#NormalBody QLineEdit#waterprintText:disabled{
-background-color:#393939;
-border-radius:6px;
-color:#919191;
-padding-left:10px;
 }
 
 QLineEdit#searchBar{
@@ -141,7 +134,6 @@ background:rgb(34,34,34);
 color:#fff;
 border-radius:6px;
 }
-
 QLineEdit#fpsEdit{
 background-color:#222222;
 border:1px solid #393939;
@@ -149,7 +141,6 @@ border-radius:6px;
 color:#fff;
 padding-left:10px;
 }
-
 QLineEdit#fpsEdit:hover{
 background-color:#222222;
 border:1px solid #2eb3ff;
@@ -158,34 +149,20 @@ color:#fff;
 padding-left:10px;
 }
 
-QLineEdit#fpsEdit:disabled{
-background-color:#393939;
+QSlider{
+background:#2d2d2d;
+}
+
+QSlider::handle:horizontal{
+border:none;
 border-radius:6px;
-color:#919191;
-padding-left:10px;
+background-color:#2eb3ff;
 }
-
-QSlider::groove:horizontal {
-border: 1px solid #fff;
-height: 0px;
-margin: 0px 4px;
-}
-QSlider::handle:horizontal {
-background: #2eb3ff;
-border: 0px solid #5c5c5c;
-width: 10px;
-margin: -5px -5px;
-border-radius: 5px;
-}
-QSlider:sub-page:horizontal{
-background:#2eb3ff;
-margin: 1.5px 0;
-}
-QSlider:add-page:horizontal{
+QSlider::add-page:horizontal{
 background:#222222;
-margin: 1.5px 0;
+margin-top:2px;
+margin-bottom:2px;
 }
-
 
 QMenu{
 background-color:#2d2d2d;
@@ -218,8 +195,8 @@ border:none;
 background-color:#2eb3ff;
 border-top-left-radius:0px;
 border-bottom-left-radius:0px;
-border-top-right-radius:5px;
-border-bottom-right-radius:5px;
+border-top-right-radius:6px;
+border-bottom-right-radius:6px;
 color:#fff;
 }
 /* hover必须放在pressed前面不然pressed不生效 */
@@ -269,24 +246,7 @@ font:bold;
 font-size:14px;
 font-family:"Sans Serif";
 }
-QPushButton#waterprintConfirm:hover{
-border:0px;
-border-radius: 6px;
-background-color:#3fc4ff;
-color:#fff;
-font:bold;
-font-size:14px;
-font-family:"Sans Serif";
-}
-QPushButton#waterprintConfirm:pressed{
-border:0px;
-border-radius: 6px;
-background-color:#1da2ff;
-color:#fff;
-font:bold;
-font-size:14px;
-font-family:"Sans Serif";
-}
+
 QPushButton#waterprintConfirm:disabled{
 border:0px;
 border-radius: 6px;
@@ -296,4 +256,3 @@ font:bold;
 font-size:14px;
 font-family:"Sans Serif";
 }
-

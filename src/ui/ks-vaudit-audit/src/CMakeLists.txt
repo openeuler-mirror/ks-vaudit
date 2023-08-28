@@ -1,12 +1,12 @@
-#project(ks-vaudit-record)
+#project(ks-vaudit-audit)
 
 cmake_minimum_required(VERSION 2.8)
 
-FILE(GLOB KS_UI_SRC_LIST_H "./*.h")
-FILE(GLOB KS_UI_SRC_LIST_CPP "./*.cpp")
-FILE(GLOB KS_UI_SRC_LIST_UI "./*.ui")
-FILE(GLOB_RECURSE KS_UI_SRC_LIST_RESOURCES "../data/*.qrc")
-FILE(GLOB_RECURSE KS_UI_SRC_LIST_QSS "../data/*.qss")
+FILE(GLOB KS_AUDIT_UI_SRC_LIST_H "./*.h")
+FILE(GLOB KS_AUDIT_UI_SRC_LIST_CPP "./*.cpp")
+FILE(GLOB KS_AUDIT_UI_SRC_LIST_UI "./*.ui")
+FILE(GLOB_RECURSE KS_AUDIT_UI_SRC_LIST_RESOURCES "../data/*.qrc")
+FILE(GLOB_RECURSE KS_AUDIT_UI_SRC_LIST_QSS "../data/*.qss")
 
 file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/include/ksvaudit-configure_global.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -22,12 +22,12 @@ foreach (interface_item ${CONFIGUREINTERFACE_SRC})
 endforeach ()
 
 ADD_EXECUTABLE(${TARGET_NAME}
-    ${KS_UI_SRC_LIST_CPP}
-    ${KS_UI_SRC_LIST_H}
-    ${KS_UI_SRC_LIST_UI}
-    ${KS_UI_SRC_LIST_RESOURCES}
+    ${KS_AUDIT_UI_SRC_LIST_CPP}
+    ${KS_AUDIT_UI_SRC_LIST_H}
+    ${KS_AUDIT_UI_SRC_LIST_UI}
+    ${KS_AUDIT_UI_SRC_LIST_RESOURCES}
     ${CONFIGUREINTERFACE_SRC}
-    ${KS_UI_SRC_LIST_QSS})
+    ${KS_AUDIT_UI_SRC_LIST_QSS})
 
 
 target_include_directories(${TARGET_NAME} PRIVATE

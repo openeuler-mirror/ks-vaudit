@@ -1,32 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>Login</class>
+ <widget class="QDialog" name="Login">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
-    <height>200</height>
+    <width>640</width>
+    <height>294</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>提示</string>
+   <string>麒麟信安录屏审计</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../data/src.qrc">
-    <normaloff>:/images/22px.png</normaloff>:/images/22px.png</iconset>
-  </property>
-  <property name="styleSheet">
-   <string notr="true"/>
+    <normaloff>:/images/a16px.png</normaloff>:/images/a16px.png</iconset>
   </property>
   <widget class="QWidget" name="dialogWidget" native="true">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>320</width>
-     <height>200</height>
+     <width>640</width>
+     <height>294</height>
     </rect>
    </property>
    <property name="styleSheet">
@@ -41,8 +38,8 @@ border:0.5px solid #464646;
      <rect>
       <x>4</x>
       <y>44</y>
-      <width>312</width>
-      <height>152</height>
+      <width>632</width>
+      <height>246</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -55,91 +52,51 @@ border:none;
      <property name="geometry">
       <rect>
        <x>24</x>
-       <y>87</y>
-       <width>114</width>
-       <height>36</height>
+       <y>176</y>
+       <width>584</width>
+       <height>40</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <pointsize>10</pointsize>
-       <weight>50</weight>
+       <weight>75</weight>
        <italic>false</italic>
-       <bold>false</bold>
+       <bold>true</bold>
       </font>
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton#accept{
-border:none;
-color:#fff;
 background-color:#2eb3ff;
+border:none;
+color:#fff;
 border-radius:6px;
 }
+
 QPushButton#accept:hover{
-border:none;
-color:#fff;
 background-color:#3fc4ff;
+border:none;
+color:#fff;
 border-radius:6px;
 }
+
 QPushButton#accept:pressed{
-border:none;
-color:#fff;
 background-color:#1da2ff;
-border-radius:6px;
-}</string>
-     </property>
-     <property name="text">
-      <string>确定</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="cancel">
-     <property name="geometry">
-      <rect>
-       <x>174</x>
-       <y>87</y>
-       <width>114</width>
-       <height>36</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <family>Sans Serif</family>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QPushButton#cancel{
-border:none;
-color:#fff;
-background-color:#393939;
-border-radius:6px;
-}
-
-QPushButton#cancel:hover{
-background-color:#464646;
-border:none;
-color:#fff;
-border-radius:6px;
-}
-
-QPushButton#cancel:pressed{
-background-color:#343434;
 border:none;
 color:#fff;
 border-radius:6px;
 }</string>
      </property>
      <property name="text">
-      <string>取消</string>
+      <string>登录</string>
      </property>
     </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
        <x>24</x>
-       <y>24</y>
-       <width>251</width>
-       <height>41</height>
+       <y>12</y>
+       <width>61</width>
+       <height>20</height>
       </rect>
      </property>
      <property name="font">
@@ -154,7 +111,7 @@ color:#fff;
 }</string>
      </property>
      <property name="text">
-      <string>关闭程序后将退出麒麟信安录屏软件，是否关闭程序？</string>
+      <string>用户名</string>
      </property>
      <property name="textFormat">
       <enum>Qt::AutoText</enum>
@@ -166,13 +123,115 @@ color:#fff;
       <bool>true</bool>
      </property>
     </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>24</x>
+       <y>91</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sans Serif</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:#fff;</string>
+     </property>
+     <property name="text">
+      <string>密码</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::AutoText</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="geometry">
+      <rect>
+       <x>24</x>
+       <y>118</y>
+       <width>584</width>
+       <height>36</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLineEdit{
+background-color:rgb(34,34,34);
+border: 1px solid #393939;
+border-radius:4px;
+color:#fff;
+padding-left:10px;
+font-size:13px;
+}
+
+QLineEdit:hover{
+background-color:rgb(34,34,34);
+border: 1px solid #2eb3ff;
+border-radius:4px;
+color:#fff;
+padding-left:10px;
+font-size:13px;
+}</string>
+     </property>
+     <property name="echoMode">
+      <enum>QLineEdit::Password</enum>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>24</x>
+       <y>39</y>
+       <width>584</width>
+       <height>36</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>sysadm</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>secadm</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>audadm</string>
+      </property>
+     </item>
+    </widget>
    </widget>
    <widget class="QWidget" name="titleBar" native="true">
     <property name="geometry">
      <rect>
       <x>1</x>
       <y>1</y>
-      <width>318</width>
+      <width>640</width>
       <height>39</height>
      </rect>
     </property>
@@ -193,7 +252,7 @@ border-top-right-radius:6px;
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">image: url(:/images/16px.png);</string>
+      <string notr="true">image: url(:/images/a16px.png);</string>
      </property>
      <property name="text">
       <string/>
@@ -204,7 +263,7 @@ border-top-right-radius:6px;
       <rect>
        <x>37</x>
        <y>3</y>
-       <width>81</width>
+       <width>131</width>
        <height>31</height>
       </rect>
      </property>
@@ -218,7 +277,34 @@ border-top-right-radius:6px;
       <string notr="true">color:#fff;</string>
      </property>
      <property name="text">
-      <string>提示</string>
+      <string>麒麟信安录屏审计</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="exit">
+     <property name="geometry">
+      <rect>
+       <x>596</x>
+       <y>0</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: none;
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../data/src.qrc">
+       <normaloff>:/images/clear_icon.svg</normaloff>:/images/clear_icon.svg</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>14</width>
+       <height>14</height>
+      </size>
      </property>
     </widget>
    </widget>

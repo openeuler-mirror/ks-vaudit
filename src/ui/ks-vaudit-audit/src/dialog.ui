@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../data/src.qrc">
-    <normaloff>:/images/22px.png</normaloff>:/images/22px.png</iconset>
+    <normaloff>:/images/a16px.png</normaloff>:/images/a16px.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -193,7 +193,7 @@ border-top-right-radius:6px;
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">image: url(:/images/16px.png);</string>
+      <string notr="true">image: url(:/images/a16px.png);</string>
      </property>
      <property name="text">
       <string/>

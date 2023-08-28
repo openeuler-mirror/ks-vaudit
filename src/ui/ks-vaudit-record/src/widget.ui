@@ -98,7 +98,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/clear_icon.svg</normaloff>:/images/clear_icon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -164,7 +164,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/minus-tiny.svg</normaloff>:/images/minus-tiny.svg</iconset>
       </property>
       <property name="iconSize">
@@ -196,7 +196,7 @@ image:none;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/menuicon.svg</normaloff>:/images/menuicon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -698,7 +698,7 @@ padding-left:10px;
        <string> 常规配置</string>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/normalicon.svg</normaloff>:/images/normalicon.svg</iconset>
       </property>
      </widget>
@@ -732,7 +732,7 @@ padding-left:10px;
        <string> 录屏列表</string>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/listicon.svg</normaloff>:/images/listicon.svg</iconset>
       </property>
      </widget>
@@ -764,7 +764,7 @@ padding-left:10px;
        <string> 录屏设置</string>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/configicon.svg</normaloff>:/images/configicon.svg</iconset>
       </property>
      </widget>
@@ -947,7 +947,21 @@ font-size:12px;
        <property name="styleSheet">
         <string notr="true">QPushButton#pushButton{
 color:#fff;
-background-color:rgb(46,179,255);
+background-color:#2eb3ff;
+border-radius:4px;
+border:none;
+font:bold;
+}
+QPushButton#pushButton:hover{
+color:#fff;
+background-color:#3fc4ff;
+border-radius:4px;
+border:none;
+font:bold;
+}
+QPushButton#pushButton:pressed{
+color:#fff;
+background-color:#1da2ff;
 border-radius:4px;
 border:none;
 font:bold;
@@ -1158,9 +1172,6 @@ border-radius:4px;
         <height>36</height>
        </rect>
       </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
       <item>
        <property name="text">
         <string>不提醒</string>
@@ -1243,7 +1254,7 @@ border-radius:4px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/icon_plus_pre.svg</normaloff>:/images/icon_plus_pre.svg</iconset>
       </property>
       <property name="iconSize">
@@ -1266,7 +1277,7 @@ border-radius:4px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../data/src.qrc">
+       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
         <normaloff>:/images/icon_Less_pre.svg</normaloff>:/images/icon_Less_pre.svg</iconset>
       </property>
       <property name="iconSize">
@@ -1276,17 +1287,40 @@ border-radius:4px;
        </size>
       </property>
      </widget>
+     <widget class="QLabel" name="label_14">
+      <property name="geometry">
+       <rect>
+        <x>24</x>
+        <y>321</y>
+        <width>591</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Sans Serif</family>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color:#fff</string>
+      </property>
+      <property name="text">
+       <string>提示：录制过程中，无法修改录屏设置！</string>
+      </property>
+     </widget>
     </widget>
     <zorder>SideBar</zorder>
+    <zorder>NormalFooterBar</zorder>
     <zorder>NormalBody</zorder>
     <zorder>ConfigBody</zorder>
     <zorder>ListBody</zorder>
-    <zorder>NormalFooterBar</zorder>
    </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
+  <include location="../../ks-vaudit-audit/data/src.qrc"/>
   <include location="../data/src.qrc"/>
  </resources>
  <connections/>

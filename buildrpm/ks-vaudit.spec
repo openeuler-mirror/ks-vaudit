@@ -93,11 +93,18 @@ sudo chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 /usr/share/*
 
 %post
-sudo service ks-vaudit-configure start
+ldconfig
+qtlib=/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib
+cat /etc/bashrc | grep "export LIBVA_DRIVERS_PATH=" > /dev/null 2>&1 || echo "export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri" >> /etc/bashrc
+cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:${qtlib}/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
+cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:${qtlib}:\$LD_LIBRARY_PATH" >> /etc/bashrc 
+
+sudo service ks-vaudit-configure restart
 sudo chkconfig ks-vaudit-configure on
 
 %preun
 sudo service ks-vaudit-configure stop
+sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean
 qtpath=%_topdir/BUILD/Qt5.7.1

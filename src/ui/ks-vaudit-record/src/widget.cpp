@@ -738,26 +738,28 @@ QString Widget::getVideoDuration(QString absPath)
     int hours = 0;
     AVFormatContext* pCtx = NULL;
     int ret = avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL);
-    int ret1 = avformat_find_stream_info(pCtx,NULL);
-    if (ret < 0 || ret1 < 0){
-        KLOG_DEBUG() << "avformat_open_input():" << ret << "avformat_find_stream_info():" << ret1;
-    }else{
-        if (pCtx != NULL){
-            if (pCtx->duration != AV_NOPTS_VALUE){
-                int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
-                secs = duration / AV_TIME_BASE;
-                mins = secs / 60;
-                secs %= 60;
-                hours = mins / 60;
-                mins %= 60;
-    //            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
-            }else{
-                KLOG_DEBUG() << absPath << "has no duration";
-            }
-        }else{
-            KLOG_DEBUG() << "No such file:"<< absPath << "pCtx is NULL" ;
-        }
+    if (ret < 0){
+        KLOG_DEBUG() << "avformat_open_input() failed:" << ret;
+        return QString("文件损坏");
     }
+    int ret1 = avformat_find_stream_info(pCtx,NULL);
+    if(ret1 < 0){
+        KLOG_DEBUG() << "avformat_find_stream_info() failed:" << ret1;
+        return QString("文件损坏");
+    }
+
+    if (pCtx->duration != AV_NOPTS_VALUE){
+        int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
+        secs = duration / AV_TIME_BASE;
+        mins = secs / 60;
+        secs %= 60;
+        hours = mins / 60;
+        mins %= 60;
+        // KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
+    }else{
+        KLOG_DEBUG() << absPath << "has no duration";
+    }
+
     if (pCtx != NULL){
         avformat_close_input(&pCtx);
         pCtx=NULL;

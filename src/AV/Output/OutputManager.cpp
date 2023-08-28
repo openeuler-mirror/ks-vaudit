@@ -691,13 +691,31 @@ void OutputManager::StartFragment() {
 		ret = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
 
 		if (m_output_settings.encode_quality == "0") {
-			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(33)));
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(15)));
 		} else if (m_output_settings.encode_quality == "1") {
-			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(23)));
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(14)));
 		} else if (m_output_settings.encode_quality == "2") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(13)));
 		}
-	} else { // vaapi and libx264
+	} else if (enc_type == EncodeTypeVaapi) { // vaapi
+		ret = unsetenv("LIBVA_DRIVER_NAME");
+
+		unsigned int vaapi_kbit_rate = 0;
+
+		if (m_output_settings.encode_quality == "0") {
+			vaapi_kbit_rate = 800;
+		} else if (m_output_settings.encode_quality == "1") {
+			vaapi_kbit_rate = 1200;
+		} else if (m_output_settings.encode_quality == "2") {
+			vaapi_kbit_rate = 1600;
+		}
+
+		vaapi_kbit_rate = vaapi_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
+		m_output_settings.video_kbit_rate = vaapi_kbit_rate;
+		
+		Logger::LogInfo("[OutputManager::StartFragment] m_output_settings.video_kbit_rate: " + QString::number(m_output_settings.video_kbit_rate));
+
+	} else {
 		ret = unsetenv("LIBVA_DRIVER_NAME");
 
 		m_output_settings.video_options.push_back(std::make_pair(QString("crf"), QString::number(23)));
@@ -707,8 +725,8 @@ void OutputManager::StartFragment() {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("fast")));
 		} else if (m_output_settings.encode_quality == "2") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("veryslow")));
-		}
-	}
+                }
+	} 
 
 	if (ret < 0) {
 		Logger::LogError("setenv/unsetenv LIBVA_DRIVER_NAME failed");

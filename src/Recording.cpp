@@ -314,7 +314,7 @@ void Recording::StartPage() {
 		m_audio_recordtype = "all";
 	}
 	m_audio_channels = 2;
-	m_audio_sample_rate = 48000;
+	m_audio_sample_rate = 8000;
 	m_audio_backend = AUDIO_BACKEND_PULSEAUDIO;
 
 	if(m_audio_enabled){

@@ -301,12 +301,12 @@ border-radius: 4px;
       </property>
       <item>
        <property name="text">
-        <string>全屏录制</string>
+        <string>不录制屏幕</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>不录制屏幕</string>
+        <string>全屏录制</string>
        </property>
       </item>
      </widget>

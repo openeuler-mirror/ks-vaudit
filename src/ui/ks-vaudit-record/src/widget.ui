@@ -98,7 +98,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/clear_icon.svg</normaloff>:/images/clear_icon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -164,7 +164,7 @@ border-top-right-radius: 8px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/minus-tiny.svg</normaloff>:/images/minus-tiny.svg</iconset>
       </property>
       <property name="iconSize">
@@ -196,7 +196,7 @@ image:none;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/menuicon.svg</normaloff>:/images/menuicon.svg</iconset>
       </property>
       <property name="iconSize">
@@ -698,7 +698,7 @@ padding-left:10px;
        <string> 常规配置</string>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/normalicon.svg</normaloff>:/images/normalicon.svg</iconset>
       </property>
      </widget>
@@ -732,7 +732,7 @@ padding-left:10px;
        <string> 录屏列表</string>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/listicon.svg</normaloff>:/images/listicon.svg</iconset>
       </property>
      </widget>
@@ -764,7 +764,7 @@ padding-left:10px;
        <string> 录屏设置</string>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/configicon.svg</normaloff>:/images/configicon.svg</iconset>
       </property>
      </widget>
@@ -1254,7 +1254,7 @@ border-radius:4px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/icon_plus_pre.svg</normaloff>:/images/icon_plus_pre.svg</iconset>
       </property>
       <property name="iconSize">
@@ -1277,7 +1277,7 @@ border-radius:4px;
        <string/>
       </property>
       <property name="icon">
-       <iconset resource="../../ks-vaudit-audit/data/src.qrc">
+       <iconset resource="../data/src.qrc">
         <normaloff>:/images/icon_Less_pre.svg</normaloff>:/images/icon_Less_pre.svg</iconset>
       </property>
       <property name="iconSize">
@@ -1320,7 +1320,7 @@ border-radius:4px;
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../../ks-vaudit-audit/data/src.qrc"/>
+  <include location="../data/src.qrc"/>
   <include location="../data/src.qrc"/>
  </resources>
  <connections/>

@@ -329,7 +329,7 @@ void Recording::StartPage() {
 	// get file settings
 	m_file_base = settings->value("output/file").toString();
 
-	m_separate_files = true;
+	m_separate_files = false;
 	m_add_timestamp = true;
 
 	// get the output settings
@@ -1041,7 +1041,7 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		OnRecordStartPause();
 	}else if(op == "stop"){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
-		OnRecordSaveAndExit(true);
+		OnRecordSave(); //结束视频录制但不退出
 		KyNotifyInterface::instance().sendNotify(KSVAUDIT_STOP);
 	}
 }

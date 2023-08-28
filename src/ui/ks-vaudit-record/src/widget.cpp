@@ -559,7 +559,7 @@ void Widget::on_waterprintText_textChanged(const QString &arg1)
 void Widget::on_resolutionBox_currentIndexChanged(int index)
 {
     QVariant v(1|32);
-    if (index == 1){
+    if (index == 0){
         v.setValue(0);
     }
     ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
@@ -580,7 +580,7 @@ void Widget::on_audioBox_currentIndexChanged(int index)
         setValue = QString("none");
         v.setValue(0);
     }
-    ui->resolutionBox->setItemData(1, v, Qt::UserRole -1 );
+    ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
     setConfig(QString("RecordAudio"), setValue);
 }
 

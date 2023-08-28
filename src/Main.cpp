@@ -26,6 +26,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "EnumStrings.h"
 #include "ScreenScaling.h"
 #include "kiran-log/qt5-log-i.h"
+#include <qapplication.h>
 extern "C" {
 #include<signal.h>
 }
@@ -38,7 +39,11 @@ QSettings* settings_ptr = NULL;
 
 static void sig_handler(int sig){
 	if(sig == SIGINT){
-		recording_screen->OnRecordSaveAndExit(true);
+		if(recording_screen->IsOutputStarted()){
+			recording_screen->OnRecordSaveAndExit(true);
+		}else{
+			qApp->quit();
+		}
 	}
 }
 

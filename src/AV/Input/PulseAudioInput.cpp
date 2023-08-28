@@ -18,6 +18,9 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "PulseAudioInput.h"
+#include <pulse/operation.h>
+#include <pulse/stream.h>
+#include <string>
 
 #if SSR_USE_PULSEAUDIO
 
@@ -28,6 +31,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 // (I've seen one situation where PulseAudio instantly 'captures' 2 seconds of silence when the recording is started).
 // It also eliminates the clicking sound when the microphone is started for the first time.
 const int64_t PulseAudioInput::START_DELAY = 100000;
+uint32_t  PulseAudioInput::m_load_pulsemodule_idx = 0;
 
 static void PulseAudioIterate(pa_mainloop* mainloop) {
 	if(pa_mainloop_prepare(mainloop, 1000) < 0) {
@@ -54,7 +58,7 @@ static void PulseAudioConnect(pa_mainloop** mainloop, pa_context** context) {
 	}
 
 	// connect to PulseAudio
-	*context = pa_context_new(pa_mainloop_get_api(*mainloop), "SimpleScreenRecorder");
+	*context = pa_context_new(pa_mainloop_get_api(*mainloop), "ks-vaudit");
 	if(*context == NULL) {
 		Logger::LogError("[PulseAudioConnect] " + Logger::tr("Error: Could not create context!"));
 		throw PulseAudioException();
@@ -114,7 +118,7 @@ static void PulseAudioConnectStream(pa_mainloop* mainloop, pa_context* context, 
 	buffer_attr.tlength = (uint32_t) -1;
 
 	// create a stream
-	*stream = pa_stream_new(context, "SimpleScreenRecorder input", &sample_spec, NULL);
+	*stream = pa_stream_new(context, "ks-vaduit input", &sample_spec, NULL);
 	if(*stream == NULL) {
 		Logger::LogError("[PulseAudioConnectStream] " + Logger::tr("Error: Could not create stream! Reason: %1").arg(pa_strerror(pa_context_errno(context))));
 		throw PulseAudioException();
@@ -188,7 +192,7 @@ static void PulseAudioCancelOperation(pa_mainloop* mainloop, pa_operation** oper
 
 }
 
-PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample_rate) {
+PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample_rate, QString record_audio_type) {
 
 	m_source_name = source_name;
 	m_sample_rate = sample_rate;
@@ -198,6 +202,10 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 	m_pa_context = NULL;
 	m_pa_stream = NULL;
 	m_pa_period_size = 1024; // number of samples per period
+
+	m_record_audio_type = record_audio_type;
+	Logger::LogInfo("the record_audio_type is  ---> " + m_record_audio_type + " LINE207");
+	//m_load_pulsemodule_idx = 0;
 
 	try {
 		Init();
@@ -275,7 +283,22 @@ void PulseAudioInput::Init() {
 	pa_stream_set_suspended_callback(m_pa_stream, SuspendedCallback, this);
 	pa_stream_set_moved_callback(m_pa_stream, MovedCallback, this);
 
-	DetectMonitor();
+	DetectMonitor(); //检测pa_source_info
+	if(m_record_audio_type == "all" && m_stream_is_monitor){
+		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX   record all the audio XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+		pa_operation* operation = NULL;
+		//operation = pa_context_get_source_info_by_index(m_pa_context, pa_stream_get_device_index(m_pa_stream), SourceInfoCallback, this);
+		//if(operation == NULL){
+		//	Logger::LogError("Could not get the stream source info");
+		//}
+		//PulseAudioCompleteOperation(m_pa_mainloop, &operation);
+
+		//load the module module-loopback
+		Logger::LogInfo("load the module module-loopback to record the system speaker volume and microphone volume ");
+		operation = pa_context_load_module(m_pa_context, "module-loopback", NULL, LoadModuleCallback, this);
+		PulseAudioCompleteOperation(m_pa_mainloop, &operation);
+
+	}
 
 	// start input thread
 	m_should_stop = false;
@@ -285,6 +308,13 @@ void PulseAudioInput::Init() {
 }
 
 void PulseAudioInput::Free() {
+	if(m_record_audio_type == "all" && m_stream_is_monitor){
+		//unload the module module-loopback
+		pa_operation* operation = NULL;
+		Logger::LogInfo("unload the mojdule mojdule-loopback XXXXXXXXXXXXXXXX LINE 314");
+		operation = pa_context_unload_module(m_pa_context,PulseAudioInput::m_load_pulsemodule_idx,UnLoadModuleCallback, this);
+		PulseAudioCompleteOperation(m_pa_mainloop, &operation);
+	}
 	PulseAudioDisconnectStream(&m_pa_stream);
 	PulseAudioDisconnect(&m_pa_mainloop, &m_pa_context);
 }
@@ -315,7 +345,20 @@ void PulseAudioInput::SourceInfoCallback(pa_context* context, const pa_source_in
 		PulseAudioInput *input = (PulseAudioInput*) userdata;
 		input->m_stream_is_monitor = (info->monitor_of_sink != PA_INVALID_INDEX);
 	}
+	//pa_source_info 可以在这里调音量  pa_context_set_sink_volume_by_name
 }
+
+void PulseAudioInput::LoadModuleCallback(pa_context *c, uint32_t idx, void *userdata){
+	Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXX Load the module success ");
+	m_load_pulsemodule_idx = idx;
+	Logger::LogInfo("XXXXXXXXXXXthe module idx is " + QString::fromStdString(std::to_string(idx)));
+
+}
+
+void PulseAudioInput::UnLoadModuleCallback(pa_context *c, int success, void *userdata){
+	Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXX unload Load the module success ");
+}
+
 
 void PulseAudioInput::SuspendedCallback(pa_stream* stream, void* userdata) {
 	PulseAudioInput *input = (PulseAudioInput*) userdata;

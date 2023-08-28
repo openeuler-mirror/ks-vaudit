@@ -61,8 +61,8 @@ public:
 		VIDEO_AREA_V4L2,
 #endif
 		VIDEO_AREA_COUNT // must be last
-	};    
-    
+	};
+
 	enum enum_h264_preset {
 		H264_PRESET_ULTRAFAST,
 		H264_PRESET_SUPERFAST,
@@ -135,10 +135,11 @@ private:
 	unsigned int m_video_x, m_video_y, m_video_in_width, m_video_in_height;
 	unsigned int m_video_frame_rate;
 	bool m_video_scaling;
-
+	bool m_video_enabled; //是否录制视频
 	bool m_audio_enabled; //是否录制音频
+	QString m_audio_recordtype;
 	std::vector<PulseAudioInput::Source> m_pulseaudio_sources;
-	
+
 	unsigned int m_audio_channels, m_audio_sample_rate;
 	enum_audio_backend m_audio_backend;
 
@@ -179,7 +180,7 @@ public:
 	std::vector<QRect> GetScreenGeometries();
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);
-	
+
 
 private:
 	void FinishOutput();

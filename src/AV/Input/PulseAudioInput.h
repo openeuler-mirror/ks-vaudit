@@ -54,19 +54,21 @@ private:
 	bool m_stream_is_monitor;
 	bool m_stream_suspended, m_stream_moved;
 
+	QString m_record_audio_type;
+
 	std::thread m_thread;
 	std::atomic<bool> m_should_stop, m_error_occurred;
 
 public:
-	PulseAudioInput(const QString& source_name, unsigned int sample_rate);
+	PulseAudioInput(const QString& source_name, unsigned int sample_rate, QString m_record_audio_type);
 	~PulseAudioInput();
 
 	// Returns whether an error has occurred in the input thread.
 	// This function is thread-safe.
 	inline bool HasErrorOccurred() { return m_error_occurred; }
-
 public:
 	static std::vector<Source> GetSourceList();
+	static uint32_t  m_load_pulsemodule_idx; //加载module的idx
 
 private:
 	void Init();
@@ -75,6 +77,8 @@ private:
 	void DetectMonitor();
 
 	static void SourceInfoCallback(pa_context* context, const pa_source_info* info, int eol, void* userdata);
+	static void LoadModuleCallback(pa_context *c, uint32_t idx, void *userdata);
+	static void UnLoadModuleCallback(pa_context *c, int success, void *userdata);
 	static void SuspendedCallback(pa_stream* stream, void* userdata);
 	static void MovedCallback(pa_stream* stream, void* userdata);
 

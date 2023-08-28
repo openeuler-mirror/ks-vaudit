@@ -420,11 +420,26 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
     QString a = arg1;
     if (a == "1"){
         // 1开头的时候边框置红，开始录屏设为10fps
-        ui->fpsEdit->setStyleSheet("background-color:#222222;"
-                                   "border:1px solid #ff4444;"
+        ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
+                                   "background-color:#222222;"
+                                   "border:1px solid #393939;"
                                    "border-radius:6px;"
                                    "color:#fff;"
-                                   "padding-left:10px;");
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:hover{"
+                                   "background-color:#222222;"
+                                   "border:1px solid #2eb3ff;"
+                                   "border-radius:6px;"
+                                   "color:#fff;"
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:disabled{"
+                                   "background-color:#393939;"
+                                   "border-radius:6px;"
+                                   "color:#919191;"
+                                   "padding-left:10px;"
+                                   "}");
         ui->label_11->setStyleSheet("color:#ff4444");
         // 这里如果是1，直接点开始录屏
         // 会先发SwitchControl的信号开始录屏，再修改fps
@@ -452,6 +467,12 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
                                    "border:1px solid #2eb3ff;"
                                    "border-radius:6px;"
                                    "color:#fff;"
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:disabled{"
+                                   "background-color:#393939;"
+                                   "border-radius:6px;"
+                                   "color:#919191;"
                                    "padding-left:10px;"
                                    "}");
         ui->label_11->setStyleSheet("color:#999999");
@@ -727,7 +748,7 @@ QString Widget::getVideoDuration(QString absPath)
             mins %= 60;
 //            KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
         }else{
-            KLOG_DEBUG() << absPath << "No duration";
+            KLOG_DEBUG() << absPath << "No duration" << ":" << pCtx->duration;
         }
     }
     if (pCtx != NULL){

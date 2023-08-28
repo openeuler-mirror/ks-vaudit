@@ -34,9 +34,8 @@ start(){
 }
 
 stop(){
-        echo -n $"Shutting down ${procname}: "
         killproc ${procname}
-        ret=$?
+        echo "Shutting down ${procname}: "
 }
 
 rhstatus() {

@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-    int ret = klog_qt5_init("", "kylinsec-session", "ks-vaudit", "ks-vaudit-configure");
+    int ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit-configure");
     if (ret == 0)
         KLOG_INFO() << "init klog succeed";
     else

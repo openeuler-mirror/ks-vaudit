@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QMutexLocker>
+#include <QTextCodec>
 
 //conatin MIN, contain MAX
 #define FPS_MIN_VALUE               2
@@ -44,15 +45,16 @@ GeneralConfigure::GeneralConfigure(QObject *parent)
     m_itemMap.insert(CONFIG_AUDIT_QUALITY, "audit/Quality");
     m_itemMap.insert(CONFIG_AUDIT_RECORD_AUDIO, "audit/RecordAudio");
     m_itemMap.insert(CONFIG_AUDIT_BITRATE, "audit/Bitrate");
-    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT, "audit/TimingPause");
-    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT_TEXT, "audit/WaterPrint");
-    m_itemMap.insert(CONFIG_AUDIT_TIMING_PAUSE, "audit/WaterPrintText");
+    m_itemMap.insert(CONFIG_AUDIT_TIMING_PAUSE, "audit/TimingPause");
+    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT, "audit/WaterPrint");
+    m_itemMap.insert(CONFIG_AUDIT_WATER_PRINT_TEXT, "audit/WaterPrintText");
     m_itemMap.insert(CONFIG_AUDIT_MIN_FREE_SPACE, "audit/MinFreeSpace");
     m_itemMap.insert(CONFIG_AUDIT_MAX_SAVE_DAYS, "audit/MaxSaveDays");
     m_itemMap.insert(CONFIG_AUDIT_MAX_FILE_SIZE, "audit/MaxFileSize");
     m_itemMap.insert(CONFIG_AUDIT_MAX_RECORD_PER_USER, "audit/MaxRecordPerUser");
 
     m_confSettings = QSharedPointer<QSettings>(new QSettings(m_confFile, QSettings::IniFormat));
+    m_confSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
     initConfig();
 
     m_fileWatcher = new QFileSystemWatcher();
@@ -283,6 +285,13 @@ bool GeneralConfigure::checkAuditParam(QString item, QString value)
 
 bool GeneralConfigure::checkPath(QString path)
 {
+    if (path.contains('~'))
+    {
+        QString home_dir = getenv("HOME");
+        path.replace('~', home_dir);
+        KLOG_INFO() << "repalce path:" << path;
+    }
+
     QDir dir(path);
     if (dir.exists())
         return true;

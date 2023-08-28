@@ -180,6 +180,7 @@ public:
 	std::vector<QRect> GetScreenGeometries();
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);
+	bool IsOutputStarted(){return m_output_started ;}
 
 
 private:

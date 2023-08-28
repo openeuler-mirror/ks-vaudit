@@ -1729,12 +1729,12 @@ border-radius:6px;
       </widget>
      </widget>
     </widget>
-    <zorder>SideBar</zorder>
+    <zorder>AboutBody</zorder>
     <zorder>EditPassWidget</zorder>
-    <zorder>ListBody</zorder>
+    <zorder>SideBar</zorder>
     <zorder>UserBody</zorder>
     <zorder>ConfigBody</zorder>
-    <zorder>AboutBody</zorder>
+    <zorder>ListBody</zorder>
    </widget>
    <widget class="QWidget" name="TitleBar" native="true">
     <property name="geometry">

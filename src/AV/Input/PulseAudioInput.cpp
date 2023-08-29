@@ -284,21 +284,6 @@ void PulseAudioInput::Init() {
 	pa_stream_set_moved_callback(m_pa_stream, MovedCallback, this);
 
 	DetectMonitor(); //检测pa_source_info
-	if(m_record_audio_type == "all" && m_stream_is_monitor){
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX   record all the audio XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-		pa_operation* operation = NULL;
-		//operation = pa_context_get_source_info_by_index(m_pa_context, pa_stream_get_device_index(m_pa_stream), SourceInfoCallback, this);
-		//if(operation == NULL){
-		//	Logger::LogError("Could not get the stream source info");
-		//}
-		//PulseAudioCompleteOperation(m_pa_mainloop, &operation);
-
-		//load the module module-loopback
-		Logger::LogInfo("load the module module-loopback to record the system speaker volume and microphone volume ");
-		operation = pa_context_load_module(m_pa_context, "module-loopback", NULL, LoadModuleCallback, this);
-		PulseAudioCompleteOperation(m_pa_mainloop, &operation);
-
-	}
 
 	// start input thread
 	m_should_stop = false;
@@ -308,13 +293,6 @@ void PulseAudioInput::Init() {
 }
 
 void PulseAudioInput::Free() {
-	if(m_record_audio_type == "all" && m_stream_is_monitor){
-		//unload the module module-loopback
-		pa_operation* operation = NULL;
-		Logger::LogInfo("[PulseAudioInput::Free] unload the mojdule mojdule-loopback");
-		operation = pa_context_unload_module(m_pa_context,PulseAudioInput::m_load_pulsemodule_idx,UnLoadModuleCallback, this);
-		PulseAudioCompleteOperation(m_pa_mainloop, &operation);
-	}
 	PulseAudioDisconnectStream(&m_pa_stream);
 	PulseAudioDisconnect(&m_pa_mainloop, &m_pa_context);
 }
@@ -347,18 +325,6 @@ void PulseAudioInput::SourceInfoCallback(pa_context* context, const pa_source_in
 	}
 	//pa_source_info 可以在这里调音量  pa_context_set_sink_volume_by_name
 }
-
-void PulseAudioInput::LoadModuleCallback(pa_context *c, uint32_t idx, void *userdata){
-	Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXX Load the module success ");
-	m_load_pulsemodule_idx = idx;
-	Logger::LogInfo("XXXXXXXXXXXthe module idx is " + QString::fromStdString(std::to_string(idx)));
-
-}
-
-void PulseAudioInput::UnLoadModuleCallback(pa_context *c, int success, void *userdata){
-	Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXX unload Load the module success ");
-}
-
 
 void PulseAudioInput::SuspendedCallback(pa_stream* stream, void* userdata) {
 	PulseAudioInput *input = (PulseAudioInput*) userdata;
@@ -397,7 +363,12 @@ void PulseAudioInput::InputThread() {
 			if(data == NULL) {
 				if(bytes > 0) {
 					// skip hole
-					PushAudioHole();
+					if (m_record_audio_type == "mic"){
+						PushAudioHoleInput();
+					} else {
+						PushAudioHole();
+					}
+
 					pa_stream_drop(m_pa_stream);
 				}
 			} else {
@@ -435,7 +406,11 @@ void PulseAudioInput::InputThread() {
 						if(!m_stream_is_monitor) {
 							time -= (int64_t) samples * (int64_t) 1000000 / (int64_t) m_sample_rate;
 						}
-						PushAudioSamples(m_channels, m_sample_rate, AV_SAMPLE_FMT_S16, samples, push_data, time);
+						if (m_record_audio_type == "mic"){
+							PushAudioSamplesInput(m_channels, m_sample_rate, AV_SAMPLE_FMT_S16, samples, push_data, time);
+						} else {
+							PushAudioSamples(m_channels, m_sample_rate, AV_SAMPLE_FMT_S16, samples, push_data, time);
+						}
 
 					}
 				} else {
@@ -455,16 +430,22 @@ void PulseAudioInput::InputThread() {
 
 			}
 
+			if (m_stream_suspended || m_stream_moved) {
+				if (m_record_audio_type == "mic"){
+					PushAudioHoleInput();
+				} else {
+					PushAudioHole();
+				}
+			}
+
 			// is the stream suspended?
 			if(m_stream_suspended) {
 				m_stream_suspended = false;
 				Logger::LogWarning("[PulseAudioInput::InputThread] " + Logger::tr("Warning: Audio source was suspended. The current segment will be stopped until the source is resumed."));
-				PushAudioHole();
 			}
 			if(m_stream_moved) {
 				m_stream_moved = false;
 				Logger::LogWarning("[PulseAudioInput::InputThread] " + Logger::tr("Warning: Stream was moved to a different source."));
-				PushAudioHole();
 				DetectMonitor();
 			}
 

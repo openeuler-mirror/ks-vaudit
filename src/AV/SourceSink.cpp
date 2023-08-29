@@ -95,3 +95,18 @@ void AudioSource::PushAudioHole() {
 		static_cast<AudioSink*>(s.sink)->ReadAudioHole();
 	}
 }
+
+void AudioSourceInput::PushAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
+    SharedLock lock(&m_shared_data);
+    for(SinkData &s : lock->m_sinks) {
+        static_cast<AudioSinkInput*>(s.sink)->ReadAudioSamplesInput(channels, sample_rate, format, sample_count, data, timestamp);
+    }
+}
+
+void AudioSourceInput::PushAudioHoleInput() {
+    SharedLock lock(&m_shared_data);
+    for(SinkData &s : lock->m_sinks) {
+        static_cast<AudioSinkInput*>(s.sink)->ReadAudioHoleInput();
+    }
+}
+

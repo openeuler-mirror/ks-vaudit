@@ -31,12 +31,19 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "SampleCast.h"
 #include "NvEncoderGL.h"
 
+typedef enum recode_audio_type {
+	RECORD_AUDIO_MIC,
+	RECORD_AUDIO_SPEAKER,
+	RECORD_AUDIO_ALL,
+	RECORD_AUDIO_INVALID
+} RECORD_AUDIO_TYPE;
+
 class OutputManager;
 class OutputSettings;
 class OutputFormat;
 class SyncDiagram;
 
-class Synchronizer : public VideoSink, public AudioSink {
+class Synchronizer : public VideoSink, public AudioSink, public AudioSinkInput {
 
 private:
 	struct VideoData {
@@ -86,13 +93,17 @@ private:
 		unsigned int m_partial_audio_frame_samples;
 
 		std::deque<std::unique_ptr<AVFrameWrapper> > m_video_buffer;
-		QueueBuffer<float> m_audio_buffer;
+		QueueBuffer<float> m_audio_buffer_input;
+		QueueBuffer<float> m_audio_buffer_output;
 		int64_t m_video_pts, m_audio_samples; // video and audio position in the final stream (encoded frames and samples, including the partial audio frame)
 		int64_t m_time_offset; // the length of all previous segments combined (in microseconds)
 
-		bool m_segment_video_started, m_segment_audio_started; // whether video and audio have started (always true if the corresponding stream is disabled)
-		int64_t m_segment_video_start_time, m_segment_audio_start_time; // the start time of video and audio (real-time, in microseconds)
-		int64_t m_segment_video_stop_time, m_segment_audio_stop_time; // the stop time of video and audio (real-time, in microseconds)
+		bool m_segment_video_started;
+		bool m_segment_audio_started_input, m_segment_audio_started_output; // whether video and audio have started (always true if the corresponding stream is disabled)
+		int64_t m_segment_video_start_time;
+		int64_t m_segment_audio_start_time_input, m_segment_audio_start_time_output; // the start time of video and audio (real-time, in microseconds)
+		int64_t m_segment_video_stop_time;
+		int64_t m_segment_audio_stop_time_input, m_segment_audio_stop_time_output; // the stop time of video and audio (real-time, in microseconds)
 		bool m_segment_audio_can_drop; // whether audio samples can still be dropped (i.e. no samples have been sent to the encoder yet)
 		int64_t m_segment_audio_samples_read; // the number of samples that have been read from the audio buffer (including dropped samples)
 		int64_t m_segment_video_accumulated_delay; // sum of all video frame delays that were applied so far
@@ -133,12 +144,12 @@ private:
 	const OutputFormat *m_output_format;
 
 	int64_t m_max_frames_skipped;
-
 	std::unique_ptr<SyncDiagram> m_sync_diagram;
 
 	std::thread m_thread;
 	MutexDataPair<VideoData> m_video_data;
-	MutexDataPair<AudioData> m_audio_data;
+	MutexDataPair<AudioData> m_audio_data_input;
+	MutexDataPair<AudioData> m_audio_data_output;
 	MutexDataPair<SharedData> m_shared_data;
 	std::atomic<bool> m_should_stop, m_error_occurred;
 
@@ -178,8 +189,12 @@ public: // internal
 	virtual int64_t GetNextVideoTimestamp() override;
 	virtual void ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp, int changed) override;
 	virtual void ReadVideoPing(int64_t timestamp) override;
+	void ReadAudioSamplesReal(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp, QString &type);
+	void ReadAudioHoleReal(QString &type);
 	virtual void ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) override;
 	virtual void ReadAudioHole() override;
+	virtual void ReadAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) override;
+	virtual void ReadAudioHoleInput() override;
 
 private:
 	void InitAudioSegment(AudioData* audiolock);

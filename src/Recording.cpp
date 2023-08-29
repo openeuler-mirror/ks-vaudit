@@ -30,6 +30,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "KyNotify.h"
 #include "kiran-log/qt5-log-i.h"
 #include "kidletime.h"
+#include <QAudioDeviceInfo>
 
 ENUMSTRINGS(Recording::enum_video_area) = {
     {Recording::VIDEO_AREA_SCREEN, "screen"},
@@ -104,7 +105,7 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 		if(add_timestamp) {
 			if(!newfile.isEmpty())
 				newfile += "-";
-                        newfile += now.toString("yyyyMMdd_hhmmss");
+			newfile += now.toString("yyyy-MM-dd_hh.mm.ss");
 		}
 		if(counter != 1) {
 			if(!newfile.isEmpty())
@@ -246,10 +247,6 @@ void Recording::OnRecordTimer() {
 }
 
 void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
-	//没有开始录屏 不处理
-	if(!m_page_started)
-		return;
-
 	//分辨率变化后的处理
 	m_separate_files = true;
 	OnRecordPause();
@@ -305,60 +302,43 @@ void Recording::StartPage() {
 	}
 
 	// 音频相关设置
-	// Logger::LogInfo("[Recording::StartPage] the m_audio_en is " + settings->value("input/audio_enabled").toString());
+	QString defualtAudioInput = QAudioDeviceInfo::defaultInputDevice().deviceName();
+	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
 
-	if(settings->value("input/audio_enabled").toString() == "none"){ //不录制音频
-		m_audio_enabled = false;
-		m_audio_recordtype = "none";
-	}else if (settings->value("input/audio_enabled").toString() == "mic"){ //录制麦克风
-		if(m_pulseaudio_sources.size() == 0){ //pulseaudio 未检测到设备
-			Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 未检测到设备 XXXXXXXXXXXXXXXXXXXX");
-			m_audio_enabled = false;
-			m_audio_recordtype = "none";
-		}else if(m_pulseaudio_sources.size() == 1){ //pulseaudio 仅检测到输出设备
+	m_pulseaudio_source_input = "";
+	m_pulseaudio_source_output = "";
+	m_audio_enabled = false;
+	m_audio_recordtype = "none";
+
+	QString audio_enabled = settings->value("input/audio_enabled").toString();
+	if (audio_enabled == "mic" || audio_enabled == "all"){ //录制麦克风
+		if (!defualtAudioInput.contains("alsa_null") && !defualtAudioInput.isEmpty()) {
 			m_audio_enabled = true;
-			m_audio_recordtype = "mic";
-			m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
-		} else{
-			m_audio_enabled = true;
-			m_audio_recordtype = "mic";
-			if(QString::fromStdString(m_pulseaudio_sources[0].m_name).contains("monitor")){
-				m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[1].m_name);
-			}
+			m_pulseaudio_source_input = defualtAudioInput;
 		}
-	}else if(settings->value("input/audio_enabled").toString() == "speaker"){ //扬声器
-		if(m_pulseaudio_sources.size() == 0){//pulseaudio 未检测到设备
-			m_audio_enabled = false;
-			m_audio_recordtype = "none";
-		}else if(m_pulseaudio_sources.size() ==1){
-			m_audio_enabled = true;
-			m_audio_recordtype = "speaker";
-			m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
-		}else{
-			m_audio_enabled = true;
-			m_audio_recordtype = "speaker";
-			if(QString::fromStdString(m_pulseaudio_sources[0].m_name).contains("monitor")){
-				m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
-			}
-		}
-	}else if(settings->value("input/audio_enabled").toString() == "all"){ //录制所有
-		Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 录制所有音频 XXXXXXXXXXXXXXXXXXXX");
-		if(m_pulseaudio_sources.size() < 2){
-			m_audio_enabled = true;
-			m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
-		}else{
-			m_audio_enabled = true;
-			if(QString::fromStdString(m_pulseaudio_sources[0].m_name).contains("monitor")){
-				m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
-			}
-		}
-		m_audio_recordtype = "all";
 	}
+	if(audio_enabled == "speaker" || audio_enabled == "all"){ //扬声器
+		if (m_pulseaudio_sources.size() > 0 && !defualtAudioOutput.contains("alsa_null") && !defualtAudioOutput.isEmpty()){
+			for(auto asource : m_pulseaudio_sources){
+				if (QString::fromStdString(asource.m_name).contains("monitor") && QString::fromStdString(asource.m_name).contains(defualtAudioOutput)){
+					m_audio_enabled = true;
+					m_pulseaudio_source_output = QString::fromStdString(asource.m_name);
+					break;
+				}
+			}
+		}
+	}
+	if (m_pulseaudio_source_input != "" && m_pulseaudio_source_output != "") {
+		m_audio_recordtype = "all";
+	} else if (m_pulseaudio_source_input != "") {
+		m_audio_recordtype = "mic";
+	} else if (m_pulseaudio_source_output != "") {
+		m_audio_recordtype = "speaker";
+	}
+
 	m_audio_channels = 2;
 	m_audio_sample_rate = 8000;
 	m_audio_backend = AUDIO_BACKEND_PULSEAUDIO;
-
-	//m_pulseaudio_source = settings->value("input/audio_pulseaudio_source", QString()).toString();
 
 	// get file settings
 	m_file_base = settings->value("output/file").toString();
@@ -373,10 +353,8 @@ void Recording::StartPage() {
 	}else{
 		m_output_settings.container_avname = settings->value("output/container_av", QString()).toString();
 	}
-	//m_output_settings.container_avname = QString("mp4");
 
 	m_output_settings.video_codec_avname = settings->value("output/video_codec_av", QString()).toString();
-	// Logger::LogInfo("[Recording::StartPage] the m_output_settings.video_codec_avname is " + m_output_settings.video_codec_avname);
 
 	m_output_settings.video_kbit_rate = 128;
 	m_output_settings.video_width = m_video_in_width;
@@ -583,8 +561,7 @@ void Recording::SaveSettings(QSettings* settings) {
 		Logger::LogError("the video codec error \n");
 		qApp->quit();
 	}
-//	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
-    settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
+	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/video_allow_frame_skipping", true);
@@ -674,10 +651,7 @@ void Recording::StartOutput() {
 			if (m_auditBaseFileName.isEmpty())
 				m_output_settings.file = GetNewSegmentFile(m_file_base, m_add_timestamp);
 			else
-			{
 				m_output_settings.file = GetAUditNewSegmentFile(m_file_base, m_auditBaseFileName, m_add_timestamp);
-				m_configure_interface->MonitorNotification(getpid(), m_output_settings.file);
-			}
 
 			KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
 
@@ -799,11 +773,17 @@ void Recording::StartInput() {
 
 		// start the audio input
 		if(m_audio_enabled) {
-			if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO)
-				Logger::LogInfo("[Recording::StartInput] start recording audio");
-				m_pulseaudio_input.reset(new PulseAudioInput(m_pulseaudio_source, m_audio_sample_rate, m_audio_recordtype));
-				Logger::LogInfo("[Recording::StartInput] m_audio_recordtype is " + m_audio_recordtype);
+			if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO) {
+				Logger::LogInfo("[Recording::StartInput] m_audio_recordtype is: " + m_audio_recordtype +  "  m_pulseaudio_source_input: " + m_pulseaudio_source_input + "  m_pulseaudio_source_output: " + m_pulseaudio_source_output);
+				// 这里recordtype只用来判断是否需要new对象 这里需要加上{}
+				if (m_audio_recordtype == "mic" || m_audio_recordtype == "all"){
+					m_pulseaudio_input.reset(new PulseAudioInput(m_pulseaudio_source_input, m_audio_sample_rate, "mic"));
+				}
+				if (m_audio_recordtype == "speaker" || m_audio_recordtype == "all"){
+					m_pulseaudio_output.reset(new PulseAudioInput(m_pulseaudio_source_output, m_audio_sample_rate, "speaker"));
+				}
 
+			}
 		}
 
 		Logger::LogInfo("[PageRecord::StartInput] " + tr("Started input."));
@@ -825,6 +805,7 @@ void Recording::StartInput() {
 #endif
 #if SSR_USE_PULSEAUDIO
 		m_pulseaudio_input.reset();
+		m_pulseaudio_output.reset();
 #endif
 		// JACK shouldn't stop until the page stops
 		return;
@@ -839,9 +820,8 @@ void Recording::StopInput() {
 		return;
 
 	Logger::LogInfo("[PageRecord::StopInput] " + tr("Stopping input ..."));
-	KLOG_DEBUG() << "start m_x11_input reset";
+
 	m_x11_input.reset();
-	KLOG_DEBUG() << "end m_x11_input reset";
 #if SSR_USE_OPENGL_RECORDING
 	if(m_gl_inject_input != NULL)
 		m_gl_inject_input->SetCapturing(false);
@@ -854,6 +834,7 @@ void Recording::StopInput() {
 #endif
 #if SSR_USE_PULSEAUDIO
 	m_pulseaudio_input.reset();
+	m_pulseaudio_output.reset();
 #endif
 	// JACK shouldn't stop until the page stops
 
@@ -900,21 +881,36 @@ void Recording::UpdateInput() {
 
 	// get sources
 	VideoSource *video_source = NULL;
-	AudioSource *audio_source = NULL;
+	AudioSourceInput *audio_source_input = NULL;
+	AudioSource *audio_source_output = NULL;
+
 	video_source = m_x11_input.get();
 
 	if(m_audio_enabled) {
-		if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO)
-			audio_source = m_pulseaudio_input.get();
+		if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO) {
+			audio_source_input = m_pulseaudio_input.get();
+			audio_source_output = m_pulseaudio_output.get();
+		}
 	}
 
 	// connect sinks
 	if(m_output_manager != NULL) {
 		if(m_output_started) {
 			m_output_manager->GetSynchronizer()->ConnectVideoSource(video_source, PRIORITY_RECORD);
-			m_output_manager->GetSynchronizer()->ConnectAudioSource(audio_source, PRIORITY_RECORD);
+			if (m_audio_recordtype == "mic" || m_audio_recordtype == "all"){
+				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(audio_source_input, PRIORITY_RECORD);
+			} else {
+				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(NULL);
+			}
+
+			if (m_audio_recordtype == "speaker" || m_audio_recordtype == "all") {
+				m_output_manager->GetSynchronizer()->ConnectAudioSource(audio_source_output, PRIORITY_RECORD);
+			} else {
+				m_output_manager->GetSynchronizer()->ConnectAudioSource(NULL);
+			}
 		} else {
 			m_output_manager->GetSynchronizer()->ConnectVideoSource(NULL);
+			m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(NULL);
 			m_output_manager->GetSynchronizer()->ConnectAudioSource(NULL);
 		}
 	}
@@ -1026,9 +1022,10 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
 			} else if (key == "TimingReminder") {
 				KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
-                        }else if(key == "WaterPrint"){
+			}else if(key == "is_use_watermark"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}else if(key == "WaterPrintText"){
+			}
+			else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
 			}else if(key == "RecordVideo"){ //更新是否开启视频配置
 				settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
@@ -1060,9 +1057,10 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				}
 			}else if(key == "FileType"){
 				settings->setValue("output/container_av", jsonObj[key].toString());
-                        }else if(key == "WaterPrint"){
+			}else if(key == "is_use_watermark"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}else if(key == "WaterPrintText"){
+			}
+			else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
 			} else if (key == "TimingPause") {
 				m_timingPause = jsonObj[key].toString().toInt();
@@ -1095,9 +1093,7 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		OnRecordSave(); //结束视频录制但不退出
 	}
 
-	//后台审计不需要提示
-	if (m_auditBaseFileName.isEmpty())
-		KyNotify::instance().sendNotify(op);
+	KyNotify::instance().sendNotify(op);
 }
 
 void Recording::AuditParamDeal()
@@ -1107,13 +1103,9 @@ void Recording::AuditParamDeal()
 	if (args.size() != 2)
 		return;
 
-	//后台审计不需要发送录屏时间
-	if (m_tm && m_tm->isActive())
-		m_tm->stop();
-
 	m_auditFirstStart = true;
 	QStringList strlist = args[1].split("-");
-	strlist.removeAll("");
+    strlist.removeAll("");
 	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
 	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);

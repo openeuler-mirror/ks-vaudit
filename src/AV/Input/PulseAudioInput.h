@@ -31,7 +31,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include <pulse/stream.h>
 #include <pulse/error.h>
 
-class PulseAudioInput : public AudioSource {
+class PulseAudioInput : public AudioSourceInput, public AudioSource {
 
 public:
 	struct Source {
@@ -77,8 +77,6 @@ private:
 	void DetectMonitor();
 
 	static void SourceInfoCallback(pa_context* context, const pa_source_info* info, int eol, void* userdata);
-	static void LoadModuleCallback(pa_context *c, uint32_t idx, void *userdata);
-	static void UnLoadModuleCallback(pa_context *c, int success, void *userdata);
 	static void SuspendedCallback(pa_stream* stream, void* userdata);
 	static void MovedCallback(pa_stream* stream, void* userdata);
 

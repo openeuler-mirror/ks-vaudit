@@ -628,7 +628,8 @@ void Widget::openAbout()
 void Widget::renameVideo()
 {
     QString oldName = sender()->property("S_OLDNAME").toString();
-//    KLOG_DEBUG() << oldName;
+
+//    KLOG_DEBUG() << oldName << "left:" << oldName.left(oldName.lastIndexOf(".")) << "right:" << oldName.right(4);
     if (m_renameDialog != NULL){
         delete m_renameDialog;
         m_renameDialog = NULL;
@@ -646,8 +647,11 @@ void Widget::realRename()
         KLOG_DEBUG() << m_fileList->at(i).fileName() << ":" << oldName;
         if (m_fileList->at(i).fileName() == oldName){
             QFile file(m_fileList->at(i).filePath());
-            KLOG_DEBUG() << "is ok: " << file.rename(QString("%1/%2").arg(m_fileList->at(i).absolutePath()).arg(newName));
+            bool ret = file.rename(QString("%1/%2").arg(m_fileList->at(i).absolutePath()).arg(newName));
+            KLOG_DEBUG() << "rename file ok: " << ret;
+            m_renameDialog->close();
             refreshList();
+            break;
         }
     }
 }
@@ -836,6 +840,10 @@ void Widget::refreshList(QString regName)
     for (int p = 0; p < testList->size(); ++p){
         QString fileName = testList->at(p).fileName();
         QString duration = getVideoDuration(testList->at(p).absoluteFilePath());
+        if (QString::compare(duration,QString("文件损坏")) == 0){
+            // 录制中的视频和其他原因打不开的视频不展示 #59083
+            continue;
+        }
         qint64 sizeInt = testList->at(p).size();
         QString fileSize = QString("%1").arg("0");
         if (sizeInt > 1073741824){

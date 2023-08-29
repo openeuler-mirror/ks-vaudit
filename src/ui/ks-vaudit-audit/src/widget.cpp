@@ -16,7 +16,6 @@
 #include "kiran-log/qt5-log-i.h"
 #include "ksvaudit-configure_global.h"
 
-
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -33,6 +32,8 @@ Widget::Widget(QWidget *parent) :
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     setWindowFlags(Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground, true);
+    m_activatedPage = new ActivatePage(this);
+    getActivationInfo();
     this->init_ui();
     connect(ui->acceptBtn,SIGNAL(clicked()),this,SLOT(setConfig()));
     connect(ui->cancelBtn,SIGNAL(clicked()),this,SLOT(resetConfig()));
@@ -1111,4 +1112,14 @@ QString Widget::strTobase64(QString inputStr)
 QString Widget::base64ToStr(QString inputStr)
 {
     return QByteArray::fromBase64(QVariant(inputStr).toByteArray()).toStdString().data();
+}
+
+void Widget::getActivationInfo()
+{
+    ui->label_23->setText(m_activatedPage->getExpireDate());
+}
+
+void Widget::on_aboutInfoBtn_clicked()
+{
+    m_activatedPage->exec();
 }

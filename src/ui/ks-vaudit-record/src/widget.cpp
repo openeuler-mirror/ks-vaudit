@@ -16,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
+#include "license-entry.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -36,8 +37,12 @@ Widget::Widget(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground, true);
 
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
-
+    m_activatePage = new ActivatePage();
+    m_isActivated = m_activatePage->getActivation();
     init_ui();
+    if (!m_isActivated){
+        m_activatePage->exec();
+    }
 
 }
 
@@ -50,12 +55,6 @@ Widget::~Widget()
 
 void Widget::init_ui()
 {
-    int ret = klog_qt5_init("", "kylinsec-session", "ks-vaudit", "ks-vaudit-record");
-    if (ret != 0){
-        KLOG_DEBUG() << "init failed: " << ret;
-    }else{
-        KLOG_DEBUG() << "succeed";
-    }
     ui->NormalBody->show();
     ui->NormalFooterBar->show();
     ui->ListBody->hide();
@@ -72,9 +71,10 @@ void Widget::init_ui()
     moreMenu->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
     moreMenu->setAttribute(Qt::WA_TranslucentBackground);
     moreMenu->setObjectName("moreMenu");
-//    moreMenu->addAction(tr("软件激活"));
+    QAction* activateAction = moreMenu->addAction(tr("软件激活"));
     QAction* aboutAction = moreMenu->addAction(tr("关于软件"));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(openAbout()));
+    connect(activateAction, SIGNAL(triggered()), this, SLOT(openActivate()));
 
     ui->moreMenuBtn->setMenu(moreMenu);
 
@@ -328,6 +328,11 @@ void Widget::on_audioSlider_valueChanged(int value)
 
 void Widget::on_playBtn_clicked()
 {
+    m_isActivated = m_activatePage->getActivation();
+    if (!m_isActivated){
+        m_activatePage->exec();
+        return;
+    }
     if (ui->fpsEdit->text() == "1"){
         ui->fpsEdit->setText("10");
     }
@@ -974,7 +979,7 @@ int Widget::startRecrodProcess()
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
     pp->setStandardOutputFile("/var/log/ks-vaudit-record.out");
-    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
+//    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
     QStringList arg;
     arg << "--record";
     pp->start("/usr/bin/ks-vaudit",arg);
@@ -1003,4 +1008,9 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         QString timeText = op.split(" ")[1];
         ui->timeStamp->setText(timeText);
     }
+}
+
+void Widget::openActivate()
+{
+    m_activatePage->exec();
 }

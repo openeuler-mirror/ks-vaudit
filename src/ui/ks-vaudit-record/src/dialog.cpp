@@ -43,6 +43,10 @@ void Dialog::initUI()
         initAboutUI();
     }else if(m_dialogType == QString("rename")){
         initRenameUI();
+    }else if(m_dialogType == QString("activate")){
+        initActivateUI(true);
+    }else if(m_dialogType == QString("activateFailed")){
+        initActivateUI(false);
     }
 }
 
@@ -147,6 +151,16 @@ void Dialog::initRenameUI()
     connect(m_fileNameEditor, SIGNAL(returnPressed()), this, SLOT(emitRename()));
     m_fileNameEditor->setFocus();
     m_fileNameEditor->selectAll();
+}
+
+void Dialog::initActivateUI(bool isSucceed)
+{
+    ui->titleText->setText("软件激活");
+    if (isSucceed){
+        ui->label->setText("软件激活成功！");
+    }else{
+        ui->label->setText("激活失败，请检查激活码是否正确！");
+    }
 }
 
 void Dialog::on_accept_clicked()

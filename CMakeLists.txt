@@ -69,7 +69,7 @@ endif()
 if(WITH_SIMPLESCREENRECORDER)
 
 	add_subdirectory(src)
-	add_subdirectory(src/translations)
+#	add_subdirectory(src/translations)
 
 	if(WITH_OPENGL_RECORDING)
 		# the 'ssr-glinject' script is installed together with the main SSR executable to avoid problems with multiarch packages
@@ -79,37 +79,37 @@ if(WITH_SIMPLESCREENRECORDER)
 			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 		)
 	endif()
-	install(
-		DIRECTORY data/output-profiles
-		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/ks-vaudit
-	)
-	install(
-		DIRECTORY data/man/
-		DESTINATION ${CMAKE_INSTALL_FULL_MANDIR}/man1
-	)
-	install(
-		FILES data/ks-vaudit.desktop
-		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/applications
-	)
+#	install(
+#		DIRECTORY data/output-profiles
+#		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/ks-vaudit
+#	)
+#	install(
+#		DIRECTORY data/man/
+#		DESTINATION ${CMAKE_INSTALL_FULL_MANDIR}/man1
+#	)
+#	install(
+#		FILES data/ks-vaudit.desktop
+#		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/applications
+#	)
 	install(
 		FILES data/ks-vaudit.metainfo.xml
 		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/metainfo
 	)
 
 	# icons
-	set(icons_res 16 22 24 32 48 64 96 128 192 256)
+#	set(icons_res 16 22 24 32 48 64 96 128 192 256)
 
-	foreach(res IN LISTS icons_res)
-		install(
-			DIRECTORY data/icons/${res}/
-			DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/${res}x${res}/apps
-		)
-	endforeach()
+#	foreach(res IN LISTS icons_res)
+#		install(
+#			DIRECTORY data/icons/${res}/
+#			DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/${res}x${res}/apps
+#		)
+#	endforeach()
 
-	install(
-		DIRECTORY data/icons/scalable/
-		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/scalable/apps
-	)
+#	install(
+#		DIRECTORY data/icons/scalable/
+#		DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/scalable/apps
+#	)
 
 endif()
 

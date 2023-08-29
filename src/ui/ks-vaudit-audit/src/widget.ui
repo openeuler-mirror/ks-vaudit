@@ -1751,9 +1751,9 @@ border-radius:6px;
       <widget class="QLabel" name="label_6">
        <property name="geometry">
         <rect>
-         <x>357</x>
+         <x>257</x>
          <y>7</y>
-         <width>261</width>
+         <width>361</width>
          <height>21</height>
         </rect>
        </property>
@@ -1766,7 +1766,7 @@ border-radius:6px;
         <string notr="true">color:#919191;</string>
        </property>
        <property name="text">
-        <string>© 2006-2020 版权归湖南麒麟信安最终所有</string>
+        <string>Copyright ©2022-2023 KylinSec Co.Ltd.All Rights Reserved.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

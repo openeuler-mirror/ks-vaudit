@@ -115,7 +115,7 @@ void Dialog::initAboutUI()
     label3->setText("版权信息");
     label3->setFont(QFont("Sans Serif", 12));
     QLabel *label4 = new QLabel(vWidget2);
-    label4->setText("© 2006-2020 版权归湖南麒麟信安最终所有");
+    label4->setText("Copyright ©2022-2023 KylinSec Co.Ltd.All Rights Reserved.");
     label4->setFont(QFont("Sans Serif", 12));
     label4->setStyleSheet("color:#919191;");
     hwLayou2->addWidget(label3);

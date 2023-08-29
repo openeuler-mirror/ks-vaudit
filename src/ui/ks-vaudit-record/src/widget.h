@@ -47,6 +47,7 @@ protected:
     void setConfig(QString key, QString value);
     int startRecrodProcess();
     void sendSwitchControl(int from_pid, int to_pid, QString op);
+    QLabel *createVideoDurationLabel(QString);
 
 private slots:
     void on_exit_clicked();

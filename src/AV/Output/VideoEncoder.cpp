@@ -152,7 +152,10 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 	QString pixel_format_name;
 	for(unsigned int i = 0; i < codec_options.size(); ++i) {
 		const QString &key = codec_options[i].first, &value = codec_options[i].second;
-		if(key == "threads") {
+		// special process for nvenc
+		if (strstr(codec->name, "nvenc") != NULL && key == "preset") {
+			av_opt_set(codec_context->priv_data, "preset", value.toLatin1().data(), 0);
+		} else if(key == "threads") {
 			codec_context->thread_count = ParseCodecOptionInt(key, value, 1, 100);
 		} else if(key == "qscale") {
 			codec_context->flags |= AV_CODEC_FLAG_QSCALE;
@@ -233,7 +236,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 		assert(frame->GetFrame()->height == GetCodecContext()->height);
 #endif
 #if SSR_USE_AVFRAME_FORMAT
-		if (GetCodecContext()->pix_fmt != AV_PIX_FMT_VAAPI && GetCodecContext()->pix_fmt != AV_PIX_FMT_QSV) {
+		if (!frame->m_encoded && GetCodecContext()->pix_fmt != AV_PIX_FMT_VAAPI && GetCodecContext()->pix_fmt != AV_PIX_FMT_QSV) {
 			assert(frame->GetFrame()->format == GetCodecContext()->pix_fmt);
 		}
 #endif
@@ -245,11 +248,27 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 #if SSR_USE_AVCODEC_SEND_RECEIVE
 
+	if (frame->m_encoded) {
+		std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
+		packet->GetPacket()->data = frame->GetFrame()->data[0];
+		packet->GetPacket()->size = frame->m_frame_size;
+		packet->GetPacket()->pts = m_pts_cnt;
+		packet->GetPacket()->dts = m_pts_cnt;
+		m_pts_cnt ++;
+		// Logger::LogInfo("nvenc get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
+		GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
+		IncrementPacketCounter();
+
+		AVFrame *avframe = frame->Release();
+		av_frame_free(&avframe);
+		return true;
+	}
+	
 	// send a frame
 	AVFrame *avframe = (frame == NULL)? NULL : frame->Release();
 
 	int ret = 0;
-	if (m_enc_type == EncodeTypeVaapi) {
+	if (strstr(GetCodecContext()->codec->name, "vaapi") != NULL) {
 		if (m_avframe_gpu == NULL) {
 			m_avframe_gpu = av_frame_alloc();
 			assert(m_avframe_gpu != NULL);
@@ -271,7 +290,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 	}
 
 	try {
-		if (m_enc_type == EncodeTypeVaapi) {
+		if (strstr(GetCodecContext()->codec->name, "vaapi") != NULL) {
 			if(avcodec_send_frame(GetCodecContext(), m_avframe_gpu) < 0) {
 				Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Sending of vaapi video frame failed!"));
 				throw LibavException();
@@ -293,6 +312,10 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 		std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
 		int res = avcodec_receive_packet(GetCodecContext(), packet->GetPacket());
 		if(res == 0) { // we have a packet, send the packet to the muxer
+			packet->GetPacket()->pts = m_pts_cnt;
+			packet->GetPacket()->dts = m_pts_cnt;
+			m_pts_cnt ++;
+			//Logger::LogInfo("avcodec get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
 			GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
 			IncrementPacketCounter();
 		} else if(res == AVERROR(EAGAIN)) { // we have no packet

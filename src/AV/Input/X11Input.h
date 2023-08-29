@@ -65,9 +65,6 @@ private:
     bool m_is_use_watermarking;
     QString watermark_content;
     
-	//不录制屏幕录制音频，写黑色图片
-	bool m_is_only_audio;
-	std::vector<uint8_t> m_audio_image_data;
 
 	Rect m_screen_bbox;
 	std::vector<Rect> m_screen_rects;
@@ -77,8 +74,11 @@ private:
 	MutexDataPair<SharedData> m_shared_data;
 	std::atomic<bool> m_should_stop, m_error_occurred;
 
+	// opengl window for nvenc
+	int m_window;
+
 public:
-	X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_fullscreen, bool is_use_watermarking = true, bool is_only_audio = false);
+	X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_fullscreen, bool is_use_watermarking = true);
 	~X11Input();
 
 	// Reads the current recording rectangle.

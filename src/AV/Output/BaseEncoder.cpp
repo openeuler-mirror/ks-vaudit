@@ -65,8 +65,8 @@ BaseEncoder::BaseEncoder(Muxer* muxer, AVStream* stream, AVCodecContext* codec_c
 	m_is_done = false;
 	m_error_occurred = false;
 
+	m_pts_cnt = 0;
 	// 初始化GPU加速相关变量
-	m_enc_type = EncodeTypeCpu;
 	m_hw_device_ctx_ref = NULL;
 	m_hw_frames_ctx_ref = NULL;
 	m_avframe_gpu = NULL;
@@ -170,34 +170,26 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 		return;
 	}
 
-	if (strstr(codec->name, "vaapi")) {
-		SetEncodeType(EncodeTypeVaapi);
-	} else if (strstr(codec->name, "qsv")) {
-		SetEncodeType(EncodeTypeQsv);
-	} else {
-		SetEncodeType(EncodeTypeCpu);
-	} 
-
-	if (m_enc_type == EncodeTypeCpu) {
-		return;
-	}
-
 	if (m_hw_device_ctx_ref != NULL) {
 		return;
 	}
+
 	// 函数已过期，不需要调用
 	// avcodec_register_all();
 
+	EncodeType enc_type = EncodeTypeCpu;
 	int ret = 0;
-	if (m_enc_type == EncodeTypeVaapi) {
+	if (strstr(codec->name, "vaapi")) {
+		enc_type = EncodeTypeVaapi;
 		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
-	} else if (m_enc_type == EncodeTypeQsv) {
+	} else if (strstr(codec->name, "qsv")) {
+		enc_type = EncodeTypeQsv;
 		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
 	}
 
 	assert(ret >= 0);
 	
-	if (m_enc_type == EncodeTypeVaapi) {
+	if (enc_type == EncodeTypeVaapi) {
 		m_codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
 
 		m_hw_frames_ctx_ref = av_hwframe_ctx_alloc(m_hw_device_ctx_ref);
@@ -215,7 +207,7 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 		assert(ret >= 0);
 
 		m_codec_context->hw_frames_ctx = av_buffer_ref(m_hw_frames_ctx_ref);
-	} else if (m_enc_type == EncodeTypeQsv) {
+	} else if (enc_type == EncodeTypeQsv) {
 		m_codec_context->pix_fmt = AV_PIX_FMT_NV12;
 	
 		// 将硬件设备关联到编码器

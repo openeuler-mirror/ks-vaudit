@@ -120,7 +120,7 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 }
 
 //审计录屏文件以用户名_IP_YYYYMMDD_hhmmss命名，示例：张三_192.168.1.1_20220621_153620.mp4
-static QString GetAUditNewSegmentFile(const QString& file, const QString &prefix, bool add_timestamp) {
+static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix, bool add_timestamp) {
 	QFileInfo fi(file);
 	QDateTime now = QDateTime::currentDateTime();
 	QString newfile;
@@ -314,6 +314,7 @@ void Recording::StartPage() {
 	m_pulseaudio_source_output = "";
 	m_audio_enabled = false;
 	m_audio_recordtype = "none";
+	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 
 	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
 	if (audio_enabled == "mic" || audio_enabled == "all"){ //录制麦克风
@@ -1028,25 +1029,22 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			if(key == "Fps"){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
 			}else if(key == "RecordAudio"){
-				m_settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt());
-			}else if(key == "FilePath"){
+				m_settings->setValue("input/audio_enabled",jsonObj[key].toString());
+			}else if(key == "FilePath" || key == "FileType"){
+				// 修改fileType需要一起修改filePath
 				QString file_path(jsonObj[key].toString());
 				QString file_suffix;
-				if(jsonObj["FileType"].toString() == "mp4"){
+				QString fileType = jsonObj["FileType"].toString();
+				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
 					file_suffix = ".mp4";
-				}else{
-					file_suffix = ".ogv";
-				}
-			}else if(key == "FileType"){
-				QString fileType = jsonObj[key].toString();
-				if (QString::compare(fileType, "mp4", Qt::CaseInsensitive)){
 					m_settings->setValue("output/container_av", "mp4");
-				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive)){
+				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
+					file_suffix = ".ogv";
 					m_settings->setValue("output/container_av", "ogv");
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
 				}
-				m_settings->setValue("encode/quality", jsonObj[key].toString());
+				m_settings->setValue("output/file", file_path + "/" + file_suffix);
 				SetFileTypeSetting();
 			}else if(key == "Quality"){
 				m_settings->setValue("encode/quality", jsonObj[key].toString());
@@ -1076,24 +1074,22 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			if(key == "Fps"){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
 			}else if(key == "RecordAudio"){
-				m_settings->setValue("input/audio_enabled",jsonObj[key].toString().toInt());
-			}else if(key == "FilePath"){
+				m_settings->setValue("input/audio_enabled",jsonObj[key].toString());
+			}else if(key == "FilePath" || key == "FileType"){
+				// 修改fileType需要一起修改filePath
 				QString file_path(jsonObj[key].toString());
 				QString file_suffix;
-				if(jsonObj["FileType"].toString() == "mp4"){
+				QString fileType = jsonObj["FileType"].toString();
+				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
 					file_suffix = ".mp4";
-				}else{
-					file_suffix = ".ogv";
-				}
-			}else if(key == "FileType"){
-				QString fileType = jsonObj[key].toString();
-				if (QString::compare(fileType, "mp4", Qt::CaseInsensitive)){
 					m_settings->setValue("output/container_av", "mp4");
-				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive)){
+				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
+					file_suffix = ".ogv";
 					m_settings->setValue("output/container_av", "ogv");
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
 				}
+				m_settings->setValue("output/file", file_path + "/" + file_suffix);
 				SetFileTypeSetting();
 			}else if(key == "WaterPrint"){
 				m_settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());

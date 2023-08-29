@@ -1,6 +1,6 @@
 Name:           ks-vaudit
 Version:        1.0.0
-Release:        1
+Release:        2
 Summary:        kylinsec vaudit
 
 License:        GPL
@@ -128,5 +128,11 @@ qtpath=%_topdir/BUILD/Qt5.7.1
 rm -rf $RPM_BUILD_ROOT ${qtpath}
 
 %changelog
+* Tue Aug 30 2022 fanliwei <fanliwei@kylinsec.com.cn> - 1.0.0-2
+- KYOS-F: support record mic and speaker. (Related #59481)
+- KYOS-F: support nvenc. (Related #58872)
+- KYOS-F: fix bugs. (Related #58873)
+- KYOS-F: add audit ui. (Related #58046)
+
 * Mon Jun 27 2022 zhenggongping <zhenggongping@kylinsec.com.cn> - 1.0.0-1
 - KYOS-F: first release

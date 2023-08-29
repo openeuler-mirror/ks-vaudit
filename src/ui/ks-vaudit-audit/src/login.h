@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QPoint>
 #include "configure_interface.h"
+#include "activate-page.h"
 
 namespace Ui {
 class Login;
@@ -29,6 +30,7 @@ protected:
     bool checkLogin();
     QString strTobase64(QString);
     QString base64ToStr(QString);
+    bool checkActivation();
 
 private slots:
     void on_accept_clicked();
@@ -36,6 +38,8 @@ private slots:
     void show_logout();
 
     void on_passwdEdit_textChanged(const QString &arg1);
+
+    void on_activationBtn_clicked();
 
 signals:
     void show_widget(QJsonObject);
@@ -48,6 +52,8 @@ private:
     ConfigureInterface *m_dbusInterface;
     QJsonArray m_userInfoArray;
     QJsonObject m_currentUserInfo;
+    ActivatePage *m_activation;
+    bool m_isActivated = false;
 
 };
 

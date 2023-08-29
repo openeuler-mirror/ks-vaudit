@@ -15,7 +15,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include "configure_interface.h"
-
+#include "activate-page.h"
 
 namespace Ui {
 class Widget;
@@ -52,6 +52,7 @@ protected:
     QString checkNewPassword(QString);
     QString strTobase64(QString inputStr);
     QString base64ToStr(QString inputStr);
+    void getActivationInfo();
 
 private slots:
     void on_exit_clicked();
@@ -86,8 +87,8 @@ private slots:
     void on_savePasswordBtn_clicked();
     void on_oldPasswordEdit_textChanged(const QString &arg1);
     void on_confirmPasswordEdit_textChanged(const QString &arg1);
-
     void on_newPasswordEdit_textChanged(const QString &arg1);
+    void on_aboutInfoBtn_clicked();
 
 signals:
     void log_out();
@@ -111,6 +112,9 @@ private:
     QJsonObject m_configure;
     QJsonObject m_toSetConf;
     QJsonObject m_currentUserInfo;
+    ActivatePage *m_activatedPage;
+    bool m_isActivated = false;
+    QString m_expireDate;
 };
 
 #endif // WIDGET_H

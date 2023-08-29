@@ -16,6 +16,7 @@
 #include "dialog.h"
 #include "configure_interface.h"
 #include "kiran-log/qt5-log-i.h"
+#include "activate-page.h"
 
 
 namespace Ui {
@@ -49,79 +50,43 @@ protected:
 
 private slots:
     void on_exit_clicked();
-
     void on_NormalBtn_clicked();
-
     void on_ListBtn_clicked();
-
     void on_pushButton_clicked();
-
     void onTableBtnClicked();
-
     void on_waterprintCheck_stateChanged(int arg1);
-
     void on_volumnBtn_clicked();
-
     void on_volumnSlider_valueChanged(int value);
-
     void on_audioBtn_clicked();
-
     void on_audioSlider_valueChanged(int value);
-
     void on_playBtn_clicked();
-
     void on_ConfigBtn_clicked();
-
     void on_minimize_clicked();
-
     void on_fpsEdit_textChanged(const QString &arg1);
-
     void on_pushButton_2_clicked();
-
     void on_pushButton_3_clicked();
-
     void on_fpsEdit_returnPressed();
-
     void on_waterprintText_returnPressed();
-
     void on_searchBar_returnPressed();
-
-    void playVideo();
-
-    void openDir();
-
-    void deleteVideo();
-
-    void realDelete();
-
     void on_searchBar_editingFinished();
-
-    void openAbout();
-
-    void renameVideo();
-
-    void realRename();
-
     void on_waterprintConfirm_clicked();
-
-
     void on_waterprintText_textChanged(const QString &arg1);
-
     void on_resolutionBox_currentIndexChanged(int index);
-
     void on_audioBox_currentIndexChanged(int index);
-
     void on_clarityBox_currentIndexChanged(int index);
-
     void on_remainderBox_currentIndexChanged(int index);
-
     void on_typeBox_currentIndexChanged(int index);
-
+    void playVideo();
+    void openDir();
+    void deleteVideo();
+    void realDelete();
+    void openAbout();
+    void renameVideo();
+    void realRename();
     void on_stopBtn_clicked();
-
     void realClose();
-
     void refreshTime(int, int, QString);
+    void openActivate();
 
 signals:
 
@@ -153,6 +118,8 @@ private:
     int m_selfPID = 0;
     bool m_needRestart = false;
     QProcess *m_recordP;
+    ActivatePage *m_activatePage;
+    bool m_isActivated = false;
 
 };
 

@@ -34,7 +34,10 @@ Widget::Widget(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground, true);
     m_activatedPage = new ActivatePage(this);
     getActivationInfo();
-    this->init_ui();
+//    this->init_ui();
+    if (m_fpsList.isEmpty()){
+        m_fpsList << "5" << "10" << "20" << "25" << "30" << "45" << "60";
+    }
     connect(ui->acceptBtn,SIGNAL(clicked()),this,SLOT(setConfig()));
     connect(ui->cancelBtn,SIGNAL(clicked()),this,SLOT(resetConfig()));
 
@@ -58,8 +61,7 @@ void Widget::init_ui()
     ui->userArrow ->hide();
     ui->configArrow->hide();
     ui->aboutArrow->hide();
-    ui->acceptBtn->hide();
-    ui->cancelBtn->hide();
+
 
     ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
                                "border: 0px;"
@@ -106,7 +108,8 @@ void Widget::init_ui()
 
     readConfig();
     setConfigtoUi();
-
+    ui->acceptBtn->hide();
+    ui->cancelBtn->hide();
 }
 
 void Widget::initAudadmUi()
@@ -154,8 +157,7 @@ void Widget::initSysadmUi()
                                "text-align:left center;"
                                "padding-left:10px;"
                                "};");
-    m_intValidator = new QIntValidator(2, 60, this);
-    ui->fpsEdit->setValidator(m_intValidator);
+
     this->comboboxStyle();
 }
 
@@ -176,6 +178,7 @@ void Widget::initSecadmUi()
 
 void Widget::comboboxStyle(){
     ui->clarityBox->setView(new QListView());
+    ui->fpsBox->setView(new QListView());
     ui->typeBox->setView(new QListView());
     ui->pauseBox->setView(new QListView());
     ui->freeSpaceBox->setView(new QListView());
@@ -442,15 +445,16 @@ void Widget::on_pushButton_clicked()
 void Widget::onTableBtnClicked()
 {
     // 从属性里获取index
-    int a = sender()->property("S_INDEX").toInt();
+    int m = sender()->property("M_INDEX").toInt();
+    int l = sender()->property("L_INDEX").toInt();
 
     // 选择行
-    ui->videoList->selectRow(a);
+    ui->videoList->selectRow(l);
 
     // 获取视频
-    QList<QFileInfo>* testList = getVideos(ui->pathLabel->text(),m_regName);
-    m_folderAction->setProperty("S_DIR", testList->at(a).absolutePath());
-    m_playAction->setProperty("S_FILEPATH", testList->at(a).filePath());
+//    QList<QFileInfo>* testList = getVideos(ui->pathLabel->text(),m_regName);
+    m_folderAction->setProperty("S_DIR", m_fileList->at(m).absolutePath());
+    m_playAction->setProperty("S_FILEPATH", m_fileList->at(m).filePath());
 
     m_rightMenu->popup(QCursor::pos());
 }
@@ -461,90 +465,9 @@ void Widget::on_minimize_clicked()
     Widget::showMinimized();
 }
 
-void Widget::on_fpsEdit_textChanged(const QString &arg1)
+void Widget::on_fpsBox_currentIndexChanged(int index)
 {
-    QString a = arg1;
-    if (a == "1"){
-        // 1开头的时候边框置红，不能开始录屏
-        ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
-                                   "background-color:#222222;"
-                                   "border:1px solid #fa4949;"
-                                   "border-radius:6px;"
-                                   "color:#fff;"
-                                   "padding-left:10px;"
-                                   "}"
-                                   "QLineEdit#fpsEdit:hover{"
-                                   "background-color:#222222;"
-                                   "border:1px solid #2eb3ff;"
-                                   "border-radius:6px;"
-                                   "color:#fff;"
-                                   "padding-left:10px;"
-                                   "}"
-                                   "QLineEdit#fpsEdit:disabled{"
-                                   "background-color:#393939;"
-                                   "border-radius:6px;"
-                                   "color:#919191;"
-                                   "padding-left:10px;"
-                                   "}");
-        ui->label_11->setStyleSheet("color:#fa4949");
-    }else if (a.startsWith("0") || a.length() == 0){
-        // 有种情况是0000000开头，强行设为最低2
-        ui->fpsEdit->setText("2");
-        ui->fpsEdit->setStyleSheet("background-color:#222222;"
-                                   "border:1px solid #393939;"
-                                   "border-radius:6px;"
-                                   "color:#fff;"
-                                   "padding-left:10px;");
-        ui->label_11->setStyleSheet("color:#999999");
-    }else{
-        ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
-                                   "background-color:#222222;"
-                                   "border:1px solid #393939;"
-                                   "border-radius:6px;"
-                                   "color:#fff;"
-                                   "padding-left:10px;"
-                                   "}"
-                                   "QLineEdit#fpsEdit:hover{"
-                                   "background-color:#222222;"
-                                   "border:1px solid #2eb3ff;"
-                                   "border-radius:6px;"
-                                   "color:#fff;"
-                                   "padding-left:10px;"
-                                   "}"
-                                   "QLineEdit#fpsEdit:disabled{"
-                                   "background-color:#393939;"
-                                   "border-radius:6px;"
-                                   "color:#919191;"
-                                   "padding-left:10px;"
-                                   "}");
-        ui->label_11->setStyleSheet("color:#999999");
-        testConfig("Fps",a);
-    }
-}
-
-void Widget::on_pushButton_2_clicked()
-{
-    int nowFPS = ui->fpsEdit->text().toInt();
-    if (nowFPS >= 60){
-        return;
-    }
-    ui->fpsEdit->setText(QString("%1").arg(nowFPS+1));
-}
-
-void Widget::on_pushButton_3_clicked()
-{
-    int nowFPS = ui->fpsEdit->text().toInt();
-    if (nowFPS <= 2){
-        return;
-    }
-    ui->fpsEdit->setText(QString("%1").arg(nowFPS-1));
-}
-
-void Widget::on_fpsEdit_returnPressed()
-{
-    if (ui->fpsEdit->hasFocus()){
-        ui->fpsEdit->clearFocus();
-    }
+    testConfig("Fps", m_fpsList.at(index));
 }
 
 void Widget::on_searchBar_editingFinished()
@@ -751,7 +674,7 @@ void Widget::openDir()
     QDesktopServices::openUrl(QUrl::fromLocalFile(videoPath));
 }
 
-QPushButton *Widget::createOperationBtn(int index)
+QPushButton *Widget::createOperationBtn(int modelIndex, int listIndex)
 {
     QPushButton *aBtn = new QPushButton();
     // 设置图标样式
@@ -763,7 +686,8 @@ QPushButton *Widget::createOperationBtn(int index)
                         "margin-top:7px;"
                         "}");
     aBtn->setMaximumSize(24,24);
-    aBtn->setProperty("S_INDEX", index);
+    aBtn->setProperty("L_INDEX", listIndex);
+    aBtn->setProperty("M_INDEX", modelIndex);
 
     connect(aBtn, SIGNAL(clicked(bool)), this, SLOT(onTableBtnClicked()));
     return aBtn;
@@ -924,7 +848,7 @@ void Widget::refreshList(QString regName)
         m_model->setItem(i, 3, new QStandardItem(modifyDate));
         m_model->item(i,3)->setFont( QFont("Sans Serif", 10) );
         m_model->setItem(i, 4, new QStandardItem());
-        ui->videoList->setIndexWidget(m_model->index(i,4), createOperationBtn(i));
+        ui->videoList->setIndexWidget(m_model->index(i,4), createOperationBtn(p,i));
 //        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
         QCoreApplication::processEvents();
         i++;
@@ -981,7 +905,17 @@ void Widget::setConfigtoUi()
             }
             ui->typeBox->setCurrentIndex(setValue);
         }else if(k == "Fps"){
-            ui->fpsEdit->setText(m_configure[k].toString());
+            int ind = m_fpsList.indexOf(m_configure[k].toString());
+            if (ind == -1) {
+                // 手动改配置文件fps列表没有的话 设回默认值25
+                ind = 3;
+                QJsonObject obj;
+                obj["Fps"] = m_fpsList.at(ind);
+                QJsonDocument doc(obj);
+                QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
+                m_dbusInterface->SetAuditItemValue(a);
+            }
+            ui->fpsBox->setCurrentIndex(ind);
         }else if(k == "Quality"){
             ui->clarityBox->setCurrentIndex(m_configure[k].toString().toInt());
         }else if(k == "TimingPause"){
@@ -1042,9 +976,6 @@ void Widget::setConfigtoUi()
 
 void Widget::setConfig()
 {
-    if (ui->fpsEdit->text() == "1"){
-        return;
-    }
     QJsonDocument doc(m_toSetConf);
     QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
     m_dbusInterface->SetAuditItemValue(a);

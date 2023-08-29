@@ -54,6 +54,8 @@ void Dialog::initUI()
         initActivateUI(false);
     }else if(m_dialogType == QString("qrcode")){
         initQRcode();
+    }else if(m_dialogType == QString("DiskSpace")){
+        ui->label->setText("磁盘空间不足，已为您保存当前录屏，请清理空间后再进行录制");
     }
 }
 

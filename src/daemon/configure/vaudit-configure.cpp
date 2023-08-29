@@ -97,6 +97,12 @@ void VauditConfigureDbus::SwitchControl(int from_pid, int to_pid, const QString 
     this->SignalSwitchControl(from_pid, to_pid, operate);
 }
 
+void VauditConfigureDbus::MonitorNotification(int pid, const QString &message)
+{
+    KLOG_DEBUG() << pid << message;
+    this->SignalNotification(pid, message);
+}
+
 void VauditConfigureDbus::externalConfigureChanged(QString which, QString changed_config)
 {
     KLOG_DEBUG() << which << changed_config;

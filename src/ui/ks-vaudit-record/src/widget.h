@@ -12,6 +12,7 @@
 #include <QLineEdit>
 #include <QProcess>
 #include <QTimer>
+#include <QStringList>
 
 #include "dialog.h"
 #include "configure_interface.h"
@@ -38,7 +39,7 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
-    QPushButton* createOperationBtn(int);
+    QPushButton* createOperationBtn(int modelIndex, int listIndex);
     QList<QFileInfo>* getVideos(QString path, QString regName);
     QString getVideoDuration(QString absPath);
     void refreshList(QString regName = QString(""));
@@ -63,10 +64,6 @@ private slots:
     void on_playBtn_clicked();
     void on_ConfigBtn_clicked();
     void on_minimize_clicked();
-    void on_fpsEdit_textChanged(const QString &arg1);
-    void on_pushButton_2_clicked();
-    void on_pushButton_3_clicked();
-    void on_fpsEdit_returnPressed();
     void on_waterprintText_returnPressed();
     void on_searchBar_returnPressed();
     void on_searchBar_editingFinished();
@@ -88,6 +85,7 @@ private slots:
     void realClose();
     void refreshTime(int, int, QString);
     void openActivate();
+    void on_fpsBox_currentIndexChanged(int index);
 
 signals:
 
@@ -98,10 +96,9 @@ private:
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
     bool m_isRecording = false;
-    QString m_fps = "10";
-    QIntValidator *m_intValidator;
     QStandardItemModel *m_model = NULL;
     QMenu *m_rightMenu = NULL;
+    QStringList m_fpsList;
 
     QAction *m_playAction = NULL;
     QAction *m_renameAction = NULL;

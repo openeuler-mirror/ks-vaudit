@@ -751,28 +751,6 @@ border-radius:4px;
        </property>
       </item>
      </widget>
-     <widget class="QLabel" name="label_11">
-      <property name="geometry">
-       <rect>
-        <x>394</x>
-        <y>16</y>
-        <width>101</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Sans Serif</family>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">color:#999999;</string>
-      </property>
-      <property name="text">
-       <string>(2fps-60fps)</string>
-      </property>
-     </widget>
      <widget class="QComboBox" name="typeBox">
       <property name="geometry">
        <rect>
@@ -880,84 +858,6 @@ border-radius:4px;
       </property>
       <property name="text">
        <string>无操作暂停录屏</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="fpsEdit">
-      <property name="geometry">
-       <rect>
-        <x>350</x>
-        <y>40</y>
-        <width>302</width>
-        <height>36</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="inputMethodHints">
-       <set>Qt::ImhNone</set>
-      </property>
-      <property name="text">
-       <string>25</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_2">
-      <property name="geometry">
-       <rect>
-        <x>617</x>
-        <y>41</y>
-        <width>34</width>
-        <height>34</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="icon">
-       <iconset resource="../data/src.qrc">
-        <normaloff>:/images/icon_plus_pre.svg</normaloff>:/images/icon_plus_pre.svg</iconset>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>15</width>
-        <height>15</height>
-       </size>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_3">
-      <property name="geometry">
-       <rect>
-        <x>582</x>
-        <y>41</y>
-        <width>34</width>
-        <height>34</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="icon">
-       <iconset resource="../data/src.qrc">
-        <normaloff>:/images/icon_Less_pre.svg</normaloff>:/images/icon_Less_pre.svg</iconset>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>14</width>
-        <height>14</height>
-       </size>
       </property>
      </widget>
      <widget class="QComboBox" name="freeSpaceBox">
@@ -1211,6 +1111,60 @@ border-radius:6px;
       <property name="text">
        <string>取消</string>
       </property>
+     </widget>
+     <widget class="QComboBox" name="fpsBox">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>40</y>
+        <width>302</width>
+        <height>36</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>30</width>
+        <height>30</height>
+       </size>
+      </property>
+      <item>
+       <property name="text">
+        <string>5</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>10</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>20</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>25</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>30</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>45</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>60</string>
+       </property>
+      </item>
      </widget>
     </widget>
     <widget class="QWidget" name="EditPassWidget" native="true">
@@ -1864,9 +1818,9 @@ border-radius:6px;
     <zorder>SideBar</zorder>
     <zorder>ListBody</zorder>
     <zorder>UserBody</zorder>
-    <zorder>ConfigBody</zorder>
     <zorder>EditPassWidget</zorder>
     <zorder>AboutBody</zorder>
+    <zorder>ConfigBody</zorder>
    </widget>
    <widget class="QWidget" name="TitleBar" native="true">
     <property name="geometry">

@@ -44,6 +44,7 @@ private:
 
 private slots:
     void monitorProcess();
+    void receiveNotification(int, QString);
 
 signals:
     void exitProgram();
@@ -54,6 +55,7 @@ private:
     QTimer *m_pTimer;
     QMutex m_mutex;
     QProcess *m_process;
+    QMap<int, QString> m_videoFileName;
     QMultiMap<QString, sessionInfo> m_sessionInfos;
 };
 

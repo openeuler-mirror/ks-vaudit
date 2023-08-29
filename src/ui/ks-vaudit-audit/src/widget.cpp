@@ -425,14 +425,14 @@ void Widget::on_AboutBtn_clicked()
 
 void Widget::on_pushButton_clicked()
 {
-    QString dirPath = NULL;
+    QString dirPath;
     QString homePath = QDir::homePath();
     QString openDir = ui->pathLabel->text();
     if (openDir.startsWith("~")){
         openDir.replace(0,1,homePath);
     }
     dirPath = QFileDialog::getExistingDirectory(this, "请选择文件路径...", openDir, QFileDialog::ShowDirsOnly);
-    if (dirPath != NULL){
+    if (!dirPath.isEmpty()){
         ui->pathLabel->setText(dirPath);
         ui->pathLabel->setToolTip(dirPath);
         refreshList(m_regName);

@@ -1280,6 +1280,9 @@ padding-right:10px;
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
       </property>
+      <property name="isError" stdset="0">
+       <bool>false</bool>
+      </property>
      </widget>
      <widget class="QLineEdit" name="newPasswordEdit">
       <property name="geometry">
@@ -1321,6 +1324,9 @@ padding-right:10px;
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
       </property>
+      <property name="isError" stdset="0">
+       <bool>false</bool>
+      </property>
      </widget>
      <widget class="QLineEdit" name="confirmPasswordEdit">
       <property name="geometry">
@@ -1361,6 +1367,9 @@ padding-right:10px;
       </property>
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
+      </property>
+      <property name="isError" stdset="0">
+       <bool>false</bool>
       </property>
      </widget>
      <widget class="QLabel" name="label_21">

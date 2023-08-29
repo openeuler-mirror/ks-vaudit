@@ -895,6 +895,10 @@ void Widget::refreshList(QString regName)
     for (int p = 0; p < testList->size(); ++p){
         QString fileName = testList->at(p).fileName();
         QString duration = getVideoDuration(testList->at(p).absoluteFilePath());
+        if (QString::compare(duration,QString("文件损坏")) == 0){
+            // 录制中的视频和其他原因打不开的视频不展示 #59083
+            continue;
+        }
         qint64 sizeInt = testList->at(p).size();
         QString fileSize = QString("%1").arg("0");
         if (sizeInt > 1073741824){

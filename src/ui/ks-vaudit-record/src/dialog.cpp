@@ -28,7 +28,9 @@ QString Dialog::getOldName()
 
 QString Dialog::getNewName()
 {
-    return m_fileNameEditor->text();
+    QString leftFileName = m_fileNameEditor->text();
+    QString rightFileName = m_fileName.right(4);
+    return QString("%1%2").arg(leftFileName).arg(rightFileName);
 }
 
 void Dialog::initUI()
@@ -125,7 +127,8 @@ void Dialog::initRenameUI()
 //    m_oldName = m_fileName;
 //    ui->bodyWidget->setFocusPolicy(Qt::ClickFocus);
     m_fileNameEditor = new QLineEdit(ui->bodyWidget);
-    m_fileNameEditor->setText(m_fileName);
+    QString fileBaseName = m_fileName.left(m_fileName.lastIndexOf("."));
+    m_fileNameEditor->setText(fileBaseName);
     m_fileNameEditor->setStyleSheet("QLineEdit{"
                                     "color:#fff;"
                                     "background-color:#222222;"
@@ -142,6 +145,8 @@ void Dialog::initRenameUI()
                                     "}");
     m_fileNameEditor->setGeometry(24,24,264,36);
     connect(m_fileNameEditor, SIGNAL(returnPressed()), this, SLOT(emitRename()));
+    m_fileNameEditor->setFocus();
+    m_fileNameEditor->selectAll();
 }
 
 void Dialog::on_accept_clicked()
@@ -153,7 +158,6 @@ void Dialog::on_accept_clicked()
     }else if(m_dialogType == QString("rename")){
         emit rename_file();
     }
-
     this->close();
 }
 

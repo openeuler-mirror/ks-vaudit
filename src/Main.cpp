@@ -26,6 +26,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "EnumStrings.h"
 #include "ScreenScaling.h"
 #include "kiran-log/qt5-log-i.h"
+#include "KyNotify.h"
 #include <qapplication.h>
 extern "C" {
 #include<signal.h>
@@ -38,7 +39,7 @@ QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){
-	KLOG_DEBUG() << "cur display:" << getenv("DISPLAY") << "sig:" << sig;
+	KLOG_DEBUG() << "receive signal, cur display:" << getenv("DISPLAY") << "sig:" << sig;
 	if(sig == SIGINT){
 		if(recording_screen->IsOutputStarted()){
 			recording_screen->OnRecordSaveAndExit(true);
@@ -55,6 +56,10 @@ int main(int argc, char* argv[]) {
 	int klog_ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit");
 	if (0 == klog_ret)
 		KLOG_DEBUG() << "init klog succeed";
+	KLOG_INFO() << "DBUS_SESSION_BUS_ADDRESS:" << getenv("DBUS_SESSION_BUS_ADDRESS");
+	setenv("DBUS_SESSION_BUS_ADDRESS", "", 1);
+	KLOG_INFO() << "after modifying DBUS_SESSION_BUS_ADDRESS:" << getenv("DBUS_SESSION_BUS_ADDRESS");
+	KyNotify::instance();
 	signal(SIGINT, sig_handler);
 	XInitThreads();
 

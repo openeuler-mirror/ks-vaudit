@@ -35,6 +35,8 @@ signals:
 
 private:
     bool creatObjectName();
+    QString GetLicense();
+    bool ActivateByActivationCode(QString activation_Code, QString &errorMsg);
 };
 
 #endif  // DBUSUTILS_H

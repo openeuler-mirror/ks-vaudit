@@ -379,8 +379,8 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 	context->width = 352;
 	context->height = 288;
 	/* frames per second */
-	context->time_base = (AVRational){1, 10};
-	context->framerate = (AVRational){10, 1};
+	context->time_base = av_make_q(1, 10);
+	context->framerate = av_make_q(10, 1);
 
 	/* emit one intra frame every ten frames
 	 * check frame pict_type before passing frame
@@ -691,11 +691,11 @@ void OutputManager::StartFragment() {
 		unsigned int vaapi_kbit_rate = 0;
 
 		if (m_output_settings.encode_quality == "0") {
-			vaapi_kbit_rate = 800;
+			vaapi_kbit_rate = 2048;
 		} else if (m_output_settings.encode_quality == "1") {
-			vaapi_kbit_rate = 1200;
+			vaapi_kbit_rate = 4096;
 		} else if (m_output_settings.encode_quality == "2") {
-			vaapi_kbit_rate = 1600;
+			vaapi_kbit_rate = 8192;
 		}
 
 		vaapi_kbit_rate = vaapi_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
@@ -703,9 +703,23 @@ void OutputManager::StartFragment() {
 
 	} else if (enc_name == "libtheora") {
 
-		m_output_settings.audio_codec_avname = QString("libvorbis");
+		// 在Recording.cpp里统一判断音频编码器
+//		m_output_settings.audio_codec_avname = QString("libvorbis");
 		// 音频采样率为8k时，比特率不能为128，否则会初始化失败
 		m_output_settings.audio_kbit_rate = 32;
+
+		unsigned int theora_kbit_rate = 0;
+
+		if (m_output_settings.encode_quality == "0") {
+			theora_kbit_rate = 2048;
+		} else if (m_output_settings.encode_quality == "1") {
+			theora_kbit_rate = 4096;
+		} else if (m_output_settings.encode_quality == "2") {
+			theora_kbit_rate = 8192;
+		}
+
+		theora_kbit_rate = theora_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
+		m_output_settings.video_kbit_rate = theora_kbit_rate;
 
 	} else if (enc_name == "libx264") {
 
@@ -745,9 +759,10 @@ void OutputManager::StartFragment() {
 	video_encoder = muxer->AddVideoEncoder(m_output_settings.video_codec_avname, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
 						   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
 
-	if(!m_output_settings.audio_codec_avname.isEmpty())
+	if(!m_output_settings.audio_codec_avname.isEmpty()){
 		audio_encoder = muxer->AddAudioEncoder(m_output_settings.audio_codec_avname, m_output_settings.audio_options, m_output_settings.audio_kbit_rate * 1000,
 											   m_output_settings.audio_channels, m_output_settings.audio_sample_rate);
+	}
 	muxer->Start();
 
 	// acquire lock and share the muxer and encoders

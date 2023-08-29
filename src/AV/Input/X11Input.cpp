@@ -733,8 +733,8 @@ void X11Input::InputThread() {
 		Logger::LogError("[X11Input::InputThread] " + Logger::tr("Unknown exception in input thread."));
 	}
 
-	if (m_window) {
-		glutDestroyWindow(m_window);
-		m_window = 0;
-	}
+//	if (m_window) {
+//		glutDestroyWindow(m_window);
+//		m_window = 0;
+//	}
 }

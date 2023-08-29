@@ -4,7 +4,6 @@
 #include <QWidget>
 #include <QMouseEvent>
 #include <QPushButton>
-#include <QIntValidator>
 #include <QTimer>
 #include <QFileInfo>
 #include <QStandardItemModel>
@@ -41,7 +40,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     QPushButton* createOperationBtn(int modelIndex, int listIndex);
-    QList<QFileInfo>* getVideos(QString path, QString regName);
+    QList<QFileInfo> getVideos(QString path, QString regName);
     QString getVideoDuration(QString absPath);
     void refreshList(QString regName = QString(""));
     QLineEdit *createVideoNameEdit(QString fileName);
@@ -67,7 +66,6 @@ private slots:
     void on_searchBar_returnPressed();
     void playVideo();
     void openDir();
-    void on_searchBar_editingFinished();
     void on_clarityBox_currentIndexChanged(int index);
     void on_pauseBox_currentIndexChanged(int index);
     void on_typeBox_currentIndexChanged(int index);
@@ -97,7 +95,6 @@ private:
     bool m_bDrag = false;
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
-    QIntValidator *m_intValidator;
     QStandardItemModel *m_model = NULL;
     QMenu *m_rightMenu = NULL;
     QStringList m_fpsList;
@@ -105,7 +102,7 @@ private:
     QAction *m_playAction = NULL;
     QAction *m_folderAction = NULL;
 
-    QList<QFileInfo> *m_fileList = NULL;
+    QList<QFileInfo> m_fileList;
     QString m_regName = "";
 
     ConfigureInterface *m_dbusInterface;

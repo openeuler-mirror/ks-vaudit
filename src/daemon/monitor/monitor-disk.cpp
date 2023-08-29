@@ -50,6 +50,7 @@ void MonitorDisk::getAuditInfo()
     KLOG_DEBUG() << "record: FilePath:" << m_recordFilePath << "MinFreeSpace" << m_recordMinFreeSpace;
 }
 
+//超出最大保存天数的录像删除
 void MonitorDisk::checkSaveDays(const QString &filePath, const int &maxSaveDays)
 {
     QDir dir(filePath);
@@ -70,36 +71,21 @@ void MonitorDisk::checkSaveDays(const QString &filePath, const int &maxSaveDays)
     }
 }
 
-void MonitorDisk::checkFreeSpace(const QString &filePath, const quint64 &minFreeSpace)
+bool MonitorDisk::checkFreeSpace(const QString &filePath, const quint64 &minFreeSpace)
 {
     QDir dir(filePath);
     struct statfs diskInfo;
     statfs(filePath.toStdString().data(), &diskInfo);
     quint64 availsize = diskInfo.f_bavail * diskInfo.f_bsize;
 
-    //少于最小可用空间，删除文件
+    //少于最小可用空间，停止录像并弹框提示
     if (availsize < minFreeSpace)
     {
-        qint64 removeSize = minFreeSpace - availsize;
-        KLOG_DEBUG("minFreeSpace: %lluB(%lluM)(%lluG), availsize:%lluB(%lluM)(%lluG), remove: %lluB(%lluM)",
-            minFreeSpace, (minFreeSpace>>20), (minFreeSpace>>30), availsize, (availsize>>20), (availsize>>30), removeSize, (removeSize>>20));
-        QFileInfoList files = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Files, QDir::Time | QDir::Reversed); //Sort by time (modification time)
-        for (auto file : files)
-        {
-            QString suffix = file.suffix();
-            if (suffix == "mp4" || suffix == "MP4" || suffix == "ogv" || suffix == "OGV")
-            {
-                removeSize -= file.size();
-                KLOG_DEBUG() << "remove file:" << file.absoluteFilePath() << "time:" << file.lastModified().toLocalTime().toString() << "size:" << file.size();
-                dir.remove(file.absoluteFilePath());
-                if (removeSize <= 0)
-                {
-                    KLOG_DEBUG("finish clearing files, removeSize: %lldB(%lldM)", removeSize, (removeSize>>20));
-                    return;
-                }
-            }
-        }
+        //KLOG_DEBUG() << "availsize" << availsize << "minFreeSpace" << minFreeSpace;
+        return false;
     }
+
+    return true;
 }
 
 void MonitorDisk::parseConfigureInfo(QString value)
@@ -139,21 +125,8 @@ void MonitorDisk::parseConfigureInfo(QString value)
 
 void MonitorDisk::checkRecordFreeSpace(QString filePath, const quint64 &minFreeSpace)
 {
-    if (filePath.isEmpty())
+    if (!filePathOk(filePath))
         return;
-
-    if (filePath.contains('~'))
-    {
-        filePath.replace('~', getenv("HOME"));
-        KLOG_DEBUG() << "filePath:" << filePath;
-    }
-
-    QDir dir(filePath);
-    if (!dir.exists())
-    {
-        KLOG_DEBUG() << "filePath:" << filePath << "not exist";
-        return;
-    }
 
     struct statfs diskInfo;
     statfs(filePath.toStdString().data(), &diskInfo);
@@ -162,7 +135,7 @@ void MonitorDisk::checkRecordFreeSpace(QString filePath, const quint64 &minFreeS
     {
         KLOG_DEBUG("minFreeSpace: %lluB(%lluM)(%lluG), availsize:%lluB(%lluM)(%lluG)",
             minFreeSpace, (minFreeSpace>>20), (minFreeSpace>>30), availsize, (availsize>>20), (availsize>>30));
-        m_dbusInterface->SwitchControl(getpid(), 0, "DiskSpace");
+        sendSwitchControl(0, "DiskSpace");
     }
 }
 
@@ -187,6 +160,21 @@ void MonitorDisk::parseRecordConfigureInfo(QString value)
             m_recordMinFreeSpace = jsonObj[key].toString().toULongLong();
         }
     }
+}
+
+bool MonitorDisk::filePathOk(QString filePath)
+{
+    if (filePath.isEmpty())
+        return false;
+
+    if (filePath.contains('~'))
+        filePath.replace('~', getenv("HOME"));
+
+    QDir dir(filePath);
+    if (!dir.exists())
+        return false;
+
+    return true;
 }
 
 void MonitorDisk::UpdateConfigureData(QString key, QString value)
@@ -222,8 +210,8 @@ void MonitorDisk::fileSizeProcess(QMap<int, QString>& map)
         if (fileinfo.size() >= m_maxFileSize)
         {
             KLOG_DEBUG() << "file reaches maximum limit" << it.value();
-            m_dbusInterface->SwitchControl(getpid(), it.key(), "stop");
-            m_dbusInterface->SwitchControl(getpid(), it.key(), "start");
+            sendSwitchControl(it.key(), "stop");
+            sendSwitchControl(it.key(), "start");
             map.erase(it++);
             continue;
         }
@@ -232,30 +220,23 @@ void MonitorDisk::fileSizeProcess(QMap<int, QString>& map)
     }
 }
 
-void MonitorDisk::fileDiskLimitProcess()
+void MonitorDisk::sendSwitchControl(int to_pid, const QString &operate)
 {
-    checkRecordFreeSpace(m_recordFilePath, m_recordMinFreeSpace);
+    KLOG_DEBUG() << "to_pid:" << to_pid << "operate:" << operate;
+    m_dbusInterface->SwitchControl(getpid(), to_pid, operate);
+}
+
+bool MonitorDisk::fileDiskLimitProcess()
+{
+    checkRecordFreeSpace(m_recordFilePath, m_recordMinFreeSpace); //前台录屏磁盘空间检测
 
     QString filePath = m_filePath;
-    if (filePath.isEmpty())
-        return;
-
-    if (filePath.contains('~'))
-    {
-        filePath.replace('~', getenv("HOME"));
-        KLOG_DEBUG() << "filePath:" << filePath;
-    }
-
-    QDir dir(filePath);
-    if (!dir.exists())
-    {
-        KLOG_DEBUG() << "filePath:" << filePath << "not exist";
-        return;
-    }
+    if (!filePathOk(filePath))
+        return true;
 
     int maxSaveDays = m_maxSaveDays;
     checkSaveDays(filePath, maxSaveDays);
 
     quint64 minFreeSpace = m_minFreeSpace;
-    checkFreeSpace(filePath, minFreeSpace);
+    return checkFreeSpace(filePath, minFreeSpace);
 }

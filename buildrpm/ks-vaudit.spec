@@ -32,6 +32,8 @@ BuildRequires: kiran-log-qt5-devel
 BuildRequires: ffmpeg >= 4.3.4
 BuildRequires: libnotify-devel
 BuildRequires: kylin-license-devel
+BuildRequires: mesa-libGL-devel
+BuildRequires: nv-codec-headers
 
 Requires:      libX11
 Requires:      ffmpeg >= 4.3.4
@@ -40,6 +42,7 @@ Requires:      zlog >= 1.2.15
 Requires:      kiran-log-qt5
 Requires:      postgresql
 Requires:      unixODBC
+Requires:      mesa-libGL
 Requires:      kylin-license-client
 Requires:      kylin-license-core
 

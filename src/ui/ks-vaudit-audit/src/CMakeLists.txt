@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 FILE(GLOB KS_AUDIT_UI_SRC_LIST_H "./*.h")
-FILE(GLOB KS_AUDIT_UI_SRC_LIST_CPP "./*.cpp")
+FILE(GLOB KS_AUDIT_UI_SRC_LIST_CPP "./*.cpp" "../../vaudit-license/*.cpp")
 FILE(GLOB KS_AUDIT_UI_SRC_LIST_UI "./*.ui")
 FILE(GLOB_RECURSE KS_AUDIT_UI_SRC_LIST_RESOURCES "../data/*.qrc")
 FILE(GLOB_RECURSE KS_AUDIT_UI_SRC_LIST_QSS "../data/*.qss")
@@ -27,11 +27,14 @@ ADD_EXECUTABLE(${TARGET_NAME}
     ${KS_AUDIT_UI_SRC_LIST_UI}
     ${KS_AUDIT_UI_SRC_LIST_RESOURCES}
     ${CONFIGUREINTERFACE_SRC}
-    ${KS_AUDIT_UI_SRC_LIST_QSS})
-
+    ${KS_AUDIT_UI_SRC_LIST_QSS}
+    ${LICENSE_MANAGER_GENERATED_CPP_FILES}
+    ${LICENSE_OBJECT_GENERATED_CPP_FILES})
 
 target_include_directories(${TARGET_NAME} PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR})
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src/ui/vaudit-license/
+    ${KYLIN_LICENSE_INCLUDE_DIRS})
 
 target_link_libraries(${TARGET_NAME}
     -lavformat
@@ -42,5 +45,4 @@ target_link_libraries(${TARGET_NAME}
     Qt5::Widgets
     Qt5::DBus
     Qt5::Core)
-
 

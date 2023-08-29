@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
     }
     Login n;// = new Login();
     Widget w;// = new Widget();
-    QWidget::connect(&n,SIGNAL(show_widget()),&w,SLOT(show_widget_page()));
+    QWidget::connect(&n,SIGNAL(show_widget(QJsonObject)),&w,SLOT(show_widget_page(QJsonObject)));
+    QWidget::connect(&w,SIGNAL(log_out()),&n,SLOT(show_logout()));
     // 加载样式
     QFile file(":/ks-vaudit-audit.qss");
     if (file.open(QFile::ReadOnly)){

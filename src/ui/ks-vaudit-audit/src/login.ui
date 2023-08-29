@@ -127,7 +127,7 @@ color:#fff;
      <property name="geometry">
       <rect>
        <x>24</x>
-       <y>91</y>
+       <y>89</y>
        <width>61</width>
        <height>20</height>
       </rect>
@@ -154,43 +154,58 @@ color:#fff;
       <bool>true</bool>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit">
+    <widget class="QLineEdit" name="passwdEdit">
      <property name="geometry">
       <rect>
        <x>24</x>
-       <y>118</y>
+       <y>114</y>
        <width>584</width>
        <height>36</height>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">QLineEdit{
+      <string notr="true">QLineEdit#passwdEdit[isError=&quot;false&quot;]{
 background-color:rgb(34,34,34);
 border: 1px solid #393939;
 border-radius:4px;
 color:#fff;
 padding-left:10px;
+padding-right:10px;
 font-size:13px;
 }
 
-QLineEdit:hover{
+QLineEdit#passwdEdit[isError=&quot;true&quot;]{
+background-color:rgb(34,34,34);
+border: 1px solid #fa4949;
+border-radius:4px;
+color:#fff;
+padding-left:10px;
+padding-right:10px;
+font-size:13px;
+}
+
+QLineEdit#passwdEdit:hover{
 background-color:rgb(34,34,34);
 border: 1px solid #2eb3ff;
 border-radius:4px;
 color:#fff;
 padding-left:10px;
+padding-right:10px;
 font-size:13px;
 }</string>
      </property>
      <property name="echoMode">
       <enum>QLineEdit::Password</enum>
      </property>
+     <property name="isError" stdset="0">
+      <bool>false</bool>
+     </property>
     </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="userBox">
      <property name="geometry">
       <rect>
        <x>24</x>
-       <y>39</y>
+       <y>37</y>
        <width>584</width>
        <height>36</height>
       </rect>
@@ -224,6 +239,39 @@ font-size:13px;
        <string>audadm</string>
       </property>
      </item>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>545</x>
+       <y>153</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sans Serif</family>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel#label_3{
+color:#fa1919;
+}</string>
+     </property>
+     <property name="text">
+      <string>密码错误</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::AutoText</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
     </widget>
    </widget>
    <widget class="QWidget" name="titleBar" native="true">

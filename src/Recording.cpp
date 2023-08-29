@@ -222,8 +222,10 @@ void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
 	//分辨率变化后的处理
 	m_separate_files = true;
 	OnRecordPause();
-	m_video_in_width = changed_screen_rect.width();
-	m_video_in_height = changed_screen_rect.height();
+	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+	QRect rect = CombineScreenGeometries(screen_geometries); 
+	m_video_in_width = rect.width();
+	m_video_in_height = rect.height();
 	m_output_settings.video_height = m_video_in_height;
 	m_output_settings.video_width = m_video_in_width;
 	OnRecordStartPause();

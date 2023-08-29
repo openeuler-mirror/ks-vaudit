@@ -554,6 +554,20 @@ void X11Input::UpdateScreenConfiguration() {
 void X11Input::InputThread() {
 	try {
 
+		// init opengl env and create window for nvenc
+		int argc = 1;
+		char *argv[1] = {(char*)"dummy"};
+
+		glutInit(&argc, argv);
+		glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
+		glutInitWindowSize(80, 60);
+
+		m_window = glutCreateWindow("gl");
+		if (!m_window) {
+			Logger::LogError("[X11Input::InputThread] create glut window failed");
+			glutHideWindow();
+		}
+
 		pid_t tid = gettid();
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
 
@@ -716,5 +730,10 @@ void X11Input::InputThread() {
 	} catch(...) {
 		m_error_occurred = true;
 		Logger::LogError("[X11Input::InputThread] " + Logger::tr("Unknown exception in input thread."));
+	}
+
+	if (m_window) {
+		glutDestroyWindow(m_window);
+		m_window = 0;
 	}
 }

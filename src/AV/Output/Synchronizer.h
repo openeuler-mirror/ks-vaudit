@@ -29,6 +29,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "AVWrapper.h"
 
 #include "SampleCast.h"
+#include "NvEncoderGL.h"
 
 class OutputManager;
 class OutputSettings;
@@ -41,6 +42,12 @@ private:
 	struct VideoData {
 
 		FastScaler m_fast_scaler;
+		int m_nvenc_inited;
+		NvEncoderGL *m_nvenc;
+
+		int m_image_cnt;
+		int m_scale_cnt;
+		int m_unchanged_cnt;
 
 		int64_t m_last_timestamp; // the timestamp of the last received video frame (for gap detection)
 		int64_t m_next_timestamp; // the preferred timestamp of the next frame (for rate control)
@@ -91,8 +98,16 @@ private:
 		int64_t m_segment_video_accumulated_delay; // sum of all video frame delays that were applied so far
 
 		std::shared_ptr<AVFrameData> m_last_video_frame_data;
+		// check if last read frame is encoded by nvenc
+		int m_last_video_frame_encoded;
+		size_t m_last_video_frame_size;
+
 		// to check if image changed
 		std::shared_ptr<AVFrameData> m_last_video_read_data;
+		// check if last read frame is encoded by nvenc
+		int m_last_video_read_encoded;
+		size_t m_last_video_read_size;
+
 		std::vector<ChannelData> m_channel_data;
 		int m_has_voice;
 
@@ -131,6 +146,9 @@ public:
 	~Synchronizer();
 
 private:
+	//void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+	int EncodeFrameByNvenc(VideoLock &videolock, const uint8_t* data, std::unique_ptr<AVFrameWrapper> &converted_frame);
+	void InitNvenc(VideoLock &videolock);
 	void Init();
 	void Free();
 

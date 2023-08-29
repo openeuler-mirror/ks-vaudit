@@ -111,6 +111,16 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/syscall.h>
 
+#define GL_GLEXT_PROTOTYPES
+#define GLX_GLXEXT_PROTOTYPES
+#include <GL/glut.h>
+#include <GL/gl.h>
+#include <GL/glx.h>
+#include <GL/glu.h>
+
+#include <GL/glext.h>
+#include <GL/glxext.h>
+
 // video encode type
 typedef enum enumEncodeType {
 	EncodeTypeCpu = 0,

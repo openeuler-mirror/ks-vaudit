@@ -94,6 +94,9 @@ void Widget::init_ui()
     connect(m_deleteAction, SIGNAL(triggered()), this, SLOT(deleteVideo()));
 
     readConfig();
+    // 构建模型表头
+    m_model = new QStandardItemModel();
+    createList();
     refreshList(m_regName);
     m_selfPID = QCoreApplication::applicationPid();
     m_recordPID = startRecrodProcess();
@@ -423,7 +426,7 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
         // 1开头的时候边框置红，开始录屏设为10fps
         ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
                                    "background-color:#222222;"
-                                   "border:1px solid #393939;"
+                                   "border:1px solid #fa4949;"
                                    "border-radius:6px;"
                                    "color:#fff;"
                                    "padding-left:10px;"
@@ -772,8 +775,6 @@ QString Widget::getVideoDuration(QString absPath)
 }
 
 void Widget::createList(){
-    // 构建模型表头
-    m_model = new QStandardItemModel();
     QList<QString> headers;
     headers << "视频名" << "时长" << "大小" << "日期"<<"操作";
     for (int i = 0; i < headers.size(); i++)
@@ -822,11 +823,11 @@ void Widget::createList(){
 
 void Widget::refreshList(QString regName)
 {
-    if (m_model != NULL){
-        m_model->clear();
-        m_model = NULL;
+    int modelRowNum = m_model->rowCount();
+    if (modelRowNum > 0){
+        m_model->removeRows(0,modelRowNum);
     }
-    createList();
+
     // 添加内容
     QList<QFileInfo>* testList;
     testList = getVideos(ui->pathLabel->text(), regName);
@@ -860,6 +861,8 @@ void Widget::refreshList(QString regName)
         m_model->item(p,3)->setFont( QFont("Sans Serif", 10) );
         m_model->setItem(p, 4, new QStandardItem());
         ui->videoList->setIndexWidget(m_model->index(p,4), createOperationBtn(p));
+//        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        QCoreApplication::processEvents();
     }
 
 }
@@ -883,7 +886,7 @@ QLineEdit *Widget::createVideoNameEdit(QString fileName)
 void Widget::readConfig()
 {
     QString value = m_dbusInterface->GetRecordInfo();
-    QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
     if (doc.isObject())
     {
         QJsonObject jsonObj = doc.object();

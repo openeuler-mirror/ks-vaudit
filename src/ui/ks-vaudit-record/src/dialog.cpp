@@ -131,6 +131,8 @@ void Dialog::initRenameUI()
                                     "background-color:#222222;"
                                     "border-radius:6px;"
                                     "border:1px solid #393939;"
+                                    "padding-left:10px;"
+                                    "padding-right:10px;"
                                     "}"
                                     "QLineEdit:hover{"
                                     "color:#fff;"

@@ -868,7 +868,7 @@ void Widget::createList(){
 
     ui->videoList->horizontalHeader()->setFixedWidth(628);
     ui->videoList->setColumnWidth(0,202);
-    ui->videoList->setColumnWidth(1,100);
+    ui->videoList->setColumnWidth(1,108);
     ui->videoList->setColumnWidth(2,100);
     ui->videoList->setColumnWidth(3,155);
     ui->videoList->setColumnWidth(4,70);
@@ -893,10 +893,10 @@ void Widget::refreshList(QString regName)
     testList = getVideos(ui->pathLabel->text(), regName);
     m_fileList = testList;
 
-    for (int p = 0; p < testList->size(); ++p){
+    for (int p,i = 0; p < testList->size(); ++p){
         QString fileName = testList->at(p).fileName();
         QString duration = getVideoDuration(testList->at(p).absoluteFilePath());
-        if (QString::compare(duration,QString("文件损坏")) == 0){
+        if (QString::compare(duration,"文件损坏") == 0){
             // 录制中的视频和其他原因打不开的视频不展示 #59083
             continue;
         }
@@ -914,19 +914,20 @@ void Widget::refreshList(QString regName)
         QString modifyDate = dateTime.toString("yyyy/MM/dd hh:mm");
         QStandardItem *fileNameItem = new QStandardItem(fileName);
         fileNameItem->setToolTip(fileName);
-        m_model->setItem(p, 0, fileNameItem);
-        m_model->item(p,0)->setFont( QFont("Sans Serif", 10) );
+        m_model->setItem(i, 0, fileNameItem);
+        m_model->item(i,0)->setFont( QFont("Sans Serif", 10) );
 //        ui->videoList->setIndexWidget(m_model->index(p,0), createVideoNameEdit(fileName));
-        m_model->setItem(p, 1, new QStandardItem(duration));
-        m_model->item(p,1)->setFont( QFont("Sans Serif", 10) );
-        m_model->setItem(p, 2, new QStandardItem(fileSize));
-        m_model->item(p,2)->setFont( QFont("Sans Serif", 10) );
-        m_model->setItem(p, 3, new QStandardItem(modifyDate));
-        m_model->item(p,3)->setFont( QFont("Sans Serif", 10) );
-        m_model->setItem(p, 4, new QStandardItem());
-        ui->videoList->setIndexWidget(m_model->index(p,4), createOperationBtn(p));
+        m_model->setItem(i, 1, new QStandardItem());
+        ui->videoList->setIndexWidget(m_model->index(i,1), createVideoDurationLabel(duration));
+        m_model->setItem(i, 2, new QStandardItem(fileSize));
+        m_model->item(i,2)->setFont( QFont("Sans Serif", 10) );
+        m_model->setItem(i, 3, new QStandardItem(modifyDate));
+        m_model->item(i,3)->setFont( QFont("Sans Serif", 10) );
+        m_model->setItem(i, 4, new QStandardItem());
+        ui->videoList->setIndexWidget(m_model->index(i,4), createOperationBtn(i));
 //        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
         QCoreApplication::processEvents();
+        i++;
     }
 
 }
@@ -943,6 +944,15 @@ QLineEdit *Widget::createVideoNameEdit(QString fileName)
                                 "}");
     fileNameEdit->setEnabled(false);
     return fileNameEdit;
+}
+
+QLabel *Widget::createVideoDurationLabel(QString duration)
+{
+    QLabel *durationLabel = new QLabel();
+    durationLabel->setText(duration);
+    durationLabel->setFont(QFont("Sans Serif", 10));
+    durationLabel->setStyleSheet("color:#fff;");
+    return durationLabel;
 }
 
 void Widget::readConfig()

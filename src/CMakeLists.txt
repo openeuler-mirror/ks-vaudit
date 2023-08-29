@@ -53,6 +53,10 @@ set(sources
 	AV/Input/V4L2Input.h
 	AV/Input/X11Input.cpp
 	AV/Input/X11Input.h
+	AV/Output/NvEncoder.h
+	AV/Output/NvEncoder.cpp
+	AV/Output/NvEncoderGL.h
+	AV/Output/NvEncoderGL.cpp
 	AV/Output/AudioEncoder.cpp
 	AV/Output/AudioEncoder.h
 	AV/Output/BaseEncoder.cpp
@@ -209,6 +213,9 @@ target_include_directories(ks-vaudit PRIVATE
 target_link_libraries(ks-vaudit PRIVATE
 	-lcairo
 	-lrt
+	-lGL
+	-lglut
+	-ldl
 	Qt5::DBus
 	Qt5::Core
 	glib-2.0

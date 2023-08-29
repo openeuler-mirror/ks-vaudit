@@ -65,17 +65,15 @@ private:
 	std::atomic<bool> m_should_stop, m_should_finish, m_is_done, m_error_occurred;
 
 public:
+	// 用来设置编码后包的 pts 和 dts
+	uint64_t m_pts_cnt;
+
 	// GPU 硬件加速用到的变量
-	EncodeType m_enc_type;
 	AVBufferRef *m_hw_device_ctx_ref;
 	AVBufferRef *m_hw_frames_ctx_ref;
 	AVFrame *m_avframe_gpu;
 
 	void InitGpuEncode(AVCodec* codec);
-	void SetEncodeType(EncodeType enc_type) {
-		assert(enc_type >= EncodeTypeCpu && enc_type <= EncodeTypeNv);
-		m_enc_type = enc_type;
-	}
 
 protected:
 	BaseEncoder(Muxer* muxer, AVStream* stream, AVCodecContext* codec_context, AVCodec* codec, AVDictionary** options);

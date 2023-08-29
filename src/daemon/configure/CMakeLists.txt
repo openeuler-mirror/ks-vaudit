@@ -7,8 +7,6 @@ include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-# set(CMAKE_CXX_FLAGS "-execution-charset:utf-8")
-# set(CMAKE_CXX_FLAGS "-source-charset:utf-8")
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)

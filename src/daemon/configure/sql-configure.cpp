@@ -10,7 +10,7 @@
 #include <QMutexLocker>
 #include <QByteArray>
 
-//#define SUPPOORT_SQLITECIPHER
+#define SUPPOORT_SQLITECIPHER
 
 #define SQLITE_NAME             "ks-vaudit"
 #define SQLITE_PATH             "/etc/ks-vaudit.sqlite"
@@ -31,12 +31,17 @@ bool SQLConfigure::createUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
+    {
+        KLOG_DEBUG() << "not object:" << jsonDocument;
         return false;
-
+    }
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_USER) || !jsonObj.contains(PARAM_USER_PASSWD) || !jsonObj.contains(PARAM_USER_ROLE))
+    {
+        KLOG_DEBUG() << "param err:" << jsonObj;
         return false;
+    }
 
     return createUser(jsonObj[PARAM_USER].toString(), jsonObj[PARAM_USER_PASSWD].toString(), jsonObj[PARAM_USER_ROLE].toString());
 }
@@ -46,11 +51,17 @@ bool SQLConfigure::deleteUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
+    {
+        KLOG_DEBUG() << "not object:" << jsonDocument;
         return false;
+    }
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_USER) || !jsonObj.contains(PARAM_USER_PASSWD))
+    {
+        KLOG_DEBUG() << "param err:" << jsonObj;
         return false;
+    }
 
     return deleteUser(jsonObj[PARAM_USER].toString(), jsonObj[PARAM_USER_PASSWD].toString());
 }
@@ -60,11 +71,17 @@ bool SQLConfigure::updateUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
+    {
+        KLOG_DEBUG() << "not object:" << jsonDocument;
         return false;
+    }
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_USER) || !jsonObj.contains(PARAM_USER_OLD_PASSWD))
+    {
+        KLOG_DEBUG() << "param err:" << jsonObj;
         return false;
+    }
 
     QString newpwd{}, role{};
     if (jsonObj.contains(PARAM_USER_PASSWD))
@@ -80,11 +97,17 @@ QString SQLConfigure::queryUser(const QString param)
     QString str = param;
     QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
     if (!jsonDocument.isObject())
+    {
+        KLOG_DEBUG() << "not object:" << jsonDocument;
         return "";
+    }
 
     QJsonObject jsonObj = jsonDocument.object();
     if (!jsonObj.contains(PARAM_DB_PASSWD))
+    {
+        KLOG_DEBUG() << "param err:" << jsonObj;
         return "";
+    }
 
     QString usr{};
     if (jsonObj.contains(PARAM_USER))
@@ -199,7 +222,7 @@ bool SQLConfigure::checkUserPasswd(const QString name, const QString pwd)
     while (m_query->next())
         return true;
 
-    KLOG_INFO() << "user or passwd err";
+    KLOG_DEBUG() << "user or passwd err";
     return false;
 }
 
@@ -209,14 +232,17 @@ bool SQLConfigure::isNameLegal(QString name)
     if (rxp.exactMatch(name))
         return true;
 
-    KLOG_INFO() << name << " is illegal";
+    KLOG_DEBUG() << name << " is illegal";
     return false;
 }
 
 bool SQLConfigure::createUser(const QString name, const QString pwd, const QString role)
 {
     if (name.isEmpty() || pwd.isEmpty() || role.isEmpty())
+    {
+        KLOG_DEBUG() << "param err";
         return false;
+    }
 
     if (!isNameLegal(name))
         return false;
@@ -263,7 +289,10 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
         return false;
 
     if (newpwd.isEmpty() && role.isEmpty())
+    {
+        KLOG_DEBUG() << "param err";
         return false;
+    }
     else if (newpwd.isEmpty())
     {
         QString sql = "update user_infos set role = :role where name = :name";
@@ -302,7 +331,10 @@ QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
 {
 #ifdef SUPPOORT_SQLITECIPHER
     if (dbpwd != m_db.password())
+    {
+        KLOG_DEBUG() << "database password err";
         return "";
+    }
 #endif
 
     if (name.isEmpty())

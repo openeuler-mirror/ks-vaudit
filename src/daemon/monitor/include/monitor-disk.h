@@ -13,18 +13,20 @@ class MonitorDisk : public QObject
 public:
     MonitorDisk(QWidget *parent = 0);
     static MonitorDisk &instance();
-    void fileDiskLimitProcess();
+    bool fileDiskLimitProcess();
     int getMaxRecordPerUser();
     void fileSizeProcess(QMap<int, QString>&);
+    void sendSwitchControl(int to_pid, const QString &operate);
 
 private:
     ~MonitorDisk();
     void getAuditInfo();
     void checkSaveDays(const QString &filePath, const int &maxSaveDays);
-    void checkFreeSpace(const QString &filePath, const quint64 &minFreeSpace);
+    bool checkFreeSpace(const QString &filePath, const quint64 &minFreeSpace);
     void parseConfigureInfo(QString);
     void checkRecordFreeSpace(QString filePath, const quint64 &minFreeSpace);
     void parseRecordConfigureInfo(QString value);
+    bool filePathOk(QString filePath);
 
 private slots:
     void UpdateConfigureData(QString, QString);

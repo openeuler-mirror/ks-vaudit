@@ -155,9 +155,9 @@ void Widget::mouseReleaseEvent(QMouseEvent *event)
 
 void Widget::on_exit_clicked()
 {
-    Dialog *confirm = new Dialog(this, QString("exit"));
-    connect(confirm, SIGNAL(close_window()), this, SLOT(realClose()));
-    confirm->exec();
+    m_pConfirm = new Dialog(this, QString("exit"));
+    connect(m_pConfirm, SIGNAL(close_window()), this, SLOT(realClose()));
+    m_pConfirm->exec();
 }
 
 void Widget::on_NormalBtn_clicked()
@@ -936,6 +936,10 @@ void Widget::realClose()
 {
     // 给后端发送exit信号
     sendSwitchControl(m_selfPID, m_recordPID, "exit");
+    this->hide();
+    m_pConfirm->hide();
+    m_recordP->waitForFinished();
+    m_pConfirm->close();
     this->close();
 }
 

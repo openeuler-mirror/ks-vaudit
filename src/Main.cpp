@@ -150,8 +150,8 @@ int main(int argc, char* argv[]) {
 	recording_screen.reset(new Recording(&settings));
 	recording_screen->SaveSettings(&settings);
 	if(!CommandLineOptions::GetFrontRecord()){
-		recording_screen->AuditParamDeal();
-		recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
+		if (!recording_screen->AuditParamDeal()) //监控程序启的进程默认不开始录屏，收到信号才录屏
+			recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
 	}
 	
 	// stop main program

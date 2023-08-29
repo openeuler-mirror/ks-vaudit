@@ -355,6 +355,44 @@ border-top-right-radius:6px;
       </size>
      </property>
     </widget>
+    <widget class="QWidget" name="dotWidget" native="true">
+     <property name="geometry">
+      <rect>
+       <x>539</x>
+       <y>18</y>
+       <width>5</width>
+       <height>5</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border:none;
+border-radius:2px;
+background-color:#fa1919;</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="activationBtn">
+     <property name="geometry">
+      <rect>
+       <x>550</x>
+       <y>2</y>
+       <width>41</width>
+       <height>34</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border:none;
+background-color:transparent;
+color:#fff;</string>
+     </property>
+     <property name="text">
+      <string>未激活</string>
+     </property>
+    </widget>
    </widget>
   </widget>
  </widget>

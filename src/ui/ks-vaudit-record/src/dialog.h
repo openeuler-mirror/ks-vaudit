@@ -23,6 +23,7 @@ protected:
     void initUI();
     void initAboutUI();
     void initRenameUI();
+    void initActivateUI(bool);
 
 private slots:
 

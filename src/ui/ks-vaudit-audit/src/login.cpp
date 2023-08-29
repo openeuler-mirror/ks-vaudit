@@ -11,6 +11,11 @@ Login::Login(QWidget *parent) :
     ui(new Ui::Login)
 {
     ui->setupUi(this);
+    m_activation = new ActivatePage();
+
+    if (!checkActivation()){
+        m_activation->exec();
+    }
     this->setWindowFlags(Qt::Dialog|Qt::FramelessWindowHint);
     this->setAttribute(Qt::WA_TranslucentBackground, true);
     m_dbusInterface = new ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
@@ -37,6 +42,12 @@ void Login::initUI()
 
 void Login::on_accept_clicked()
 {
+    bool isActivated = checkActivation();
+    if (!isActivated){
+        m_activation->exec();
+        checkActivation();
+        return;
+    }
     bool passwordConfirmed = checkLogin();
     if(passwordConfirmed){
         emit show_widget(m_currentUserInfo);
@@ -110,6 +121,24 @@ QString Login::base64ToStr(QString inputStr)
     return QByteArray::fromBase64(QVariant(inputStr).toByteArray()).toStdString().data();
 }
 
+bool Login::checkActivation()
+{
+    // 检查是否激活并且设置ui
+    m_isActivated = m_activation->getActivation();
+    if (!m_isActivated){
+        ui->dotWidget->setStyleSheet("border:none;"
+                                     "border-radius:2px;"
+                                     "background-color:#fa1919;");
+        ui->activationBtn->setText("未激活");
+    }else{
+        ui->dotWidget->setStyleSheet("border:none;"
+                                     "border-radius:2px;"
+                                     "background-color:#2eb3ff;");
+        ui->activationBtn->setText("已激活");
+    }
+    return m_isActivated;
+}
+
 void Login::on_exit_clicked()
 {
     this->close();
@@ -118,6 +147,7 @@ void Login::on_exit_clicked()
 void Login::show_logout()
 {
     // 刷新用户信息
+    this->checkActivation();
     this->getUserInfo();
     this->show();
 }
@@ -130,3 +160,9 @@ void Login::on_passwdEdit_textChanged(const QString &arg1)
     ui->passwdEdit->style()->polish(ui->passwdEdit);
 }
 
+
+void Login::on_activationBtn_clicked()
+{
+    m_activation->exec();
+    checkActivation();
+}

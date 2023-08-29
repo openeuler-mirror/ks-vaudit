@@ -106,3 +106,22 @@ public:
 	virtual void ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) = 0;
 	virtual void ReadAudioHole() {}
 };
+
+class AudioSourceInput : private BaseSource {
+	friend class AudioSinkInput;
+protected:
+	AudioSourceInput() {}
+	void PushAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp);
+	void PushAudioHoleInput();
+};
+
+class AudioSinkInput : private BaseSink {
+	friend class AudioSourceInput;
+protected:
+	AudioSinkInput() {}
+public:
+	inline void ConnectAudioSourceInput(AudioSourceInput* source, int priority = 0) { ConnectBaseSource(source, priority); }
+public:
+	virtual void ReadAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) = 0;
+	virtual void ReadAudioHoleInput() {}
+};

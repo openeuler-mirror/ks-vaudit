@@ -214,6 +214,7 @@ Synchronizer::~Synchronizer() {
 	// disconnect
 	ConnectVideoSource(NULL);
 	ConnectAudioSource(NULL);
+	ConnectAudioSourceInput(NULL);
 
 	// tell the thread to stop
 	if(m_thread.joinable()) {
@@ -296,10 +297,15 @@ void Synchronizer::Init() {
 
 	// initialize audio
 	if(m_output_format->m_audio_enabled) {
-		AudioLock audiolock(&m_audio_data);
+		AudioLock audiolock(&m_audio_data_input);
 		audiolock->m_fast_resampler.reset(new FastResampler(m_output_format->m_audio_channels, 0.9f));
 		InitAudioSegment(audiolock.get());
 		audiolock->m_warn_desync = true;
+		
+		AudioLock audiolock_output(&m_audio_data_output);
+		audiolock_output->m_fast_resampler.reset(new FastResampler(m_output_format->m_audio_channels, 0.9f));
+		InitAudioSegment(audiolock_output.get());
+		audiolock_output->m_warn_desync = true;
 	}
 
 	// create sync diagram
@@ -355,8 +361,11 @@ void Synchronizer::Free() {
 void Synchronizer::NewSegment() {
 
 	if(m_output_format->m_audio_enabled) {
-		AudioLock audiolock(&m_audio_data);
+		AudioLock audiolock(&m_audio_data_input);
 		InitAudioSegment(audiolock.get());
+		
+		AudioLock audiolock_output(&m_audio_data_output);
+		InitAudioSegment(audiolock_output.get());
 	}
 
 	SharedLock lock(&m_shared_data);
@@ -516,7 +525,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 
 	// avoid memory problems by limiting the video buffer size
 	if(lock->m_video_buffer.size() >= MAX_VIDEO_FRAMES_BUFFERED) {
-		if(lock->m_segment_audio_started) {
+		if(lock->m_segment_audio_started_input || lock->m_segment_audio_started_output) {
 			if(lock->m_warn_drop_video) {
 				lock->m_warn_drop_video = false;
 				Logger::LogWarning("[Synchronizer::ReadVideoFrame] " + Logger::tr("Warning: Video buffer overflow, some frames will be lost. The audio input seems to be too slow."));
@@ -560,8 +569,9 @@ void Synchronizer::ReadVideoPing(int64_t timestamp) {
 
 }
 
-void Synchronizer::ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
+void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp, QString &type) {
 	assert(m_output_format->m_audio_enabled);
+	assert(type == "mic" || type == "speaker");
 
 	// sanity check
 	if(sample_count == 0)
@@ -571,7 +581,14 @@ void Synchronizer::ReadAudioSamples(unsigned int channels, unsigned int sample_r
 	if(m_sync_diagram != NULL)
 		m_sync_diagram->AddBlock(1, (double) timestamp * 1.0e-6, (double) timestamp * 1.0e-6 + (double) sample_count / (double) sample_rate, QColor(0, 255, 0));
 
-	AudioLock audiolock(&m_audio_data);
+	MutexDataPair<AudioData> * audio_data = NULL;
+	if (type == "mic") {
+		audio_data = &m_audio_data_input;
+	} else {
+		audio_data = &m_audio_data_output;
+	}
+
+	AudioLock audiolock(audio_data);
 
 	// check the timestamp
 	if(timestamp < audiolock->m_last_timestamp) {
@@ -716,41 +733,64 @@ void Synchronizer::ReadAudioSamples(unsigned int channels, unsigned int sample_r
 	SharedLock lock(&m_shared_data);
 
 	// avoid memory problems by limiting the audio buffer size
-	if(lock->m_audio_buffer.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED) {
+	if((type == "mic" && lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)
+	|| (type == "speaker" && lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)) {
 		if(lock->m_segment_video_started) {
 			Logger::LogWarning("[Synchronizer::ReadAudioSamples] " + Logger::tr("Warning: Audio buffer overflow, starting new segment to keep the audio in sync with the video "
 																				"(some video and/or audio may be lost). The video input seems to be too slow."));
 			NewSegment(lock.get());
-		} else {
+		} else if (type == "mic") {
 			// If the video hasn't started yet, it makes more sense to drop the oldest samples.
 			// Shifting the start time like this isn't completely accurate, but this shouldn't happen often anyway.
 			// The number of samples dropped is calculated so that the buffer will be 90% full after this.
-			size_t n = lock->m_audio_buffer.GetSize() / m_output_format->m_audio_channels - MAX_AUDIO_SAMPLES_BUFFERED * 9 / 10;
-			lock->m_audio_buffer.Pop(n * m_output_format->m_audio_channels);
-			lock->m_segment_audio_start_time += (int64_t) round((double) n / (double) m_output_format->m_audio_sample_rate * 1.0e6);
+			size_t n = lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels - MAX_AUDIO_SAMPLES_BUFFERED * 9 / 10;
+			lock->m_audio_buffer_input.Pop(n * m_output_format->m_audio_channels);
+			lock->m_segment_audio_start_time_input += (int64_t) round((double) n / (double) m_output_format->m_audio_sample_rate * 1.0e6);
+		} else {
+			size_t n = lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels - MAX_AUDIO_SAMPLES_BUFFERED * 9 / 10;
+			lock->m_audio_buffer_output.Pop(n * m_output_format->m_audio_channels);
+			lock->m_segment_audio_start_time_output += (int64_t) round((double) n / (double) m_output_format->m_audio_sample_rate * 1.0e6);
+
 		}
 	}
 
 	// start audio
-	if(!lock->m_segment_audio_started) {
-		lock->m_segment_audio_started = true;
-		lock->m_segment_audio_start_time = timestamp;
-		lock->m_segment_audio_stop_time = timestamp;
+	if(type == "mic" && !lock->m_segment_audio_started_input) {
+		lock->m_segment_audio_started_input = true;
+		lock->m_segment_audio_start_time_input = timestamp;
+		lock->m_segment_audio_stop_time_input = timestamp;
+	}
+	if(type == "speaker" && !lock->m_segment_audio_started_output) {
+		lock->m_segment_audio_started_output = true;
+		lock->m_segment_audio_start_time_output = timestamp;
+		lock->m_segment_audio_stop_time_output = timestamp;
 	}
 
-	// store the samples
-	lock->m_audio_buffer.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
+	if (type == "mic") {
+		lock->m_audio_buffer_input.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
+		double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
+		lock->m_segment_audio_stop_time_input = lock->m_segment_audio_start_time_input + (int64_t) round(new_sample_length * 1.0e6);
+	} else {
+		lock->m_audio_buffer_output.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
+		double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
+		lock->m_segment_audio_stop_time_output = lock->m_segment_audio_start_time_output + (int64_t) round(new_sample_length * 1.0e6);
 
-	// increase segment stop time
-	double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
-	lock->m_segment_audio_stop_time = lock->m_segment_audio_start_time + (int64_t) round(new_sample_length * 1.0e6);
+	}
 
 }
 
-void Synchronizer::ReadAudioHole() {
+void Synchronizer::ReadAudioHoleReal(QString &type) {
 	assert(m_output_format->m_audio_enabled);
+	assert(type == "mic" || type == "speaker");
 
-	AudioLock audiolock(&m_audio_data);
+	MutexDataPair<AudioData> *audio_data = NULL;
+	if (type == "mic") {
+		audio_data = &m_audio_data_input;
+	} else {
+		audio_data = &m_audio_data_output;
+	}
+
+	AudioLock audiolock(audio_data);
 	if(audiolock->m_first_timestamp != (int64_t) AV_NOPTS_VALUE) {
 		audiolock->m_average_drift = 0.0;
 		if(!audiolock->m_drop_samples || !audiolock->m_insert_samples) {
@@ -760,6 +800,26 @@ void Synchronizer::ReadAudioHole() {
 		}
 	}
 
+}
+
+void Synchronizer::ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
+	QString type = "speaker";
+	ReadAudioSamplesReal(channels, sample_rate, format, sample_count, data, timestamp, type);
+}
+
+void Synchronizer::ReadAudioHole() {
+	QString type = "speaker";
+	ReadAudioHoleReal(type);
+}
+
+void Synchronizer::ReadAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
+	QString type = QString("mic");
+	ReadAudioSamplesReal(channels, sample_rate, format, sample_count, data, timestamp, type);
+}
+
+void Synchronizer::ReadAudioHoleInput() {
+	QString type = "mic";
+	ReadAudioHoleReal(type);
 }
 
 void Synchronizer::InitAudioSegment(AudioData* audiolock) {
@@ -779,30 +839,37 @@ double Synchronizer::GetAudioDrift(AudioData* audiolock, unsigned int extra_samp
 
 void Synchronizer::NewSegment(SharedData* lock) {
 	FlushBuffers(lock);
-	if(lock->m_segment_video_started && lock->m_segment_audio_started) {
+	if(lock->m_segment_video_started && (lock->m_segment_audio_started_input || lock->m_segment_audio_started_output)) {
 		int64_t segment_start_time, segment_stop_time;
 		GetSegmentStartStop(lock, &segment_start_time, &segment_stop_time);
 		lock->m_time_offset += std::max((int64_t) 0, segment_stop_time - segment_start_time);
 	}
 	lock->m_video_buffer.clear();
-	lock->m_audio_buffer.Clear();
+	lock->m_audio_buffer_input.Clear();
+	lock->m_audio_buffer_input.Clear();
 	InitSegment(lock);
 }
 
 void Synchronizer::InitSegment(SharedData* lock) {
 	lock->m_segment_video_started = !m_output_format->m_video_enabled;
-	lock->m_segment_audio_started = !m_output_format->m_audio_enabled;
+	lock->m_segment_audio_started_input = !m_output_format->m_audio_enabled;
+	lock->m_segment_audio_started_output = !m_output_format->m_audio_enabled;
+
 	lock->m_segment_video_start_time = AV_NOPTS_VALUE;
-	lock->m_segment_audio_start_time = AV_NOPTS_VALUE;
+	lock->m_segment_audio_start_time_input = AV_NOPTS_VALUE;
+	lock->m_segment_audio_start_time_output = AV_NOPTS_VALUE;
+
 	lock->m_segment_video_stop_time = AV_NOPTS_VALUE;
-	lock->m_segment_audio_stop_time = AV_NOPTS_VALUE;
+	lock->m_segment_audio_stop_time_input = AV_NOPTS_VALUE;
+	lock->m_segment_audio_stop_time_output = AV_NOPTS_VALUE;
+
 	lock->m_segment_audio_can_drop = true;
 	lock->m_segment_audio_samples_read = 0;
 	lock->m_segment_video_accumulated_delay = 0;
 }
 
 int64_t Synchronizer::GetTotalTime(Synchronizer::SharedData* lock) {
-	if(lock->m_segment_video_started && lock->m_segment_audio_started) {
+	if(lock->m_segment_video_started && (lock->m_segment_audio_started_input || lock->m_segment_audio_started_output)) {
 		int64_t segment_start_time, segment_stop_time;
 		GetSegmentStartStop(lock, &segment_start_time, &segment_stop_time);
 		return lock->m_time_offset + std::max((int64_t) 0, segment_stop_time - segment_start_time);
@@ -816,16 +883,44 @@ void Synchronizer::GetSegmentStartStop(SharedData* lock, int64_t* segment_start_
 		*segment_start_time = lock->m_segment_video_start_time;
 		*segment_stop_time = lock->m_segment_video_stop_time;
 	} else if(!m_output_format->m_video_enabled) {
-		*segment_start_time = lock->m_segment_audio_start_time;
-		*segment_stop_time = lock->m_segment_audio_stop_time;
+		if (lock->m_segment_audio_start_time_input != AV_NOPTS_VALUE && 
+			lock->m_segment_audio_start_time_output != AV_NOPTS_VALUE) {
+			*segment_start_time = std::max(lock->m_segment_audio_start_time_input, lock->m_segment_audio_start_time_output);
+		} else if (lock->m_segment_audio_start_time_input != AV_NOPTS_VALUE) {
+			*segment_start_time = lock->m_segment_audio_start_time_input;
+		} else if (lock->m_segment_audio_start_time_output != AV_NOPTS_VALUE) {
+			*segment_start_time = lock->m_segment_audio_start_time_output;
+		} else {
+			Logger::LogError("[Synchronizer::GetSegmentStartStop] m_segment_audio_start_time_input and m_segment_audio_start_time_output are both invalid");
+		}
 	} else {
-		*segment_start_time = std::max(lock->m_segment_video_start_time, lock->m_segment_audio_start_time);
-		*segment_stop_time = std::min(lock->m_segment_video_stop_time, lock->m_segment_audio_stop_time);
+
+		*segment_start_time = 0;
+		if (lock->m_segment_video_start_time != AV_NOPTS_VALUE && lock->m_segment_video_start_time > *segment_start_time) {
+			*segment_start_time = lock->m_segment_video_start_time;
+		}
+		if (lock->m_segment_audio_start_time_input != AV_NOPTS_VALUE && lock->m_segment_audio_start_time_input > *segment_start_time) {
+			*segment_start_time = lock->m_segment_audio_start_time_input;
+		}
+		if (lock->m_segment_audio_start_time_output != AV_NOPTS_VALUE && lock->m_segment_audio_start_time_output > *segment_start_time) {
+			*segment_start_time = lock->m_segment_audio_start_time_output;
+		}
+		
+		*segment_stop_time = 0;
+		if (lock->m_segment_video_stop_time != AV_NOPTS_VALUE && lock->m_segment_video_stop_time > *segment_stop_time) {
+			*segment_stop_time = lock->m_segment_video_stop_time;
+		}
+		if (lock->m_segment_audio_stop_time_input != AV_NOPTS_VALUE && lock->m_segment_audio_stop_time_input > *segment_stop_time) {
+			*segment_stop_time = lock->m_segment_audio_stop_time_input;
+		}
+		if (lock->m_segment_audio_stop_time_output != AV_NOPTS_VALUE && lock->m_segment_audio_stop_time_output > *segment_stop_time) {
+			*segment_stop_time = lock->m_segment_audio_stop_time_output;
+		}
 	}
 }
 
 void Synchronizer::FlushBuffers(SharedData* lock) {
-	if(!lock->m_segment_video_started || !lock->m_segment_audio_started)
+	if(!lock->m_segment_video_started || (!lock->m_segment_audio_started_input && !lock->m_segment_audio_started_output))
 		return;
 
 	int64_t segment_start_time, segment_stop_time;
@@ -903,8 +998,11 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 		}
 
 		// if there are no frames, or they are beyond the segment end, stop
-		if(lock->m_video_buffer.empty() || next_pts >= segment_stop_video_pts)
+		if(lock->m_video_buffer.empty() || next_pts >= segment_stop_video_pts) {
+			/*if (next_pts >= segment_stop_video_pts)
+				Logger::LogInfo("[Synchronizer::FlushVideoBuffer] next_pts >= segment_stop_video_pts");*/
 			break;
+		}
 
 		// get the frame
 		std::unique_ptr<AVFrameWrapper> frame = std::move(lock->m_video_buffer.front());
@@ -916,7 +1014,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 
 		// if the frame is too early, drop it
 		if(frame->GetFrame()->pts < lock->m_video_pts) {
-			//Logger::LogInfo("[Synchronizer::FlushVideoBuffer] Dropped video frame [" + QString::number(frame->GetFrame()->pts) + "] acc " + QString::number(lock->m_segment_video_accumulated_delay) + ".");
+			Logger::LogInfo("[Synchronizer::FlushVideoBuffer] Dropped video frame [" + QString::number(frame->GetFrame()->pts) + "] acc " + QString::number(lock->m_segment_video_accumulated_delay) + ".");
 			continue;
 		}
 
@@ -943,9 +1041,39 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 
 void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segment_start_time, int64_t segment_stop_time) {
 
-	double sample_length = (double) (segment_stop_time - lock->m_segment_audio_start_time) * 1.0e-6;
+	RECORD_AUDIO_TYPE audio_type = RECORD_AUDIO_INVALID;
+	int mic_size = lock->m_audio_buffer_input.GetSize();
+	int speaker_size = lock->m_audio_buffer_output.GetSize();
+
+	if (mic_size > 0 && speaker_size > 0) {
+		audio_type = RECORD_AUDIO_ALL;
+		
+		int i = 0;
+		while (i < mic_size && i < speaker_size) {
+			lock->m_audio_buffer_output[i] = (lock->m_audio_buffer_output[i] + lock->m_audio_buffer_input[i]) / 2;
+			i++;
+		}
+		lock->m_audio_buffer_input.Pop(i);
+	} else if (mic_size > 0) {
+		audio_type = RECORD_AUDIO_MIC;
+
+		float* in_data = (float*)lock->m_audio_buffer_input.GetData();
+		lock->m_audio_buffer_output.Push(in_data, mic_size);
+		lock->m_audio_buffer_input.Clear();
+	} else if (speaker_size > 0) {
+		audio_type = RECORD_AUDIO_SPEAKER;
+	} else {
+		return;
+	}
+
+	double sample_length = (double) (segment_stop_time - lock->m_segment_audio_start_time_output) * 1.0e-6;	
+	if (audio_type == RECORD_AUDIO_MIC) {
+		sample_length = (double) (segment_stop_time - lock->m_segment_audio_start_time_input) * 1.0e-6;
+	}
+
 	int64_t samples_max = (int64_t) ceil(sample_length * (double) m_output_format->m_audio_sample_rate) - lock->m_segment_audio_samples_read;
-	if(lock->m_audio_buffer.GetSize() > 0) {
+
+	if(lock->m_audio_buffer_output.GetSize() > 0) {
 
 		// Normally, the correct way to calculate the position of the first sample would be:
 		//     int64_t timestamp = lock->m_segment_audio_start_time + (int64_t) round((double) lock->m_segment_audio_samples_read / (double) m_audio_sample_rate * 1.0e6);
@@ -960,19 +1088,19 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 		if(lock->m_segment_audio_can_drop) {
 
 			// calculate the offset of the first sample
-			int64_t pos = (int64_t) round((double) (lock->m_time_offset + (lock->m_segment_audio_start_time - segment_start_time)) * 1.0e-6 * (double) m_output_format->m_audio_sample_rate)
+			int64_t pos = (int64_t) round((double) (lock->m_time_offset + (lock->m_segment_audio_start_time_output - segment_start_time)) * 1.0e-6 * (double) m_output_format->m_audio_sample_rate)
 						  + lock->m_segment_audio_samples_read;
 
 			// drop samples that are too early
 			if(pos < lock->m_audio_samples) {
-				int64_t n = std::min(lock->m_audio_samples - pos, (int64_t) lock->m_audio_buffer.GetSize() / m_output_format->m_audio_channels);
-				lock->m_audio_buffer.Pop(n * m_output_format->m_audio_channels);
+				int64_t n = std::min(lock->m_audio_samples - pos, (int64_t) lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels);
+				lock->m_audio_buffer_output.Pop(n * m_output_format->m_audio_channels);
 				lock->m_segment_audio_samples_read += n;
 			}
 
 		}
 
-		int64_t samples_left = std::min(samples_max, (int64_t) lock->m_audio_buffer.GetSize() / m_output_format->m_audio_channels);
+		int64_t samples_left = std::min(samples_max, (int64_t) lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels);
 
 		// add new block to sync diagram
 		if(m_sync_diagram != NULL && samples_left > 0) {
@@ -988,7 +1116,7 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 			// copy samples until either the partial frame is full or there are no samples left
 			//TODO// do direct copy/conversion to new audio frame?
 			int64_t n = std::min((int64_t) (m_output_format->m_audio_frame_size - lock->m_partial_audio_frame_samples), samples_left);
-			lock->m_audio_buffer.Pop(lock->m_partial_audio_frame.GetData() + lock->m_partial_audio_frame_samples * m_output_format->m_audio_channels, n * m_output_format->m_audio_channels);
+			lock->m_audio_buffer_output.Pop(lock->m_partial_audio_frame.GetData() + lock->m_partial_audio_frame_samples * m_output_format->m_audio_channels, n * m_output_format->m_audio_channels);
 			lock->m_segment_audio_samples_read += n;
 			lock->m_partial_audio_frame_samples += n;
 			lock->m_audio_samples += n;
@@ -1006,7 +1134,7 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 #endif
 
 				// add by tj to check if there is voice
-				int has_voice = 0;
+				int has_voice = 1;
 				int channels = 0;
 				switch(m_output_format->m_audio_sample_format) {
 					case AV_SAMPLE_FMT_S16: 

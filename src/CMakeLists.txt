@@ -26,7 +26,7 @@ if(WITH_JACK)
 endif()
 
 if(WITH_QT5)
-	find_package(Qt5 5.7 COMPONENTS Core Gui Widgets X11Extras REQUIRED)
+	find_package(Qt5 5.7 COMPONENTS Core Gui Widgets X11Extras Multimedia REQUIRED)
 else()
 	find_package(Qt4 4.8 COMPONENTS QtGui REQUIRED)
 endif()
@@ -160,6 +160,7 @@ if(WITH_QT5)
 		Qt5::Gui
 		Qt5::Widgets
 		Qt5::X11Extras
+		Qt5::Multimedia
 	)
 else()
 	qt4_add_resources(res_output ${res_input})

@@ -140,7 +140,6 @@ SQLConfigure::~SQLConfigure()
 
 bool SQLConfigure::initDB()
 {
-    QMutexLocker locker(&m_mutex);
 #ifdef SUPPOORT_SQLITECIPHER
     m_db = QSqlDatabase::addDatabase("SQLITECIPHER", SQLITE_NAME);
     m_db.setDatabaseName(SQLITE_PATH);
@@ -183,6 +182,13 @@ bool SQLConfigure::initDB()
             {
                 KLOG_INFO() << "Error: Fail to create table." << m_query->lastError();
             }
+
+            QByteArray byteArrSys("sys123456#");
+            createUser("sysadm", byteArrSys.toBase64(), "sysadm");
+            QByteArray byteArrAud("aud123456@");
+            createUser("audadm", byteArrAud.toBase64(), "audadm");
+            QByteArray byteArrSec("sec123456$");
+            createUser("secadm", byteArrSec.toBase64(), "secadm");
         }
     }
 
@@ -211,8 +217,9 @@ bool SQLConfigure::checkUserPasswd(const QString name, const QString pwd)
     QString sql = "select * from user_infos where name = ? and password = ?";
     m_query->prepare(sql);
     m_query->addBindValue(name);
-    QByteArray byteArr(pwd.toStdString().data());
-    m_query->addBindValue(byteArr.toBase64());
+    // QByteArray byteArr(pwd.toStdString().data());
+    // m_query->addBindValue(byteArr.toBase64());
+    m_query->addBindValue(pwd);
     if (!m_query->exec())
     {
         KLOG_INFO()  << "query user " << name << " failed: " << m_query->lastError();
@@ -252,8 +259,9 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
     m_query->prepare(sql);
     m_query->addBindValue(name);
     m_query->addBindValue(role);
-    QByteArray byteArr(pwd.toStdString().data());
-    m_query->addBindValue(byteArr.toBase64());
+    // QByteArray byteArr(pwd.toStdString().data());
+    // m_query->addBindValue(byteArr.toBase64());
+    m_query->addBindValue(pwd);
 
     if (!m_query->exec())
     {
@@ -304,8 +312,9 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
     {
         QString sql = "update user_infos set password = :password where name = :name";
         m_query->prepare(sql);
-        QByteArray byteArr(newpwd.toStdString().data());
-        m_query->bindValue(":password", byteArr.toBase64());
+        // QByteArray byteArr(newpwd.toStdString().data());
+        // m_query->bindValue(":password", byteArr.toBase64());
+        m_query->bindValue(":password", newpwd);
         m_query->bindValue(":name", name);
     }
     else
@@ -313,8 +322,9 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
         QString sql = "update user_infos set role = :role, password = :password where name = :name";
         m_query->prepare(sql);
         m_query->bindValue(":role", role);
-        QByteArray byteArr(newpwd.toStdString().data());
-        m_query->bindValue(":password", byteArr.toBase64());
+        // QByteArray byteArr(newpwd.toStdString().data());
+        // m_query->bindValue(":password", byteArr.toBase64());
+        m_query->bindValue(":password", newpwd);
         m_query->bindValue(":name", name);
     }
 
@@ -361,7 +371,8 @@ QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
         QJsonObject jsonObj;
         jsonObj[PARAM_USER] = m_query->value(1).toString();
         jsonObj[PARAM_USER_ROLE] = m_query->value(2).toString();
-        jsonObj[PARAM_USER_PASSWD] = QByteArray::fromBase64(m_query->value(3).toByteArray()).toStdString().data();
+        //jsonObj[PARAM_USER_PASSWD] = QByteArray::fromBase64(m_query->value(3).toByteArray()).toStdString().data();
+        jsonObj[PARAM_USER_PASSWD] = m_query->value(3).toString();
         jsonarr.append(jsonObj);
     }
 

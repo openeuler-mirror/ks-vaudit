@@ -55,7 +55,7 @@ void KyNotify::setTiming(int timing)
 
 void KyNotify::setRecordTime(uint64_t recordTime)
 {
-	if (m_bStart && m_timing)
+	if (recordTime && m_bStart && m_timing)
 	{
 		unsigned int time = (recordTime + 500000) / 1000000;
 		if (time % 60 != 0)

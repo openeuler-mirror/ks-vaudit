@@ -1317,10 +1317,10 @@ border-radius:4px;
      </widget>
     </widget>
     <zorder>SideBar</zorder>
-    <zorder>ConfigBody</zorder>
     <zorder>ListBody</zorder>
     <zorder>NormalBody</zorder>
     <zorder>NormalFooterBar</zorder>
+    <zorder>ConfigBody</zorder>
    </widget>
   </widget>
  </widget>

@@ -134,6 +134,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	static QSettings settings(CommandLineOptions::GetSettingsFile(), QSettings::IniFormat);
+	settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
 	settings_ptr = &settings;
 	settings.clear();
 

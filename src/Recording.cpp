@@ -264,6 +264,12 @@ void Recording::StartPage() {
 		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 开启视频录制XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE262");
 	}
 
+	if (!m_video_enabled)
+	{
+		m_video_in_width = 80;
+		m_video_in_height = 60;
+	}
+
 	// 音频相关设置
 	Logger::LogInfo("the m_audio_en is " + settings->value("input/audio_enabled").toString() + "XXXXXXXXXXXXXXXXLINE267");
 
@@ -451,7 +457,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	}else{ //前台录屏
 		value = m_configure_interface->GetRecordInfo();
 	}
-	QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+	QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 
 	if(!doc.isObject()){
 		Logger::LogError("Cann't get the DBus configure!");
@@ -745,6 +751,11 @@ void Recording::StartInput() {
 			}
 
 		}
+		else
+		{
+			m_video_enabled = true;
+			m_x11_input.reset(new X11Input(m_video_x, m_video_y, m_video_in_width, m_video_in_width, false, false, false, false, true));
+		}
 
 
 		// start the audio input
@@ -945,7 +956,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 	//Logger::LogInfo("%%%%%%%%%%%%%  UpdateConfigureData 信号槽函数 %%%%%%%%%%%%%%");
 	//Logger::LogInfo("the first is " + key + "the second is " + value);
 	if(key == "record"){
-		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 		if(!doc.isObject()){
 			Logger::LogError("Cann't get the DBus configure!");
 			return;
@@ -985,7 +996,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			}
 		}
 	}else { //后台审计
-		QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 		if(!doc.isObject()){
 			Logger::LogError("Cann't get the DBus configure!");
 			return;

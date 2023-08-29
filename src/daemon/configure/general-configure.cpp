@@ -168,33 +168,33 @@ void GeneralConfigure::initConfig()
 
 void GeneralConfigure::initData()
 {
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILEPATH], "~/ks-vaudit");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILEPATH], "~/videos/ks-vaudit");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILETYPE], "MP4");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_VIDIO], "1");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FPS], "25");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_QUALITY], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_QUALITY], "1");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_AUDIO], "all");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_BITRATE], "128");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT], "0");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT_TEXT], "kylinsec");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT_TEXT], "");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_TIMING_REMINDER], "30");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIC_VOLUME], "70");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME], "70");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIC_VOLUME], "50");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME], "50");
 
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILEPATH], "~/ks-vaudit");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILEPATH], "/opt");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILETYPE], "MP4");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_VIDIO], "1");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FPS], "10");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_QUALITY], "0");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_AUDIO], "all");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_QUALITY], "1");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_AUDIO], "none");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_BITRATE], "128");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT], "0");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT_TEXT], "kylinsec");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT], "1");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT_TEXT], "");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_TIMING_PAUSE], "5");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MIN_FREE_SPACE], "10737741824");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_SAVE_DAYS], "3");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_FILE_SIZE], "10737741824");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_RECORD_PER_USER], "1");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MIN_FREE_SPACE], "10737418240");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_SAVE_DAYS], "30");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_FILE_SIZE], "2147483648");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_MAX_RECORD_PER_USER], "0");
 }
 
 QString GeneralConfigure::readGroupConfig(QString group)

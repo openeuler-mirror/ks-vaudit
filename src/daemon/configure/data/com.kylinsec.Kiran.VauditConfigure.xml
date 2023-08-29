@@ -62,7 +62,7 @@
           <arg name="user_info" direction="in" type="s">
             <summary>The user infomation</summary>
             <description>User, role and passwd all need to be set, The spelling of the options should be the same as in the example, case sensitive.
-            Parameters use json form, E.g {"user":"test", "role:"sysadm", "passwd":"123"}.</description>
+            Parameters use json form, E.g {"user":"test", "role":"sysadm", "passwd":"123"}.</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>

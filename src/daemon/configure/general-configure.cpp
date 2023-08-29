@@ -37,6 +37,7 @@ GeneralConfigure::GeneralConfigure(QObject *parent)
     m_itemMap.insert(CONFIG_RECORD_TIMING_REMINDER, "record/TimingReminder");
     m_itemMap.insert(CONFIG_RECORD_MIC_VOLUME, "record/MicVolume");
     m_itemMap.insert(CONFIG_RECORD_SPEAKER_VOLUME, "record/SpeakerVolume");
+    m_itemMap.insert(CONFIG_RECORD_MIN_FREE_SPACE, "record/MinFreeSpace");
     m_itemMap.insert(CONFIG_AUDIT, "audit");
     m_itemMap.insert(CONFIG_AUDIT_FILEPATH, "audit/FilePath");
     m_itemMap.insert(CONFIG_AUDIT_FILETYPE, "audit/FileType");
@@ -150,9 +151,24 @@ void GeneralConfigure::initConfig()
     if (fileinfo.isFile() && fileinfo.size())
     {
         m_confSettings->sync();
+        bool bAdd = m_itemMap.size() > m_confSettings->allKeys().size() + 2;
+        if (bAdd)
+        {
+            initData();
+        }
+
         for (auto key : m_confSettings->allKeys())
         {
-            m_lastMap.insert(key,  m_confSettings->value(key).toString());
+            m_lastMap.insert(key, m_confSettings->value(key).toString());
+        }
+
+        if (bAdd)
+        {
+            for (auto it = m_lastMap.begin(); it != m_lastMap.end(); it++)
+            {
+                m_confSettings->setValue(it.key(), it.value());
+            }
+            m_confSettings->sync();
         }
     }
     else
@@ -180,6 +196,7 @@ void GeneralConfigure::initData()
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_TIMING_REMINDER], "30");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIC_VOLUME], "50");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME], "50");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIN_FREE_SPACE], "1073741824");
 
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILEPATH], "/opt");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILETYPE], "MP4");
@@ -243,6 +260,8 @@ bool GeneralConfigure::checkRecordParam(QString item, QString value)
         return checkInteger(value, 0, VOLUME_MAX_VALUE);
     if (m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME] == item)
         return checkInteger(value, 0, VOLUME_MAX_VALUE);
+    if (m_itemMap[CONFIG_RECORD_MIN_FREE_SPACE] == item)
+        return checkULongLong(value, 0, CONFIG_ULL_MAX);
 
     KLOG_INFO() << item << " is not in the record configure options";
     return false;

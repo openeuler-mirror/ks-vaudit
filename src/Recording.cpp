@@ -29,6 +29,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "SimpleSynth.h"
 #include "KyNotify.h"
 #include "kiran-log/qt5-log-i.h"
+#include "kidletime.h"
 
 ENUMSTRINGS(Recording::enum_video_area) = {
     {Recording::VIDEO_AREA_SCREEN, "screen"},
@@ -114,6 +115,32 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 			newfile += "." + fi.suffix();
 		newfile = fi.path() + "/" + newfile;
 	} while(QFileInfo(newfile).exists());
+	return newfile;
+}
+
+//审计录屏文件以用户名_IP_YYYYMMDD_hhmmss命名，示例：张三_192.168.1.1_20220621_153620.mp4
+static QString GetAUditNewSegmentFile(const QString& file, const QString &prefix, bool add_timestamp) {
+	QFileInfo fi(file);
+	QDateTime now = QDateTime::currentDateTime();
+	QString newfile;
+	unsigned int counter = 0;
+	do {
+		++counter;
+		newfile = prefix;
+		if (add_timestamp) {
+			newfile += "_";
+			newfile += now.toString("yyyyMMdd_hhmmss");
+		}
+
+		if (counter != 1) {
+			newfile += "_";
+			newfile += "(" + QString::number(counter) + ")";
+		}
+
+		if (!fi.suffix().isEmpty())
+			newfile += "." + fi.suffix();
+		newfile = fi.path() + "/" + newfile;
+	} while (QFileInfo(newfile).exists());
 	return newfile;
 }
 
@@ -583,6 +610,9 @@ void Recording::SaveSettings(QSettings* settings) {
 
 	key = "TimingReminder";
 	KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
+
+	key = "TimingPause";
+	m_timingPause = jsonObj[key].toString().toInt();
 }
 
 void Recording::StopPage(bool save) {
@@ -636,7 +666,11 @@ void Recording::StartOutput() {
 		if(m_output_manager == NULL) {
 
 			// set the file name
-			m_output_settings.file = GetNewSegmentFile(m_file_base, m_add_timestamp);
+			if (m_auditBaseFileName.isEmpty())
+				m_output_settings.file = GetNewSegmentFile(m_file_base, m_add_timestamp);
+			else
+				m_output_settings.file = GetAUditNewSegmentFile(m_file_base, m_auditBaseFileName, m_add_timestamp);
+			KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
 
 			// log the file name
 			{
@@ -1022,6 +1056,8 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			}
 			else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
+			} else if (key == "TimingPause") {
+				m_timingPause = jsonObj[key].toString().toInt();
 			}
 
 		}
@@ -1052,4 +1088,39 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	}
 
 	KyNotify::instance().sendNotify(op);
+}
+
+void Recording::AuditParamDeal()
+{
+	QStringList args = QCoreApplication::arguments();
+	KLOG_DEBUG() << "arguments:" << args << "cur display:" << getenv("DISPLAY");
+	if (args.size() != 2)
+		return;
+
+	m_auditFirstStart = true;
+	QStringList strlist = args[1].split("-");
+    strlist.removeAll("");
+	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
+	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
+	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);
+	KIdleTime::instance().catchNextResumeEvent();
+	KLOG_DEBUG() << m_auditBaseFileName << "idleTime:" << KIdleTime::instance().idleTime();
+}
+
+void Recording::kidleResumeEvent()
+{
+	KLOG_DEBUG() << "m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
+	KIdleTime::instance().removeAllIdleTimeouts();
+	KIdleTime::instance().addIdleTimeout(m_timingPause*60000);
+	if (!m_auditFirstStart)
+		OnRecordStartPause();
+
+	m_auditFirstStart = false;
+}
+
+void Recording::kidleTimeoutReached(int id, int timeout)
+{
+	KLOG_DEBUG() << "id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
+	KIdleTime::instance().catchNextResumeEvent();
+	OnRecordPause();
 }

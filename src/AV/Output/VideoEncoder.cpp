@@ -250,24 +250,20 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 	// has been encoded by nvenc
 	if (frame->m_encoded) {
-		size_t packet_size = frame->m_vpacket->size();
-		size_t i;
-		for (i = 0;i < packet_size;i ++) {
-			std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
-			packet->GetPacket()->data = (*(frame->m_vpacket))[i].data();
-			packet->GetPacket()->size = (*(frame->m_vpacket))[i].size();
-			packet->GetPacket()->pts = m_pts_cnt;
-			packet->GetPacket()->dts = m_pts_cnt;
-			m_pts_cnt ++;
+		std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
+		packet->GetPacket()->data = frame->GetFrame()->data[0];
+		packet->GetPacket()->size = frame->m_frame_size;
+		packet->GetPacket()->pts = m_pts_cnt;
+		packet->GetPacket()->dts = m_pts_cnt;
+		m_pts_cnt ++;
 
 #ifdef NVENC_ENCODE_DEBUG			
-			// WriteNv12(packet->GetPacket()->data, packet->GetPacket()->size);
+		WriteNv12(packet->GetPacket()->data, packet->GetPacket()->size, "3.nv12");
 #endif
 
-			// Logger::LogInfo("nvenc get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
-			GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
-			IncrementPacketCounter();
-		}
+		// Logger::LogInfo("[VideoEncoder::EncodeFrame] nvenc get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts) + " framesize:" + QString::number(packet->GetPacket()->size));
+		GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
+		IncrementPacketCounter();
 
 		AVFrame *avframe = frame->Release();
 		av_frame_free(&avframe);
@@ -322,10 +318,11 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 		std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
 		int res = avcodec_receive_packet(GetCodecContext(), packet->GetPacket());
 		if(res == 0) { // we have a packet, send the packet to the muxer
-			packet->GetPacket()->pts = m_pts_cnt;
-			packet->GetPacket()->dts = m_pts_cnt;
-			m_pts_cnt ++;
-			//Logger::LogInfo("avcodec get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
+			// Logger::LogInfo("avcodec get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
+
+#ifdef NVENC_ENCODE_DEBUG
+			WriteNv12(packet->GetPacket()->data, packet->GetPacket()->size, "vaudit.h264");
+#endif
 			GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
 			IncrementPacketCounter();
 		} else if(res == AVERROR(EAGAIN)) { // we have no packet

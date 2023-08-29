@@ -31,6 +31,10 @@ else()
 	find_package(Qt4 4.8 COMPONENTS QtGui REQUIRED)
 endif()
 
+pkg_search_module(X11_XCB REQUIRED x11-xcb)
+pkg_search_module(XET REQUIRED xext)
+pkg_search_module(XCB_SYNC REQUIRED xcb-sync)
+
 IF(HIGH_VERSION)
     ADD_DEFINITIONS(-DHIGH_VERSION)
 ENDIF(HIGH_VERSION)
@@ -112,6 +116,9 @@ set(sources
 	common/TempBuffer.h
 	common/Config.h
 	common/Config.cpp
+	kidletime.cpp
+	xsyncbasedpoller.cpp
+	fixx11h.h
 	KyNotify.cpp
 	Recording.cpp
 	Recording.h
@@ -195,6 +202,9 @@ target_include_directories(ks-vaudit PRIVATE
 	${X11_Xfixes_INCLUDE_PATH}
 	${X11_Xi_INCLUDE_PATH}
 	${X11_Xinerama_INCLUDE_PATH}
+	${XET_INCLUDE_DIRS}
+	${X11_XCB_INCLUDE_DIRS}
+	${XCB_SYNC_INCLUDE_DIRS}
 	${GLIB_INCLUDE_DIRS}
 	${GTK_INCLUDE_DIRS}
 	$<$<BOOL:${WITH_V4L2}>:${V4L2_INCLUDE_DIRS}>
@@ -233,6 +243,9 @@ target_link_libraries(ks-vaudit PRIVATE
 	${X11_Xfixes_LIB}
 	${X11_Xi_LIB}
 	${X11_Xinerama_LIB}
+	${XET_LIBRARIES}
+	${X11_XCB_LIBRARIES}
+	${XCB_SYNC_LIBRARIES}
 	$<$<BOOL:${WITH_V4L2}>:${V4L2_LIBRARIES}>
 	$<$<BOOL:${WITH_ALSA}>:${ALSA_LIBRARIES}>
 	$<$<BOOL:${WITH_PULSEAUDIO}>:${PULSEAUDIO_LIBRARIES}>

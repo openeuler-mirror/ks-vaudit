@@ -62,7 +62,7 @@ private:
 
 };
 
-#define NVENC_ENCODE_DEBUG
+// #define NVENC_ENCODE_DEBUG
 #ifdef NVENC_ENCODE_DEBUG
 
 // test function for save local bmp
@@ -127,16 +127,25 @@ inline void WriteRGB(const uint8_t * data, int width, int height) {
 	fflush(fp);
 }
 
-inline void WriteNv12(uint8_t * data, size_t size) {
-	static FILE * fp = NULL;
-	const char * path = "/tmp/ramfs/vaudit.nv12";
+inline void WriteNv12(uint8_t * data, size_t size, const char* filename) {
+	static std::map<std::string, FILE *> filemap;
+	std::map<std::string, FILE *>::iterator item;
 
-	if (fp == NULL) {
+	FILE * fp = NULL;
+	char path[128] = "/tmp/ramfs/vaudit.nv12";
+	if (filename) {
+		snprintf(path, sizeof(path), "/tmp/ramfs/%s", filename);
+	}
+	item = filemap.find(path);
+	if (item == filemap.end()) {
 		fp = fopen(path, "w");
 		if (fp == NULL) {
 			Logger::LogError("open debug file failed, path: " + QString(path));
 			return;
 		}
+		filemap[path] = fp;
+	} else {
+		fp = item->second;
 	}
 
 	fwrite(data, size, 1, fp);

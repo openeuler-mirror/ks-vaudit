@@ -323,6 +323,11 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 #ifdef NVENC_ENCODE_DEBUG
 			WriteNv12(packet->GetPacket()->data, packet->GetPacket()->size, "vaudit.h264");
 #endif
+
+			packet->GetPacket()->pts = m_pts_cnt;
+			packet->GetPacket()->dts = m_pts_cnt;
+			m_pts_cnt ++;
+
 			GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
 			IncrementPacketCounter();
 		} else if(res == AVERROR(EAGAIN)) { // we have no packet

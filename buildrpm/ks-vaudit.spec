@@ -36,6 +36,8 @@ BuildRequires: mesa-libGL-devel
 BuildRequires: nv-codec-headers
 BuildRequires: qrencode-devel
 BuildRequires: freeglut-devel
+BuildRequires: libvorbis-devel
+BuildRequires: libtheora-devel
 
 Requires:      libX11
 Requires:      ffmpeg >= 4.3.4
@@ -49,6 +51,8 @@ Requires:      kylin-license-client
 Requires:      kylin-license-core
 Requires:      qrencode
 Requires:      freeglut
+Requires:      libvorbis
+Requires:      libtheora
 
 %define debug_package %{nil}
 %define __spec_install_post\

@@ -2,6 +2,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <qrencode.h>
+#include <QPainter>
 #include "dialog.h"
 #include "license-entry.h"
 #include "kiran-log/qt5-log-i.h"
@@ -114,9 +116,33 @@ void ActivatePage::initUI()
     QLabel *licenseCodeLabel = new QLabel("激活码");
     m_licenseCodeEdit = new QLineEdit();
     m_licenseCodeEdit->setFixedSize(584,36);
+
     QLabel *machineCodeLabel = new QLabel("机器码");
     QLineEdit *machineCodeEdit = new QLineEdit();
+    machineCodeEdit->setStyleSheet("QLineEdit{"
+                                   "background-color:#393939;"
+                                   "border-radius:6px;"
+                                   "color:#919191;"
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit:hover{"
+                                   "border:1px solid #393939;"
+                                   "}");
     machineCodeEdit->setFixedSize(584,36);
+    QHBoxLayout *hlayout = new QHBoxLayout(machineCodeEdit);
+    QPushButton *qrBtn = new QPushButton();
+    connect(qrBtn,SIGNAL(clicked()),this,SLOT(showQR()));
+    qrBtn->setFlat(true);
+    qrBtn->setStyleSheet("QPushButton{"
+                         "border-image: url(:/images/QC.svg);"
+                         "}");
+    qrBtn->setFixedSize(16,16);
+    machineCodeEdit->setTextMargins(0,0,qrBtn->width(),0);
+    machineCodeEdit->setReadOnly(true);
+    hlayout->setContentsMargins(6,6,12,6);
+    hlayout->addStretch(1);
+    hlayout->addWidget(qrBtn);
+
     QLabel *dateCodeLabel = new QLabel("质保期");
     QLineEdit *dateCodeEdit = new QLineEdit();
     dateCodeEdit->setFixedSize(584,36);
@@ -186,7 +212,6 @@ void ActivatePage::initUI()
     mainVLayout->addWidget(btnGroup);
     mainVLayout->addSpacing(20);
 
-//    if (m_isActivated){
     if (m_isActivated && !m_activateCode.isEmpty()){
         m_licenseCodeEdit->setText(m_activateCode);
         m_licenseCodeEdit->setDisabled(true);
@@ -194,7 +219,7 @@ void ActivatePage::initUI()
 
     QString machineCodeText = !m_machineCode.isEmpty() ? m_machineCode : QString("查询失败");
     machineCodeEdit->setText(machineCodeText);
-    machineCodeEdit->setDisabled(true);
+
     QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString("查询失败");
     dateCodeEdit->setText(expiredText);
     dateCodeEdit->setDisabled(true);
@@ -235,4 +260,46 @@ void ActivatePage::acceptBtnClicked()
         Dialog *retDialog = new Dialog(this,"activateFailed");
         retDialog->exec();
     }
+}
+
+void ActivatePage::showQR()
+{
+    Dialog *qrDialog = new Dialog(this, "qrcode");
+    QLabel *qrCodeLabel = qrDialog->getQrLabel();
+    qrCodeLabel->setStyleSheet("image:url(:/images/128px.png)");
+    qrCodeLabel->setAlignment(Qt::AlignCenter);
+    genQRcode(qrCodeLabel);
+    qrDialog->exec();
+}
+
+void ActivatePage::genQRcode(QLabel *l)
+{
+    int height = 160;
+    int width = 160;
+    QPixmap qrPix;
+    QRcode *qrcode = QRcode_encodeString(m_machineCode.toStdString().c_str(), 2, QR_ECLEVEL_Q, QR_MODE_8, 1);
+    int qrcodeWidth = qrcode->width > 0 ? qrcode->width : 1;
+    double scaledWidth = (double)width / (double)qrcodeWidth;
+    double scaledHeight = (double)height / (double)qrcodeWidth;
+    QImage qrimage = QImage(width, height, QImage::Format_ARGB32);
+    QPainter qrpainter(&qrimage);
+    QColor background(Qt::white);
+    qrpainter.setBrush(background);
+    qrpainter.setPen(Qt::NoPen);
+    qrpainter.drawRect(0,0,width,height);
+    QColor foreground(Qt::black);
+    qrpainter.setBrush(foreground);
+
+    for(qint32 y = 0; y < qrcodeWidth; y++){
+        for(qint32 x = 0; x < qrcodeWidth; x++){
+            unsigned char b = qrcode->data[y * qrcodeWidth + x];
+            if (b & 0x01){
+                QRectF r(x * scaledWidth, y * scaledHeight, scaledWidth, scaledHeight);
+                qrpainter.drawRects(&r, 1);
+            }
+        }
+    }
+    qrPix = QPixmap::fromImage(qrimage);
+    l->setPixmap(qrPix);
+
 }

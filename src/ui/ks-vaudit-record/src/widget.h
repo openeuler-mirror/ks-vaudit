@@ -4,7 +4,6 @@
 #include <QWidget>
 #include <QMouseEvent>
 #include <QPushButton>
-#include <QIntValidator>
 #include <QTimer>
 #include <QFileInfo>
 #include <QStandardItemModel>
@@ -40,7 +39,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     QPushButton* createOperationBtn(int modelIndex, int listIndex);
-    QList<QFileInfo>* getVideos(QString path, QString regName);
+    QList<QFileInfo> getVideos(QString path, QString regName);
     QString getVideoDuration(QString absPath);
     void refreshList(QString regName = QString(""));
     QLineEdit *createVideoNameEdit(QString fileName);
@@ -66,7 +65,6 @@ private slots:
     void on_minimize_clicked();
     void on_waterprintText_returnPressed();
     void on_searchBar_returnPressed();
-    void on_searchBar_editingFinished();
     void on_waterprintConfirm_clicked();
     void on_waterprintText_textChanged(const QString &arg1);
     void on_resolutionBox_currentIndexChanged(int index);
@@ -105,7 +103,7 @@ private:
     QAction *m_folderAction = NULL;
     QAction *m_deleteAction = NULL;
 
-    QList<QFileInfo> *m_fileList = NULL;
+    QList<QFileInfo> m_fileList;
     QString m_regName = "";
     QLineEdit *m_videoNameEditor = NULL;
 

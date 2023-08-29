@@ -347,7 +347,7 @@ void X11Input::Init() {
 	m_fps_last_counter = 0;
 	m_fps_current = 0.0;
 
-    //initialize the watermark_content
+	//initialize the watermark_content
 	if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){
 		m_is_use_watermarking = false;
 		watermark_content = settings_ptr ->value("record/water_print_text").toString();
@@ -355,7 +355,7 @@ void X11Input::Init() {
 		m_is_use_watermarking = true;
 		watermark_content = settings_ptr ->value("record/water_print_text").toString();
 	}
-	Logger::LogInfo("the watermark content is " + watermark_content);
+	Logger::LogInfo("[X11Input::Init] the watermark content is " + watermark_content);
 	// start input thread
 	m_should_stop = false;
 	m_error_occurred = false;
@@ -555,7 +555,7 @@ void X11Input::InputThread() {
 	try {
 
 		// init opengl env and create window for nvenc
-		int argc = 1;
+		/*int argc = 1;
 		char *argv[1] = {(char*)"dummy"};
 
 		glutInit(&argc, argv);
@@ -566,7 +566,7 @@ void X11Input::InputThread() {
 		if (!m_window) {
 			Logger::LogError("[X11Input::InputThread] create glut window failed");
 			glutHideWindow();
-		}
+		}*/
 
 		pid_t tid = gettid();
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
@@ -697,7 +697,7 @@ void X11Input::InputThread() {
 			uint8_t *image_data = (uint8_t*) m_x11_image[m_x11_img_idx]->data;
 			int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
 			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image[m_x11_img_idx]);
-           
+          
 			//TODO: 这地方以后优化一下, 每10帧检测一次, QSetting内部用的读写锁
 			if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){//动态检测水印是否开启
 				m_is_use_watermarking = false;

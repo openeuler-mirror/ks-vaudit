@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QMouseEvent>
 #include <QLineEdit>
+#include <QLabel>
 
 namespace Ui {
 class Dialog;
@@ -16,19 +17,18 @@ class Dialog : public QDialog
 public:
     explicit Dialog(QWidget *parent = 0, QString dialogType = QString(""));
     ~Dialog();
+    QLabel *getQrLabel();
 
 protected:
     void initUI();
     void initAboutUI();
     void initRenameUI();
     void initActivateUI(bool);
+    void initQRcode();
 
 private slots:
-
     void on_accept_clicked();
-
     void on_cancel_clicked();
-
     void exitDialog();
 
 
@@ -41,6 +41,7 @@ private:
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
     QString m_dialogType;
+    QLabel *m_qrCodeLabel;
 
 };
 

@@ -100,13 +100,13 @@ private:
 		std::shared_ptr<AVFrameData> m_last_video_frame_data;
 		// check if last read frame is encoded by nvenc
 		int m_last_video_frame_encoded;
-		size_t m_last_video_frame_size;
+		std::shared_ptr<std::vector<std::vector<uint8_t> > > m_last_video_frame_vpacket;;
 
 		// to check if image changed
 		std::shared_ptr<AVFrameData> m_last_video_read_data;
 		// check if last read frame is encoded by nvenc
 		int m_last_video_read_encoded;
-		size_t m_last_video_read_size;
+		std::shared_ptr<std::vector<std::vector<uint8_t> > > m_last_video_read_vpacket;;
 
 		std::vector<ChannelData> m_channel_data;
 		int m_has_voice;

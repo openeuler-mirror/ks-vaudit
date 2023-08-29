@@ -248,16 +248,26 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 #if SSR_USE_AVCODEC_SEND_RECEIVE
 
+	// has been encoded by nvenc
 	if (frame->m_encoded) {
-		std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
-		packet->GetPacket()->data = frame->GetFrame()->data[0];
-		packet->GetPacket()->size = frame->m_frame_size;
-		packet->GetPacket()->pts = m_pts_cnt;
-		packet->GetPacket()->dts = m_pts_cnt;
-		m_pts_cnt ++;
-		// Logger::LogInfo("nvenc get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
-		GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
-		IncrementPacketCounter();
+		size_t packet_size = frame->m_vpacket->size();
+		size_t i;
+		for (i = 0;i < packet_size;i ++) {
+			std::unique_ptr<AVPacketWrapper> packet(new AVPacketWrapper());
+			packet->GetPacket()->data = (*(frame->m_vpacket))[i].data();
+			packet->GetPacket()->size = (*(frame->m_vpacket))[i].size();
+			packet->GetPacket()->pts = m_pts_cnt;
+			packet->GetPacket()->dts = m_pts_cnt;
+			m_pts_cnt ++;
+
+#ifdef NVENC_ENCODE_DEBUG			
+			// WriteNv12(packet->GetPacket()->data, packet->GetPacket()->size);
+#endif
+
+			// Logger::LogInfo("nvenc get packet pts and dts:" + QString::number(packet->GetPacket()->pts) + " " + QString::number(packet->GetPacket()->dts));
+			GetMuxer()->AddPacket(GetStream()->index, std::move(packet));
+			IncrementPacketCounter();
+		}
 
 		AVFrame *avframe = frame->Release();
 		av_frame_free(&avframe);

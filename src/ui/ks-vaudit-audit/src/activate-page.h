@@ -5,6 +5,7 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QLineEdit>
+#include <QLabel>
 
 class ActivatePage : public QDialog
 {
@@ -18,9 +19,11 @@ public:
 protected:
     void initUI();
     void getLicenseInfo();
+    void genQRcode(QLabel *);
 
 private slots:
     void acceptBtnClicked();
+    void showQR();
 
 private:
     bool m_isActivated = false;

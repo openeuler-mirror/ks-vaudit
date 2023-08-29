@@ -264,7 +264,7 @@ void Recording::StartPage() {
 
 	m_video_enabled =  settings->value("input/video_enabled").toInt();
 	if(m_video_enabled){
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 开启视频录制XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE262");
+		Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 开启视频录制 XXXXXXXXXXXXXXXXXXXX");
 	}
 
 	if (!m_video_enabled)
@@ -274,14 +274,14 @@ void Recording::StartPage() {
 	}
 
 	// 音频相关设置
-	Logger::LogInfo("the m_audio_en is " + settings->value("input/audio_enabled").toString() + "XXXXXXXXXXXXXXXXLINE267");
+	// Logger::LogInfo("[Recording::StartPage] the m_audio_en is " + settings->value("input/audio_enabled").toString());
 
 	if(settings->value("input/audio_enabled").toString() == "none"){ //不录制音频
 		m_audio_enabled = false;
 		m_audio_recordtype = "none";
 	}else if (settings->value("input/audio_enabled").toString() == "mic"){ //录制麦克风
 		if(m_pulseaudio_sources.size() == 0){ //pulseaudio 未检测到设备
-			Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 未检测到设备XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE271");
+			Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 未检测到设备 XXXXXXXXXXXXXXXXXXXX");
 			m_audio_enabled = false;
 			m_audio_recordtype = "none";
 		}else if(m_pulseaudio_sources.size() == 1){ //pulseaudio 仅检测到输出设备
@@ -311,7 +311,7 @@ void Recording::StartPage() {
 			}
 		}
 	}else if(settings->value("input/audio_enabled").toString() == "all"){ //录制所有
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 录制所有音频XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE271");
+		Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 录制所有音频 XXXXXXXXXXXXXXXXXXXX");
 		if(m_pulseaudio_sources.size() < 2){
 			m_audio_enabled = true;
 			m_pulseaudio_source = QString::fromStdString(m_pulseaudio_sources[0].m_name);
@@ -326,13 +326,6 @@ void Recording::StartPage() {
 	m_audio_channels = 2;
 	m_audio_sample_rate = 8000;
 	m_audio_backend = AUDIO_BACKEND_PULSEAUDIO;
-
-	if(m_audio_enabled){
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 开启音频录制XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE317");
-	}else{
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXX 未开启音频录制XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX LINE317");
-	}
-
 
 	//m_pulseaudio_source = settings->value("input/audio_pulseaudio_source", QString()).toString();
 
@@ -352,7 +345,7 @@ void Recording::StartPage() {
 	//m_output_settings.container_avname = QString("mp4");
 
 	m_output_settings.video_codec_avname = settings->value("output/video_codec_av", QString()).toString();
-	Logger::LogInfo("------>the m_output_settings.video_codec_avname is " + m_output_settings.video_codec_avname);
+	// Logger::LogInfo("[Recording::StartPage] the m_output_settings.video_codec_avname is " + m_output_settings.video_codec_avname);
 
 	m_output_settings.video_kbit_rate = 128;
 	m_output_settings.video_width = m_video_in_width;
@@ -362,11 +355,11 @@ void Recording::StartPage() {
 
 	m_output_settings.audio_codec_avname = (m_audio_enabled)? settings->value("output/audio_codec_av", QString()).toString():QString();
 	if(m_audio_enabled){
-		Logger::LogInfo("-------------------------开启了 m_audio_enabled ----------------------------");
+		Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 开启音频录制 XXXXXXXXXXXXXXXXXXXX");
 	}else{
-		Logger::LogInfo("-------------------------未开启 m_audio_enabled ----------------------------");
+		Logger::LogInfo("[Recording::StartPage] XXXXXXXXXXXXXXXXXXXX 未开启音频录制 XXXXXXXXXXXXXXXXXXXX");
 	}
-	Logger::LogInfo("the audio_codec_avname is=============> " + m_output_settings.audio_codec_avname);
+	Logger::LogInfo("[Recording::StartPage] the audio_codec_avname is: " + m_output_settings.audio_codec_avname);
 	m_output_settings.audio_kbit_rate = 128;
 	m_output_settings.audio_options.clear();
 	m_output_settings.audio_channels = m_audio_channels;
@@ -469,7 +462,7 @@ void Recording::SaveSettings(QSettings* settings) {
 
 	QJsonObject jsonObj = doc.object();
 	for(auto key:jsonObj.keys()){
-		Logger::LogInfo(" --------------keys and value is -------------- " + key + "  " + jsonObj[key].toString());
+		Logger::LogInfo("[Recording::SaveSettings] --------------keys and value is -------------- " + key + "  " + jsonObj[key].toString());
 	}
 
 	//bool ret = m_configure_interface->SetRecordItemValue("{\"Fps\": \"7\", \"FileType\":\"mp4\"}");
@@ -503,7 +496,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/audio_enabled",jsonObj[key].toString()); //音频录制
 	settings->setValue("input/audio_backend", EnumToString(Recording::AUDIO_BACKEND_PULSEAUDIO));
 	//settings->setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
-	Logger::LogInfo("the audio source name is" + GetPulseAudioSourceName() + " XXXXXXXXXXXXXXXX LINE 394");
+	Logger::LogInfo("[SaveSettings] the audio source name is" + GetPulseAudioSourceName());
 
 	key = "RecordVideo";
 	settings->setValue("input/video_enabled",jsonObj[key].toString().toInt()); //是否录制视频
@@ -744,7 +737,7 @@ void Recording::StartInput() {
 		Logger::LogInfo("[PageRecord::StartInput] " + tr("Starting input ..."));
 
 		if(m_video_enabled){
-			Logger::LogInfo("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx开启视频录制XXXXXXXXXXXXXXXXXXXXXXXXXX");
+			Logger::LogInfo("[Recording::StartInput] start recording video");
 			// start the video input
 			if(m_video_area == VIDEO_AREA_SCREEN || m_video_area == VIDEO_AREA_FIXED || m_video_area == VIDEO_AREA_CURSOR) {
 				m_x11_input.reset(new X11Input(m_video_x, m_video_y, m_video_in_width, m_video_in_height, true,
@@ -764,9 +757,9 @@ void Recording::StartInput() {
 		// start the audio input
 		if(m_audio_enabled) {
 			if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO)
-				Logger::LogInfo("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx开启音频录制XXXXXXXXXXXXXXXXXXXXXXXXXX");
+				Logger::LogInfo("[Recording::StartInput] start recording audio");
 				m_pulseaudio_input.reset(new PulseAudioInput(m_pulseaudio_source, m_audio_sample_rate, m_audio_recordtype));
-				Logger::LogInfo("XXXXXXXXXXXXXXXXXX音频录制类型m_audio_recordtype is XXXXXXXXXXXXXXXXX " + m_audio_recordtype + " XXXXXXXXXXXXXXXXXXXXXXXXLINSE 743" );
+				Logger::LogInfo("[Recording::StartInput] m_audio_recordtype is " + m_audio_recordtype);
 
 		}
 
@@ -967,7 +960,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 
 		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
-			Logger::LogInfo(" --------------keys and value is ---------------------------------" + key + "==========" + jsonObj[key].toString());
+			Logger::LogInfo("[Recording::UpdateConfigureData] --------------keys and value is -------------" + key + "==========" + jsonObj[key].toString());
 
 			//修改settings
 			if(key == "Fps"){
@@ -1007,7 +1000,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 
 		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
-			Logger::LogInfo(" --------------keys and value is ---------------------------------" + key + "==========" + jsonObj[key].toString());
+			Logger::LogInfo("[Recording::UpdateConfigureData] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
 
 			//修改settings
 			if(key == "Fps"){

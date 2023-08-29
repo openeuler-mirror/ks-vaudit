@@ -35,7 +35,7 @@ start(){
 
 stop(){
         killproc ${procname}
-        ps aux | grep /usr/bin/ks-vaudit | grep "ks-vaudit \-\-audit\-" | awk '{print $2}' | xargs kill -9 > /dev/null 2>&1
+        ps aux | grep /usr/bin/ks-vaudit | grep "ks-vaudit \-\-audit\-" | awk '{print $2}' | xargs kill -2 > /dev/null 2>&1
         echo "Shutting down ${procname}: "
 }
 

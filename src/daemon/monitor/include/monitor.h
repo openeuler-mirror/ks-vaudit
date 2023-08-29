@@ -41,6 +41,7 @@ private:
     QVector<sessionInfo> getXvncInfo();
     QProcess* startRecordWithDisplay(sessionInfo info);
     void DealSession();
+    bool isLicenseActive();
 
 private slots:
     void monitorProcess();
@@ -50,6 +51,7 @@ signals:
     void exitProgram();
 
 private:
+    bool m_isActive;
     QString m_filePath;
     QString m_vauditBin;
     QTimer *m_pTimer;

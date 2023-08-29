@@ -1,6 +1,7 @@
 #include "kiran-log/qt5-log-i.h"
 #include "monitor.h"
 #include "monitor-disk.h"
+#include <kylin-license/license-i.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -9,6 +10,8 @@
 #include <QTimer>
 #include <QDir>
 #include <QMutexLocker>
+#include <QtDBus/QDBusConnection>
+#include <QtDBus/QtDBus>
 
 //dbus-send --system  --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Manager org.gnome.DisplayManager.Manager.GetDisplays
 //dbus-send --system --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Display2 org.gnome.DisplayManager.Display.GetX11DisplayName
@@ -18,7 +21,8 @@
 
 Monitor::Monitor(QObject *parent)
 {
-    KLOG_DEBUG() << "Current thread ID: " << QThread::currentThreadId();
+    m_isActive = isLicenseActive();
+    KLOG_DEBUG() << "Current thread ID: " << QThread::currentThreadId() << "m_isActive:" << m_isActive;
     QDir dir;
     m_filePath = "/var/log/kylinsec/ks-vaudit/monitor/";
     dir.mkpath(m_filePath);
@@ -54,12 +58,19 @@ void Monitor::monitorProcess()
     if (m_pTimer->isActive())
         m_pTimer->stop();
 
-    QFile file(m_vauditBin);
-    if (file.exists())
+    if (m_isActive)
     {
-        DealSession();
-        MonitorDisk::instance().fileDiskLimitProcess();
-        MonitorDisk::instance().fileSizeProcess(m_videoFileName);
+        QFile file(m_vauditBin);
+        if (file.exists())
+        {
+            DealSession();
+            MonitorDisk::instance().fileDiskLimitProcess();
+            MonitorDisk::instance().fileSizeProcess(m_videoFileName);
+        }
+    }
+    else
+    {
+        m_isActive = isLicenseActive();
     }
 
     m_pTimer->start(2000);
@@ -350,4 +361,47 @@ void Monitor::DealSession()
             m_sessionInfos.insert(info.userName, info);
         }
     }
+}
+
+bool Monitor::isLicenseActive()
+{
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(LICENSE_MANAGER_DBUS_NAME,
+                                                                QString(LICENSE_OBJECT_OBJECT_PATH) + "/KSVAUDITRECORD",
+                                                                 "com.kylinsec.Kiran.LicenseObject",
+                                                                "GetLicense");
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, TIMEOUT_MS);
+    KLOG_DEBUG() << "msgReply " << msgReply;
+    QString errorMsg;
+
+    if (msgReply.type() == QDBusMessage::ReplyMessage)
+    {
+        QList<QVariant> args = msgReply.arguments();
+        if (args.size() >= 1)
+        {
+            QVariant firstArg = args.takeFirst();
+            KLOG_WARNING() << firstArg.toString();
+            QJsonParseError jsonerror;
+            QJsonDocument doc = QJsonDocument::fromJson(firstArg.toString().toLatin1(), &jsonerror);
+            if (doc.isNull() || jsonerror.error != QJsonParseError::NoError || !doc.isObject())
+            {
+                KLOG_INFO() << "parse json err";
+                return false;
+            }
+
+            QJsonObject jsonObj = doc.object();
+            for (auto key : jsonObj.keys())
+            {
+                if ("activation_status" == key)
+                {
+                    int activation_status = jsonObj[key].toDouble();
+                    KLOG_INFO() << "activation_status:" << activation_status;
+                    return activation_status != LicenseActivationStatus::LAS_ACTIVATED ? false : true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    return false;
 }

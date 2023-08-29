@@ -171,7 +171,7 @@ void GeneralConfigure::initData()
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILEPATH], "~/ks-vaudit");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILETYPE], "MP4");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_VIDIO], "1");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FPS], "15");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FPS], "25");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_QUALITY], "0");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_AUDIO], "all");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_BITRATE], "128");

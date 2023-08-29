@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QMouseEvent>
 #include <QLineEdit>
+#include <QLabel>
 
 namespace Ui {
 class Dialog;
@@ -18,21 +19,19 @@ public:
     ~Dialog();
     QString getNewName();
     QString getOldName();
+    QLabel *getQrLabel();
 
 protected:
     void initUI();
     void initAboutUI();
     void initRenameUI();
     void initActivateUI(bool);
+    void initQRcode();
 
 private slots:
-
     void on_accept_clicked();
-
     void on_cancel_clicked();
-
     void exitDialog();
-
     void emitRename();
 
 signals:
@@ -49,6 +48,7 @@ private:
     QLineEdit *m_fileNameEditor = NULL;
     QString m_fileName;
     QString m_oldName;
+    QLabel *m_qrCodeLabel;
 
 };
 

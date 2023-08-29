@@ -53,6 +53,7 @@ protected:
     QString strTobase64(QString inputStr);
     QString base64ToStr(QString inputStr);
     void getActivationInfo();
+    QLabel *createVideoDurationLabel(QString duration);
 
 private slots:
     void on_exit_clicked();

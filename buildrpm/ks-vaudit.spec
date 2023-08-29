@@ -111,9 +111,12 @@ cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "expor
 
 sudo service ks-vaudit-configure restart
 sudo chkconfig ks-vaudit-configure on
+sudo service ks-vaudit-monitor restart
+sudo chkconfig ks-vaudit-monitor on
 
 %preun
 sudo service ks-vaudit-configure stop
+sudo service ks-vaudit-monitor stop
 sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean

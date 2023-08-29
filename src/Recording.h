@@ -165,6 +165,11 @@ private:
 	pid_t m_selfPID;
 	QTimer *m_tm;
 
+	// 用于审计录屏
+	int m_timingPause;
+	bool m_auditFirstStart;
+	QString m_auditBaseFileName;
+
 public:
 	Recording(QSettings* qsettings);
 	~Recording();
@@ -181,7 +186,7 @@ public:
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);
 	bool IsOutputStarted(){return m_output_started ;}
-
+	void AuditParamDeal();
 
 private:
 	void FinishOutput();
@@ -201,4 +206,7 @@ public slots:
 	void ScreenChangedHandler(const QRect&);
 	// 用于定时向前端发送录屏时间信息
 	void OnRecordTimer();
+	//后台录屏无操作处理
+	void kidleResumeEvent();
+	void kidleTimeoutReached(int id, int timeout);
 };

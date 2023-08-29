@@ -153,6 +153,8 @@ void CommandLineOptions::Parse() {
 				m_gui = false;
 			}else if(option == "--record"){
 				m_front_record = true;
+			}else if(option.startsWith("--audit")){
+				Logger::LogInfo(option);
 			}else if(option == "--version") {
 				CheckOptionHasNoValue(option, value);
 				Logger::LogInfo(GetVersionInfo());

@@ -88,7 +88,7 @@ private:
 public:
 	// for nvenc
 	int m_encoded;
-	size_t m_frame_size;
+	std::shared_ptr<std::vector<std::vector<uint8_t> > > m_vpacket;
 
 public:
 	AVFrameWrapper(const std::shared_ptr<AVFrameData>& refcounted_data);

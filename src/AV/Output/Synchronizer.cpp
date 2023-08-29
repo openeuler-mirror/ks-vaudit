@@ -234,9 +234,27 @@ Synchronizer::~Synchronizer() {
 }
 
 void Synchronizer::InitNvenc(VideoLock &videolock) {
-	
+
+	if (QString::compare(m_output_settings->container_avname, "mp4", Qt::CaseInsensitive) != 0) {
+		return;
+	}
+
+	unsigned int nvenc_kbit_rate = 0;
+	if (m_output_settings->encode_quality == "0") {
+		nvenc_kbit_rate = 1000;
+	} else if (m_output_settings->encode_quality == "1") {
+		nvenc_kbit_rate = 2000;
+	} else if (m_output_settings->encode_quality == "2") {
+		nvenc_kbit_rate = 3000;
+	}
+
+	nvenc_kbit_rate = nvenc_kbit_rate * m_output_settings->video_width / 1920 * m_output_settings->video_height / 1080;
+
 	try {
-		videolock->m_nvenc = new NvEncoderGL(m_output_format->m_video_width, m_output_format->m_video_height, NV_ENC_BUFFER_FORMAT_ARGB, m_output_settings->video_frame_rate, m_output_settings->video_kbit_rate * 1000);
+		videolock->m_nvenc = new NvEncoderGL(m_output_format->m_video_width, m_output_format->m_video_height, NV_ENC_BUFFER_FORMAT_ARGB, 
+							m_output_settings->video_frame_rate, nvenc_kbit_rate * 1000);
+		Logger::LogInfo("[Synchronizer::InitNvenc] set nvenc bitrate: " + QString::number( nvenc_kbit_rate * 1000) + 
+				" fps: " + QString::number(m_output_settings->video_frame_rate));
 		NV_ENC_INITIALIZE_PARAMS initializeParams = { NV_ENC_INITIALIZE_PARAMS_VER };
 		initializeParams.frameRateNum = m_output_settings->video_frame_rate;
 		initializeParams.frameRateDen = 1;
@@ -245,7 +263,7 @@ void Synchronizer::InitNvenc(VideoLock &videolock) {
 		initializeParams.encodeConfig = &encodeConfig;
 
 		GUID guidCodec = NV_ENC_CODEC_H264_GUID;
-		GUID guidPreset = NV_ENC_PRESET_LOW_LATENCY_HQ_GUID; //NV_ENC_PRESET_LOW_LATENCY_DEFAULT_GUID;//NV_ENC_PRESET_DEFAULT_GUID;
+		GUID guidPreset = NV_ENC_PRESET_LOW_LATENCY_HQ_GUID; // NV_ENC_PRESET_LOW_LATENCY_HQ_GUID; //NV_ENC_PRESET_LOW_LATENCY_DEFAULT_GUID;//NV_ENC_PRESET_DEFAULT_GUID;
 
 		videolock->m_nvenc->CreateDefaultEncoderParams(&initializeParams, guidCodec, guidPreset);    
 		videolock->m_nvenc->CreateEncoder(&initializeParams);
@@ -312,11 +330,11 @@ void Synchronizer::Init() {
 
 		// check if last read frame is encoded by nvenc
 		lock->m_last_video_read_encoded = 0;
-		lock->m_last_video_read_size = 0;
+		lock->m_last_video_read_vpacket = NULL;
 
 		// check if last frame is encoded by nvenc
 		lock->m_last_video_frame_encoded = 0;
-		lock->m_last_video_frame_size = 0;
+		lock->m_last_video_frame_vpacket = NULL;
 
 		// check if there is voice
 		lock->m_has_voice = -1;
@@ -369,6 +387,11 @@ int Synchronizer::EncodeFrameByNvenc(VideoLock &videolock, const uint8_t* data, 
 		return -1;
 	}
 
+#ifdef NVENC_ENCODE_DEBUG
+	WriteBmp(data, m_output_format->m_video_width, m_output_format->m_video_height);
+	WriteRGB(data, m_output_format->m_video_width, m_output_format->m_video_height);
+#endif
+
 	const NvEncInputFrame* encoderInputFrame = videolock->m_nvenc->GetNextInputFrame();
 	NV_ENC_INPUT_RESOURCE_OPENGL_TEX *pResource = (NV_ENC_INPUT_RESOURCE_OPENGL_TEX *)encoderInputFrame->inputPtr;
 
@@ -378,24 +401,21 @@ int Synchronizer::EncodeFrameByNvenc(VideoLock &videolock, const uint8_t* data, 
 				GL_RED, GL_UNSIGNED_BYTE, data);
 	glBindTexture(pResource->target, 0);
 
-	std::vector<std::vector<uint8_t>> vPacket;
-	videolock->m_nvenc->EncodeFrame(vPacket);
-	int i, vPacketSize = vPacket.size();
+	std::shared_ptr<std::vector<std::vector<uint8_t> > > vPacket = std::make_shared<std::vector<std::vector<uint8_t> > >();
+	videolock->m_nvenc->EncodeFrame(*vPacket);
 
-	if (vPacketSize != 1) {
-		Logger::LogError("[Synchronizer::ReadVideoFrame] get vPacketSize not 1 after nvenc");
-		return -1;
+#ifdef NVENC_ENCODE_DEBUG
+	int i = 0;
+	for (i = 0;i < vPacket->size(); i++) {
+		WriteNv12((*vPacket)[i].data(), (*vPacket)[i].size());
 	}
-	int i_frame_size = vPacket[0].size();
-	if (i_frame_size <= 0) {
-		Logger::LogError("[Synchronizer::ReadVideoFrame] get framesize 0 after nvenc");
-		return -1;
-	}
+#endif
 
 	converted_frame->m_encoded = 1;
-	converted_frame->m_frame_size = i_frame_size;
-	memcpy(converted_frame->GetFrame()->data[0], vPacket[0].data(), i_frame_size);
-	// Logger::LogInfo("copy converted image to converted_frame, vPacketSize: " + QString::number(vPacketSize));
+	converted_frame->m_vpacket = std::move(vPacket);
+	int vPacketSize = converted_frame->m_vpacket->size();
+	// Logger::LogInfo("get nvenced vpacket to converted_frame, vPacketSize: " + QString::number(vPacketSize));
+
 	return 0;
 }
 
@@ -440,8 +460,8 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 		// create the converted frame
 		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, NULL);
 
-		// 单独的 nvenc 接口，rgb2yuv和编码在一起，cpu占用低，但是文件占用打，暂时禁用，后续优化后再放开
-		int ret = -1; //EncodeFrameByNvenc(videolock, data, converted_frame);
+		// 单独的 nvenc 接口，rgb2yuv和编码在一起，cpu占用低，但是文件占用大，暂时禁用，后续优化后再放开
+		int ret = -1; // EncodeFrameByNvenc(videolock, data, converted_frame);
 		if (ret) {
 			// scale and convert the frame to the right format
 			videolock->m_fast_scaler.Scale(width, height, format, colorspace, &data, &stride,
@@ -452,7 +472,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 
 		lock->m_last_video_read_data = converted_frame->GetFrameData(); 
 		lock->m_last_video_read_encoded = converted_frame->m_encoded;
-		lock->m_last_video_read_size = converted_frame->m_frame_size;
+		lock->m_last_video_read_vpacket = converted_frame->m_vpacket;
 
 	} else {
 
@@ -461,7 +481,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 							m_output_format->m_video_pixel_format, lock->m_last_video_read_data);
 
 		converted_frame->m_encoded = lock->m_last_video_read_encoded;
-		converted_frame->m_frame_size = lock->m_last_video_read_size;
+		converted_frame->m_vpacket = lock->m_last_video_read_vpacket;
 	}
 	
 	/*
@@ -837,7 +857,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 				// create duplicate frame
 				std::unique_ptr<AVFrameWrapper> duplicate_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, lock->m_last_video_frame_data);
 				duplicate_frame->m_encoded = lock->m_last_video_frame_encoded;
-				duplicate_frame->m_frame_size = lock->m_last_video_frame_size;
+				duplicate_frame->m_vpacket = lock->m_last_video_frame_vpacket;
 				duplicate_frame->GetFrame()->pts = lock->m_video_pts + m_max_frames_skipped;
 
 				// add new block to sync diagram
@@ -866,7 +886,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 		frame->GetFrame()->pts = next_pts;
 		lock->m_last_video_frame_data = frame->GetFrameData();
 		lock->m_last_video_frame_encoded = frame->m_encoded;
-		lock->m_last_video_frame_size = frame->m_frame_size;
+		lock->m_last_video_frame_vpacket = frame->m_vpacket;
 
 		// if the frame is too early, drop it
 		if(frame->GetFrame()->pts < lock->m_video_pts) {

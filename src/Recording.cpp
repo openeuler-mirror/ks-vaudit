@@ -246,6 +246,10 @@ void Recording::OnRecordTimer() {
 }
 
 void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
+	//没有开始录屏 不处理
+	if(!m_page_started)
+		return;
+
 	//分辨率变化后的处理
 	m_separate_files = true;
 	OnRecordPause();
@@ -670,7 +674,11 @@ void Recording::StartOutput() {
 			if (m_auditBaseFileName.isEmpty())
 				m_output_settings.file = GetNewSegmentFile(m_file_base, m_add_timestamp);
 			else
+			{
 				m_output_settings.file = GetAUditNewSegmentFile(m_file_base, m_auditBaseFileName, m_add_timestamp);
+				m_configure_interface->MonitorNotification(getpid(), m_output_settings.file);
+			}
+
 			KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
 
 			// log the file name
@@ -831,8 +839,9 @@ void Recording::StopInput() {
 		return;
 
 	Logger::LogInfo("[PageRecord::StopInput] " + tr("Stopping input ..."));
-
+	KLOG_DEBUG() << "start m_x11_input reset";
 	m_x11_input.reset();
+	KLOG_DEBUG() << "end m_x11_input reset";
 #if SSR_USE_OPENGL_RECORDING
 	if(m_gl_inject_input != NULL)
 		m_gl_inject_input->SetCapturing(false);
@@ -1086,7 +1095,9 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		OnRecordSave(); //结束视频录制但不退出
 	}
 
-	KyNotify::instance().sendNotify(op);
+	//后台审计不需要提示
+	if (m_auditBaseFileName.isEmpty())
+		KyNotify::instance().sendNotify(op);
 }
 
 void Recording::AuditParamDeal()
@@ -1096,9 +1107,13 @@ void Recording::AuditParamDeal()
 	if (args.size() != 2)
 		return;
 
+	//后台审计不需要发送录屏时间
+	if (m_tm && m_tm->isActive())
+		m_tm->stop();
+
 	m_auditFirstStart = true;
 	QStringList strlist = args[1].split("-");
-    strlist.removeAll("");
+	strlist.removeAll("");
 	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
 	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);

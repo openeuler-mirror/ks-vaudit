@@ -2,10 +2,13 @@
 #include <QApplication>
 #include <QFile>
 #include <QDesktopWidget>
+#include <sys/types.h>
+#include <unistd.h>
 #include "kiran-log/qt5-log-i.h"
 
 int main(int argc, char *argv[])
 {
+    setuid(0);
     QApplication a(argc, argv);
 
     // 加载KLOG

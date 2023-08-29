@@ -109,6 +109,16 @@
           <summary>Receives operations on the process and sends them to the background.</summary>
         </method>
 
+        <method name="MonitorNotification">
+          <arg name="pid" direction="in" type="i">
+            <summary>The audit progess id.</summary>
+          </arg>
+          <arg name="message" direction="in" type="s">
+            <summary>The message.</summary>
+          </arg>
+          <summary>For Monitor and Audit process to notify each other.</summary>
+        </method>
+
         <signal name="ConfigureChanged">
             <arg name="which" type="s">
                 <summary>The configuration type.</summary>
@@ -131,6 +141,16 @@
                 <summary>The operations on processes.</summary>
             </arg>
             <summary>Notify operate progess</summary>.
+        </signal>
+
+        <signal name="SignalNotification">
+          <arg name="pid" type="i">
+              <summary>The audit progess id.</summary>
+          </arg>
+          <arg name="message" type="s">
+              <summary>The message.</summary>
+          </arg>
+          <summary>For Monitor and Audit process to notify each other</summary>.
         </signal>
 
     </interface>

@@ -42,6 +42,7 @@ target_link_libraries(${TARGET_NAME}
     -lavcodec
     -lavutil
     -lklog-qt5
+    -lqrencode
     Qt5::Gui
     Qt5::Widgets
     Qt5::DBus

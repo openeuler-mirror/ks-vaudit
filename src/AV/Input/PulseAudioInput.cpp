@@ -204,7 +204,7 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 	m_pa_period_size = 1024; // number of samples per period
 
 	m_record_audio_type = record_audio_type;
-	Logger::LogInfo("the record_audio_type is  ---> " + m_record_audio_type + " LINE207");
+	Logger::LogInfo("[PulseAudioInput::PulseAudioInput] the record_audio_type is: " + m_record_audio_type);
 	//m_load_pulsemodule_idx = 0;
 
 	try {
@@ -311,7 +311,7 @@ void PulseAudioInput::Free() {
 	if(m_record_audio_type == "all" && m_stream_is_monitor){
 		//unload the module module-loopback
 		pa_operation* operation = NULL;
-		Logger::LogInfo("unload the mojdule mojdule-loopback XXXXXXXXXXXXXXXX LINE 314");
+		Logger::LogInfo("[PulseAudioInput::Free] unload the mojdule mojdule-loopback");
 		operation = pa_context_unload_module(m_pa_context,PulseAudioInput::m_load_pulsemodule_idx,UnLoadModuleCallback, this);
 		PulseAudioCompleteOperation(m_pa_mainloop, &operation);
 	}

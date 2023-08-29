@@ -220,6 +220,7 @@ void Recording::OnRecordTimer() {
 
 void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
 	//分辨率变化后的处理
+	m_separate_files = true;
 	OnRecordPause();
 	m_video_in_width = changed_screen_rect.width();
 	m_video_in_height = changed_screen_rect.height();

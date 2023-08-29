@@ -317,13 +317,17 @@ void Recording::StartPage() {
 
 	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
 	if (audio_enabled == "mic" || audio_enabled == "all"){ //录制麦克风
-		if (!defualtAudioInput.contains("alsa_null") && !defualtAudioInput.isEmpty()) {
+		if (!defualtAudioInput.isEmpty() && defualtAudioInput.contains("alsa_input")) {
+			// 还有两种设备:alsa_null、alsa_output（输出设备）
+			// 如果没有实际输入设备(alsa_input)、会把带"monitor"字段的output设备(扬声器设备)识别defualtAudioInput
+			// 因此只判断是否有input关键字 完全区分开麦克风和扬声器 方便后续合成算法
 			m_audio_enabled = true;
 			m_pulseaudio_source_input = defualtAudioInput;
 		}
 	}
 	if(audio_enabled == "speaker" || audio_enabled == "all"){ //扬声器
-		if (m_pulseaudio_sources.size() > 0 && !defualtAudioOutput.contains("alsa_null") && !defualtAudioOutput.isEmpty()){
+		if (m_pulseaudio_sources.size() > 0 && !defualtAudioOutput.isEmpty() && defualtAudioOutput.contains("alsa_output")){
+			// 同上alsa_input逻辑，避免重复选择同一个设备
 			for(auto asource : m_pulseaudio_sources){
 				if (QString::fromStdString(asource.m_name).contains("monitor") && QString::fromStdString(asource.m_name).contains(defualtAudioOutput)){
 					m_audio_enabled = true;

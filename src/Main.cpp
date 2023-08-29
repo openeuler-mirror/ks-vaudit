@@ -38,6 +38,7 @@ QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){
+	KLOG_DEBUG() << "cur display:" << getenv("DISPLAY") << "sig:" << sig;
 	if(sig == SIGINT){
 		if(recording_screen->IsOutputStarted()){
 			recording_screen->OnRecordSaveAndExit(true);
@@ -142,6 +143,7 @@ int main(int argc, char* argv[]) {
 	recording_screen.reset(new Recording(&settings));
 	recording_screen->SaveSettings(&settings);
 	if(!CommandLineOptions::GetFrontRecord()){
+		recording_screen->AuditParamDeal();
 		recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
 	}
 	

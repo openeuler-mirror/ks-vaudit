@@ -241,11 +241,11 @@ void Synchronizer::InitNvenc(VideoLock &videolock) {
 
 	unsigned int nvenc_kbit_rate = 0;
 	if (m_output_settings->encode_quality == "0") {
-		nvenc_kbit_rate = 1000;
+		nvenc_kbit_rate = 100;
 	} else if (m_output_settings->encode_quality == "1") {
-		nvenc_kbit_rate = 2000;
+		nvenc_kbit_rate = 200;
 	} else if (m_output_settings->encode_quality == "2") {
-		nvenc_kbit_rate = 3000;
+		nvenc_kbit_rate = 300;
 	}
 
 	nvenc_kbit_rate = nvenc_kbit_rate * m_output_settings->video_width / 1920 * m_output_settings->video_height / 1080;
@@ -273,7 +273,7 @@ void Synchronizer::InitNvenc(VideoLock &videolock) {
 		Logger::LogError("[Synchronizer::InitNvenc] init nvenc failed, unknown error");
 	}
 	
-	Logger::LogInfo("[Synchronizer::InitNvenc] init nvenc succeed");
+	Logger::LogInfo("[Synchronizer::InitNvenc] init nvenc finished");
 
 }
 
@@ -330,11 +330,11 @@ void Synchronizer::Init() {
 
 		// check if last read frame is encoded by nvenc
 		lock->m_last_video_read_encoded = 0;
-		lock->m_last_video_read_vpacket = NULL;
+		lock->m_last_video_read_size = 0;
 
 		// check if last frame is encoded by nvenc
 		lock->m_last_video_frame_encoded = 0;
-		lock->m_last_video_frame_vpacket = NULL;
+		lock->m_last_video_frame_size = 0;
 
 		// check if there is voice
 		lock->m_has_voice = -1;
@@ -401,26 +401,49 @@ int Synchronizer::EncodeFrameByNvenc(VideoLock &videolock, const uint8_t* data, 
 				GL_RED, GL_UNSIGNED_BYTE, data);
 	glBindTexture(pResource->target, 0);
 
-	std::shared_ptr<std::vector<std::vector<uint8_t> > > vPacket = std::make_shared<std::vector<std::vector<uint8_t> > >();
-	videolock->m_nvenc->EncodeFrame(*vPacket);
+	std::vector<std::vector<uint8_t>> vPacket;
+	videolock->m_nvenc->EncodeFrame(vPacket);
+	int i = 0;
 
 #ifdef NVENC_ENCODE_DEBUG
-	int i = 0;
-	for (i = 0;i < vPacket->size(); i++) {
-		WriteNv12((*vPacket)[i].data(), (*vPacket)[i].size());
+	for (i = 0;i < vPacket.size(); i++) {
+		WriteNv12(vPacket[i].data(), vPacket[i].size(), "1.nv12");
 	}
 #endif
+	
+	size_t total_size = 0;
+	for (i = 0;i < vPacket.size(); i++) {
+		if (vPacket[i].size() > 0) {
+			total_size += vPacket[i].size();
+		}
+	}
+	assert(total_size <= m_output_settings->video_width * m_output_settings->video_height * 1.5);
 
 	converted_frame->m_encoded = 1;
-	converted_frame->m_vpacket = std::move(vPacket);
-	int vPacketSize = converted_frame->m_vpacket->size();
-	// Logger::LogInfo("get nvenced vpacket to converted_frame, vPacketSize: " + QString::number(vPacketSize));
+	size_t offset = 0;
+	for (i = 0;i < vPacket.size(); i++) {
+		if (vPacket[i].size() > 0) {
+			memcpy(converted_frame->GetFrame()->data[0] + offset, vPacket[i].data(), vPacket[i].size());
+			offset += vPacket[i].size();
+		}
+	}
+	converted_frame->m_frame_size = total_size;
+
+	int vPacketSize = vPacket.size();
+	if (vPacketSize < 1 || vPacketSize > 1) {
+		Logger::LogInfo("get nvenced vpacket to converted_frame, vPacketSize: " + QString::number(vPacketSize));
+	}
+
+#ifdef NVENC_ENCODE_DEBUG
+	WriteNv12(converted_frame->GetFrame()->data[0], converted_frame->m_frame_size, "2.nv12");
+#endif
 
 	return 0;
 }
 
-void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp) {
+void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp, int changed) {
 	assert(m_output_format->m_video_enabled);
+	assert(data != NULL);
 
 	// add new block to sync diagram
 	if(m_sync_diagram != NULL)
@@ -453,7 +476,9 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 	// statistics changed image count
 	videolock->m_image_cnt += 1;
 	std::unique_ptr<AVFrameWrapper> converted_frame = NULL;
-	if (data) {
+
+	// 应用了云桌面的nvenc库的情况下，不开启图像变化检测，否则图像会有锯齿
+	if (changed) {
 
 		videolock->m_scale_cnt += 1;
 
@@ -472,7 +497,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 
 		lock->m_last_video_read_data = converted_frame->GetFrameData(); 
 		lock->m_last_video_read_encoded = converted_frame->m_encoded;
-		lock->m_last_video_read_vpacket = converted_frame->m_vpacket;
+		lock->m_last_video_read_size = converted_frame->m_frame_size;
 
 	} else {
 
@@ -481,7 +506,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 							m_output_format->m_video_pixel_format, lock->m_last_video_read_data);
 
 		converted_frame->m_encoded = lock->m_last_video_read_encoded;
-		converted_frame->m_vpacket = lock->m_last_video_read_vpacket;
+		converted_frame->m_frame_size = lock->m_last_video_read_size;
 	}
 	
 	/*
@@ -854,10 +879,11 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 		if(lock->m_last_video_frame_data != NULL) {
 			while(lock->m_video_pts + m_max_frames_skipped < std::min(next_pts, segment_stop_video_pts)) {
 
+				Logger::LogInfo("[Synchronizer::FlushVideoBuffer] create duplicate_frame");
 				// create duplicate frame
 				std::unique_ptr<AVFrameWrapper> duplicate_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, lock->m_last_video_frame_data);
 				duplicate_frame->m_encoded = lock->m_last_video_frame_encoded;
-				duplicate_frame->m_vpacket = lock->m_last_video_frame_vpacket;
+				duplicate_frame->m_frame_size = lock->m_last_video_frame_size;
 				duplicate_frame->GetFrame()->pts = lock->m_video_pts + m_max_frames_skipped;
 
 				// add new block to sync diagram
@@ -886,7 +912,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 		frame->GetFrame()->pts = next_pts;
 		lock->m_last_video_frame_data = frame->GetFrameData();
 		lock->m_last_video_frame_encoded = frame->m_encoded;
-		lock->m_last_video_frame_vpacket = frame->m_vpacket;
+		lock->m_last_video_frame_size = frame->m_frame_size;
 
 		// if the frame is too early, drop it
 		if(frame->GetFrame()->pts < lock->m_video_pts) {

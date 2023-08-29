@@ -1,15 +1,31 @@
 #include "KyNotify.h"
-#include <glib.h>
 #include <glib/gi18n.h>
 #include <locale.h>
 #include <libnotify/notify.h>
 #include "kiran-log/qt5-log-i.h"
 
-#define NOTIFY_TIMEOUT (2 * 1000) // 2 seconds
 #define GETTEXT_DOMAIN "kylin"
 #define LICENSE_LOCALEDIR "/usr/share/locale"
 
-KyNotify::KyNotify() : m_bStart(false), m_timing(0)
+static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
+{
+	KLOG_INFO() << "close notify window";
+	g_object_unref(pNotify);
+	if (KyNotify::instance().getContinueNotify())
+	{
+		if (userdata)
+		{
+			char *tmp = (char *)userdata;
+			KLOG_INFO() << "close notify window, userdata:"<< tmp;
+			if (tmp == "disk_notify")
+			{
+				KyNotify::instance().sendNotify(tmp);
+			}
+		}
+	}
+}
+
+KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_pDiskNotify(nullptr)
 {
 	initNotify();
 	if (!notify_init(_("kylin verify")))
@@ -46,6 +62,11 @@ void KyNotify::sendNotify(QString op)
 		notify(KSVAUDIT_STOP);
 		m_bStart = false;
 	}
+	else if (op == "disk_notify")
+	{
+		m_bContinue = true;
+		notify(KSVAUDIT_DISK);
+	}
 }
 
 void KyNotify::setTiming(int timing)
@@ -66,6 +87,30 @@ void KyNotify::setRecordTime(uint64_t recordTime)
 			notify(KSVAUDIT_TIMING, minute);
 		KLOG_DEBUG() << "m_timing:" << m_timing << "recordTime:" << recordTime << "time:" << time << "minute:" << minute << "reminder:" << (minute % m_timing);
 	}
+}
+
+void KyNotify::setContinueNotify(bool bContinue)
+{
+	KLOG_DEBUG() << "bContinue:" << bContinue << ", last bContinue:" << m_bContinue;
+	m_bContinue = bContinue;
+	if (!m_bContinue && m_pDiskNotify)
+	{
+		KLOG_DEBUG() << "call notify_notification_close";
+		notify_notification_close((NotifyNotification *)m_pDiskNotify, NULL);
+		g_object_unref(m_pDiskNotify);
+		m_pDiskNotify = nullptr;
+	}
+}
+
+bool KyNotify::getContinueNotify()
+{
+	return m_bContinue;
+}
+
+void KyNotify::setReserveSize(quint64 value)
+{
+	m_reserveSize = value / 1073741824;
+	KLOG_INFO() << "m_reserveSize:" << m_reserveSize << "value:" << value;
 }
 
 void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
@@ -107,6 +152,12 @@ void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
 
 				break;
 			}
+		case KSVAUDIT_DISK:
+			{
+				QString tmp = QString("%1").arg(m_reserveSize);
+				QString str = _("<b>\t请先清理磁盘空间至少预留") + tmp + _("G，否则将无法进行录屏!</b>\n");
+				notify_warn(str.toStdString().c_str(), 0, "disk_notify");
+			}
 		default:
 			break;
 	}
@@ -129,32 +180,45 @@ void KyNotify::initNotify()
 	setregid(user_gid, user_gid);
 }
 
-void KyNotify::notify_send(const char *msg, const char *icon)
+void KyNotify::notify_send(const char *msg, const char *icon, int timeout, const char *userdata)
 {
 #ifdef HIGH_VERSION
-	NotifyNotification *notify = notify_notification_new(_("提示"), msg, icon, NULL);
-	KLOG_DEBUG() << "not 3.2-8";
+	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, NULL);
+	KLOG_DEBUG() << "not 3.2-8, icon:" << icon;
 #else
-	NotifyNotification *notify = notify_notification_new(_("提示"), msg, icon, NULL);
-	KLOG_DEBUG() << "is 3.2-8";
+	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, NULL);
+	KLOG_DEBUG() << "is 3.2-8, icon:" << icon;
 #endif
-	notify_notification_set_timeout(notify, NOTIFY_TIMEOUT);
-	notify_notification_show(notify, NULL);
-	g_object_unref(G_OBJECT(notify));
+	notify_notification_set_timeout(pNotify, timeout);
+	GError *error = NULL;
+	if (!notify_notification_show(pNotify, &error))
+	{
+		KLOG_DEBUG() << "Error while displaying notification:" << error->message;
+		g_error_free(error);
+	}
+
+	if (userdata)
+	{
+		char *tmp = (char *)userdata;
+		if (tmp == "disk_notify")
+		{
+			m_pDiskNotify = (void *)pNotify;
+		}
+		g_signal_connect(pNotify, "closed", G_CALLBACK(notification_closed), (void *)userdata);
+	}
 }
 
-void KyNotify::notify_info(const char *msg)
+void KyNotify::notify_info(const char *msg, int timeout, const char  *userdata)
 {
-	KLOG_INFO() << msg;
-	notify_send(msg, "gtk-dialog-info");
+	notify_send(msg, "gtk-dialog-info", timeout, userdata);
 }
 
-void KyNotify::notify_warn(const char *msg)
+void KyNotify::notify_warn(const char *msg, int timeout, const char *userdata)
 {
-	notify_send(msg, "gtk-dialog-warning");
+	notify_send(msg, "gtk-dialog-warning", timeout, userdata);
 }
 
-void KyNotify::notify_error(const char *msg)
+void KyNotify::notify_error(const char *msg, int timeout, const char  *userdata)
 {
-	notify_send(msg, "gtk-dialog-error");
+	notify_send(msg, "gtk-dialog-error", timeout, userdata);
 }

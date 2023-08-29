@@ -173,6 +173,10 @@ private:
 	QString m_auditBaseFileName;
 
 public:
+	// 是否停止录像，用于结束监测文件是否被删除
+	bool m_bStopRecord;
+
+public:
 	Recording(QSettings* qsettings);
 	~Recording();
 
@@ -188,7 +192,7 @@ public:
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);
 	bool IsOutputStarted(){return m_output_started ;}
-	void AuditParamDeal();
+	bool AuditParamDeal();
 	void SetFileTypeSetting();
 
 private:
@@ -202,6 +206,10 @@ private:
 	void StopOutput(bool final);
 	void StartInput();
 	void StopInput();
+	void WatchFile();
+
+signals:
+	void fileRemoved(bool bRemove);
 
 public slots:
 	void UpdateConfigureData(QString, QString); //配置发生变化 响应槽
@@ -209,7 +217,10 @@ public slots:
 	void ScreenChangedHandler(const QRect&);
 	// 用于定时向前端发送录屏时间信息
 	void OnRecordTimer();
+
+private slots:
 	//后台录屏无操作处理
 	void kidleResumeEvent();
 	void kidleTimeoutReached(int id, int timeout);
+	void onFileRemove(bool bRemove);
 };

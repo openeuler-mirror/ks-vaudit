@@ -116,6 +116,7 @@ private:
     QProcess *m_recordP;
     ActivatePage *m_activatePage;
     bool m_isActivated = false;
+    Dialog *m_pConfirm;
 
 };
 

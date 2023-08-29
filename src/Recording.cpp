@@ -31,6 +31,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "kiran-log/qt5-log-i.h"
 #include "kidletime.h"
 #include <QAudioDeviceInfo>
+#include <sys/inotify.h>
 
 ENUMSTRINGS(Recording::enum_video_area) = {
     {Recording::VIDEO_AREA_SCREEN, "screen"},
@@ -228,6 +229,7 @@ Recording::Recording(QSettings* qsettings){
 	m_tm->setInterval(1000);
 	connect(m_tm, SIGNAL(timeout()), this, SLOT(OnRecordTimer()));
 	m_tm->start();
+	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 }
 
 
@@ -612,8 +614,13 @@ void Recording::SaveSettings(QSettings* settings) {
 	key = "TimingReminder";
 	KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
 
-	key = "TimingPause";
-	m_timingPause = jsonObj[key].toString().toInt();
+	if (!CommandLineOptions::GetFrontRecord())
+	{
+		key = "TimingPause";
+		m_timingPause = jsonObj[key].toString().toInt();
+		key = "MinFreeSpace";
+		KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
+	}
 }
 
 void Recording::StopPage(bool save) {
@@ -621,6 +628,7 @@ void Recording::StopPage(bool save) {
 	if(!m_page_started)
 		return;
 
+	m_bStopRecord = true;
 	StopOutput(true);
 	StopInput();
 
@@ -674,6 +682,7 @@ void Recording::StartOutput() {
 				m_output_settings.file = GetAuditNewSegmentFile(m_file_base, m_auditBaseFileName, m_add_timestamp);
 				m_configure_interface->MonitorNotification(getpid(), m_output_settings.file);
 			}
+			WatchFile();
 
 			KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
 
@@ -1097,6 +1106,8 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				m_settings->setValue("record/water_print_text", jsonObj[key].toString());
 			} else if (key == "TimingPause") {
 				m_timingPause = jsonObj[key].toString().toInt();
+			} else if (key == "MinFreeSpace") {
+				KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
 			}
 
 		}
@@ -1126,8 +1137,12 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		OnRecordSave(); //结束视频录制但不退出
 	}else if(op == "exit"){
 		Logger::LogInfo("[Recording::SwitchControl] exit signal");
-		OnRecordSave(); //结束视频录制但不退出
+		OnRecordSaveAndExit(true);
 		exit(0);
+	} else if(op == "disk_notify"){
+		KyNotify::instance().sendNotify(op);
+	} else if(op == "disk_notify_stop") {
+		KyNotify::instance().setContinueNotify(false);
 	}
 
 	//后台审计不需要提示
@@ -1135,12 +1150,12 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		KyNotify::instance().sendNotify(op);
 }
 
-void Recording::AuditParamDeal()
+bool Recording::AuditParamDeal()
 {
 	QStringList args = QCoreApplication::arguments();
 	KLOG_DEBUG() << "arguments:" << args << "cur display:" << getenv("DISPLAY");
 	if (args.size() != 2)
-		return;
+		return false;
 
 	//后台审计不需要发送录屏时间
 	if (m_tm && m_tm->isActive())
@@ -1154,6 +1169,7 @@ void Recording::AuditParamDeal()
 	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);
 	KIdleTime::instance().catchNextResumeEvent();
 	KLOG_DEBUG() << m_auditBaseFileName << "idleTime:" << KIdleTime::instance().idleTime();
+	return true;
 }
 
 void Recording::SetFileTypeSetting()
@@ -1227,7 +1243,7 @@ void Recording::kidleResumeEvent()
 	KLOG_DEBUG() << "m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
 	KIdleTime::instance().removeAllIdleTimeouts();
 	KIdleTime::instance().addIdleTimeout(m_timingPause*60000);
-	if (!m_auditFirstStart)
+	if (!m_auditFirstStart && !KyNotify::instance().getContinueNotify())
 		OnRecordStartPause();
 
 	m_auditFirstStart = false;
@@ -1238,4 +1254,76 @@ void Recording::kidleTimeoutReached(int id, int timeout)
 	KLOG_DEBUG() << "id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
 	KIdleTime::instance().catchNextResumeEvent();
 	OnRecordPause();
+}
+
+//不使用 while 循环原因：非删除文件事件下read不阻塞了
+void thread_function(QString fileName, void *user)
+{
+	Recording *pThis = (Recording *)user;
+	int fd = inotify_init();
+	if (fd < 0)
+	{
+		KLOG_INFO() << "inotify_init failed" << errno << strerror(errno);
+		return;
+	}
+
+	//IN_DELETE	| IN_DELETE_SELF 对于删除没作用， IN_ATTRIB 删除有作用
+	int	wd = inotify_add_watch(fd, fileName.toStdString().data(), IN_ATTRIB | IN_CLOSE_WRITE);
+	if (wd < 0)
+	{
+		KLOG_INFO() << "inotify_add_watch failed" << fileName.toStdString().data() << errno << strerror(errno);
+		pThis->fileRemoved(true);
+		close(fd);
+		return;
+	}
+
+	int nread = 0;
+	char buf[BUFSIZ]{};
+	struct inotify_event *event;
+	int length = read(fd, buf, sizeof(buf) - 1);
+
+	// inotify 事件发生时
+	while (length > 0)
+	{
+		event = (struct inotify_event *)&buf[nread];
+		if (pThis->m_bStopRecord)
+		{
+			KLOG_DEBUG("stop record, event->mask:%#x", event->mask);
+			inotify_rm_watch(fd, wd);
+			close(fd);
+			return;
+		}
+		nread = nread + sizeof(struct inotify_event) + event->len;
+		length = length - sizeof(struct inotify_event) - event->len;
+		KLOG_DEBUG("event->mask:%#x, nread:%d, length:%d", event->mask, nread, length);
+	}
+
+	//非删除文件和停止录屏，重新监控文件
+	inotify_rm_watch (fd, wd);
+	close(fd);
+	pThis->fileRemoved(false);
+	return;
+}
+
+void Recording::WatchFile()
+{
+	KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
+	m_bStopRecord = false;
+	std::thread t(&thread_function, m_output_settings.file, this);
+	t.detach();
+}
+
+void Recording::onFileRemove(bool bRemove)
+{
+	if (bRemove)
+	{
+		KLOG_INFO() << "file:" << m_output_settings.file << "is deleted, restart the recording";
+		OnRecordSave();  // 结束视频录制
+		OnRecordStart(); // 开始新视频
+	}
+	else
+	{
+		KLOG_INFO() << "re-watch file" << m_output_settings.file;
+		WatchFile();
+	}
 }

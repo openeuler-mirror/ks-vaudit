@@ -30,6 +30,7 @@ Monitor::Monitor(QObject *parent)
     m_pTimer = new QTimer();
     connect(m_pTimer, SIGNAL(timeout()), this, SLOT(monitorProcess()));
     connect(&MonitorDisk::instance(), SIGNAL(SignalNotification(int, QString)), this, SLOT(receiveNotification(int, QString)));
+    m_lastMaxRecordPerUser = MonitorDisk::instance().getMaxRecordPerUser();
     monitorProcess();
 }
 
@@ -39,18 +40,7 @@ Monitor::~Monitor()
         delete m_pTimer;
     m_pTimer = nullptr;
 
-    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
-    {
-        auto &process = it.value().process;
-        if (process)
-        {
-            process->execute("taskkill", QStringList() << "-PID" << QString("%1").arg(process->processId()) << "-F" <<"-T");
-            process->close();
-            delete process;
-            process = nullptr;
-        }
-        m_sessionInfos.erase(it++);
-    }
+    clearSessionInfos();
 }
 
 void Monitor::monitorProcess()
@@ -63,9 +53,9 @@ void Monitor::monitorProcess()
         QFile file(m_vauditBin);
         if (file.exists())
         {
-            DealSession();
-            MonitorDisk::instance().fileDiskLimitProcess();
-            MonitorDisk::instance().fileSizeProcess(m_videoFileName);
+            bool bRet = MonitorDisk::instance().fileDiskLimitProcess();
+            DealSession(bRet); //启停进程W
+            MonitorDisk::instance().fileSizeProcess(m_videoFileName); //文件达到指定大小，切换文件
         }
     }
     else
@@ -177,7 +167,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr};
+            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false};
             vecInfo.push_back(info);
         }
     }
@@ -199,7 +189,7 @@ QString Monitor::getRemotIP(const QString &pid)
         QString str(data.toStdString().data());
         QStringList strlist = str.split("\n");
         strlist.removeAll("");
-        KLOG_DEBUG() << "pid:" << pid << "strlist:" << strlist;
+
         for (QString v : strlist)
         {
             QStringList arr = v.split(":");
@@ -249,7 +239,7 @@ QVector<sessionInfo> Monitor::getXvncInfo()
                 continue;
 
             QString tmp = strlist[index2];
-            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr};
+            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false};
             vecInfo.push_back(info);
         }
     }
@@ -272,9 +262,8 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     arg << (QString("--audit-") + info.userName + QString("-") + info.ip + QString("-") + info.displayName);
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
-        KLOG_WARNING() << "pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
+        KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
         sessionInfo tmp = info;
-        QMutexLocker locker(&m_mutex);
         auto it = m_sessionInfos.find(tmp.userName, tmp);
         if (it != m_sessionInfos.end())
         {
@@ -287,18 +276,14 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 if (fileit != m_videoFileName.end())
                     m_videoFileName.erase(fileit);
 
-                process->execute("taskkill", QStringList() << "-PID" << QString("%1").arg(process->processId()) << "-F" <<"-T");
                 process->close();
                 delete process;
                 process = nullptr;
             }
-            m_sessionInfos.erase(it);
-            if (QProcess::ExitStatus::CrashExit == exitStatus)
-            {
-                tmp.process = startRecordWithDisplay(tmp);
-                m_sessionInfos.insert(tmp.userName, tmp);
-            }
+            value.process = startRecordWithDisplay(tmp);
+            MonitorDisk::instance().sendSwitchControl(process->processId(), "start");
         }
+        KLOG_DEBUG() << "deal CrashExit end";
     });
 
     process->start(m_vauditBin, arg);
@@ -307,18 +292,38 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     return process;
 }
 
-void Monitor::DealSession()
+void Monitor::DealSession(bool isDiskOk)
 {
     int maxRecordPerUser = MonitorDisk::instance().getMaxRecordPerUser();
+    if (m_lastMaxRecordPerUser != maxRecordPerUser)
+    {
+        clearSessionInfos();
+        m_lastMaxRecordPerUser = maxRecordPerUser;
+    }
     QVector<sessionInfo> infos = getXorgInfo();
     QVector<sessionInfo> xvncInfos = getXvncInfo();
     infos.append(xvncInfos);
 
-    QMutexLocker locker(&m_mutex);
     QMap<QString, int>mapCnt;
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
     {
         mapCnt.insert(it.key(), ++mapCnt[it.key()]);
+
+        //连续状态，不需要操作，保持之前的操作
+        if (!isDiskOk && !it.value().bNotify) //磁盘空间不足，且有在录像 ==》停止录像并提示
+        {
+            KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
+            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
+            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
+            it.value().bNotify = true;
+        }
+        else if (isDiskOk && it.value().bNotify) //磁盘空间恢复正常，但之前不足 ==》停止提示，并开始录像
+        {
+            KLOG_INFO() << "disk space returned to normal, stop notify and start record pid:" << it.value().process->processId();
+            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify_stop");
+            it.value().bNotify = false;
+            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
+        }
     }
 
     QMultiMap<QString, sessionInfo> sessionInfos;
@@ -326,21 +331,16 @@ void Monitor::DealSession()
     {
         sessionInfos.insert(info.userName, info);
     }
+
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
     {
         auto &info = it.value();
         if (!sessionInfos.contains(it.key(), info))
         {
-            auto &process = info.process;
-            if (process)
-            {
-                process->execute("taskkill", QStringList() << "-PID" << QString("%1").arg(process->processId()) << "-F" <<"-T");
-                process->close();
-                delete process;
-                process = nullptr;
-            }
             KLOG_DEBUG() << "not contain and erase:" << it.key() << info.displayName;
+            auto process = it.value().process;
             m_sessionInfos.erase(it++);
+            clearProcess(process);
             continue;
         }
 
@@ -358,6 +358,13 @@ void Monitor::DealSession()
             }
             mapCnt.insert(info.userName, ++mapCnt[info.userName]);
             info.process = startRecordWithDisplay(info);
+            KLOG_DEBUG() << "isDiskOk:" << isDiskOk;
+            //启动进程后，马上发送消息，后台进程可能没收到，下一轮再操作
+            if (isDiskOk)
+            {
+                info.bNotify = true; //下一次磁盘空间正常，开启录像
+            }
+
             m_sessionInfos.insert(info.userName, info);
         }
     }
@@ -404,4 +411,32 @@ bool Monitor::isLicenseActive()
     }
 
     return false;
+}
+
+void Monitor::clearSessionInfos()
+{
+    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
+    {
+        auto &process = it.value().process;
+        m_sessionInfos.erase(it++);
+        clearProcess(process);
+    }
+
+    KLOG_DEBUG() << "remove all end";
+}
+
+void Monitor::clearProcess(QProcess *process)
+{
+    if (process)
+    {
+        KLOG_DEBUG() << "call exit signal, remove "<< process->processId();
+        MonitorDisk::instance().sendSwitchControl(process->processId(), "exit");
+        if (process->waitForFinished())
+        {
+            process->close();
+            delete process;
+            process = nullptr;
+        }
+        KLOG_DEBUG() << "remove success";
+    }
 }

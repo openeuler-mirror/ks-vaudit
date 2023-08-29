@@ -31,11 +31,11 @@ Widget::Widget(QWidget *parent) :
 {
     ui->setupUi(this);
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
-    this->init_ui();
-//    setAutoFillBackground(false);
     setWindowFlags(Qt::FramelessWindowHint);
-//    setAttribute(Qt::WA_NoSystemBackground, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
+    this->init_ui();
+    connect(ui->acceptBtn,SIGNAL(clicked()),this,SLOT(setConfig()));
+    connect(ui->cancelBtn,SIGNAL(clicked()),this,SLOT(resetConfig()));
 
 }
 
@@ -47,37 +47,81 @@ Widget::~Widget()
 
 void Widget::init_ui()
 {
-    ui->ListBody->show();
-    ui->listArrow->show();
+    ui->ListBody->hide();
     ui->UserBody->hide();
+    ui->ConfigBody->hide();
+    ui->AboutBody->hide();
+    ui->EditPassWidget->hide();
+
+    ui->listArrow->hide();
     ui->userArrow ->hide();
     ui->configArrow->hide();
-    ui->ConfigBody->hide();
     ui->aboutArrow->hide();
     ui->acceptBtn->hide();
     ui->cancelBtn->hide();
-    ui->EditPassWidget->hide();
 
-    ui->clarityBox->setStyleSheet("");
-    ui->typeBox->setStyleSheet("");
-    ui->pauseBox->setStyleSheet("");
-    ui->freeSpaceBox->setStyleSheet("");
-    ui->maxRecordBox->setStyleSheet("");
-    ui->keepTimeBox->setStyleSheet("");
-    ui->clarityBox->setView(new QListView());
-    ui->typeBox->setView(new QListView());
-    ui->pauseBox->setView(new QListView());
-    ui->freeSpaceBox->setView(new QListView());
-    ui->maxRecordBox->setView(new QListView());
-    ui->keepTimeBox->setView(new QListView());
+    ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
+                               "border: 0px;"
+                               "background-color:rgb(57,57,57);"
+                               "color: rgb(255, 255, 255);"
+                               "border-radius: 6px;"
+                               "text-align:left center;"
+                               "padding-left:10px;"
+                               "};");
+    ui->ConfigBtn->setStyleSheet("QPushButton#ConfigBtn{"
+                                 "border: 0px;"
+                                 "background-color:rgb(57,57,57);"
+                                 "color: rgb(255, 255, 255);"
+                                 "border-radius: 4px;"
+                                 "text-align:left center;"
+                                 "padding-left:10px;"
+                                 "};");
+    ui->UserBtn->setStyleSheet("QPushButton#UserBtn{"
+                        "border: 0px;"
+                        "background-color:rgb(57,57,57);"
+                        "color: rgb(255, 255, 255);"
+                        "border-radius: 4px;"
+                        "text-align:left center;"
+                        "padding-left:10px;"
+                        "};");
+    ui->AboutBtn->setStyleSheet("QPushButton#AboutBtn{"
+                        "border: 0px;"
+                        "background-color:rgb(57,57,57);"
+                        "color: rgb(255, 255, 255);"
+                        "border-radius: 4px;"
+                        "text-align:left center;"
+                        "padding-left:10px;"
+                        "};");
 
+    ui->oldPasswordEdit->setProperty("isError", false);
+    ui->oldPasswordEdit->clear();
+    ui->newPasswordEdit->setProperty("isError", false);
+    ui->newPasswordEdit->clear();
+    ui->confirmPasswordEdit->setProperty("isError", false);
+    ui->confirmPasswordEdit->clear();
+    ui->label_24->hide();
+    ui->label_26->hide();
+    ui->label_25->clear();
 
-//    this->comboboxStyle();
+    readConfig();
+    setConfigtoUi();
 
-    m_fps = ui->fpsEdit->text();
-    m_intValidator = new QIntValidator(2, 60, this);
-    ui->fpsEdit->setValidator(m_intValidator);
+}
 
+void Widget::initAudadmUi()
+{
+    // 只能访问列表、用户、关于
+    init_ui();
+    ui->ListBody->show();
+    ui->listArrow->show();
+    ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
+                               "border: 0px;"
+                               "background-color:#2eb3ff;"
+                               "color: rgb(255, 255, 255);"
+                               "border-radius: 6px;"
+                               "text-align:left center;"
+                               "padding-left:10px;"
+                               "};");
 
     // 列表右键弹出菜单
     m_rightMenu = new QMenu(this);
@@ -90,17 +134,43 @@ void Widget::init_ui()
     connect(m_playAction, SIGNAL(triggered()), this, SLOT(playVideo()));
     connect(m_folderAction, SIGNAL(triggered()), this, SLOT(openDir()));
 
-    readConfig();
-    setConfigtoUi();
+    // 构建模型表头
+    m_model = new QStandardItemModel();
+    createList();
     refreshList(m_regName);
-    m_selfPID = QCoreApplication::applicationPid();
-//    m_recordPID = startRecrodProcess();
+}
 
-    connect(ui->acceptBtn,SIGNAL(clicked()),this,SLOT(setConfig()));
-    connect(ui->cancelBtn,SIGNAL(clicked()),this,SLOT(resetConfig()));
+void Widget::initSysadmUi()
+{
+    init_ui();
+    ui->ConfigBody->show();
+    ui->configArrow->show();
+    ui->ConfigBtn->setStyleSheet("QPushButton#ConfigBtn{"
+                               "border: 0px;"
+                               "background-color:#2eb3ff;"
+                               "color: rgb(255, 255, 255);"
+                               "border-radius: 6px;"
+                               "text-align:left center;"
+                               "padding-left:10px;"
+                               "};");
+    m_intValidator = new QIntValidator(2, 60, this);
+    ui->fpsEdit->setValidator(m_intValidator);
+    this->comboboxStyle();
+}
 
-
-
+void Widget::initSecadmUi()
+{
+    init_ui();
+    ui->UserBody->show();
+    ui->userArrow->show();
+    ui->UserBtn->setStyleSheet("QPushButton#UserBtn{"
+                               "border: 0px;"
+                               "background-color:#2eb3ff;"
+                               "color: rgb(255, 255, 255);"
+                               "border-radius: 6px;"
+                               "text-align:left center;"
+                               "padding-left:10px;"
+                               "};");
 }
 
 void Widget::comboboxStyle(){
@@ -147,15 +217,21 @@ void Widget::on_exit_clicked()
 
 void Widget::on_ListBtn_clicked()
 {
-    ui->ListBody->show();
-    ui->listArrow->show();
-
+    if (m_currentUserInfo["user"].toString() != "audadm"){
+        Dialog *d = new Dialog(this,"noprivilege");
+        d->exec();
+        return;
+    }
     ui->ConfigBody->hide();
     ui->configArrow->hide();
     ui->UserBody->hide();
     ui->userArrow->hide();
     ui->AboutBody->hide();
     ui->aboutArrow->hide();
+    ui->EditPassWidget->hide();
+
+    ui->ListBody->show();
+    ui->listArrow->show();
 
     ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
                                "border: 0px;"
@@ -190,11 +266,15 @@ void Widget::on_ListBtn_clicked()
                         "padding-left:10px;"
                         "};");
     refreshList();
-
 }
 
 void Widget::on_ConfigBtn_clicked()
 {
+    if (m_currentUserInfo["user"].toString() != "sysadm"){
+        Dialog *d = new Dialog(this,"noprivilege");
+        d->exec();
+        return;
+    }
     ui->configArrow->show();
     ui->ConfigBody->show();
 
@@ -204,6 +284,7 @@ void Widget::on_ConfigBtn_clicked()
     ui->UserBody->hide();
     ui->AboutBody->hide();
     ui->aboutArrow->hide();
+    ui->EditPassWidget->hide();
 
     ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
                                  "border: 0px;"
@@ -297,6 +378,7 @@ void Widget::on_AboutBtn_clicked()
     ui->configArrow->hide();
     ui->UserBody->hide();
     ui->userArrow->hide();
+    ui->EditPassWidget->hide();
 
     ui->ListBtn->setStyleSheet("QPushButton#ListBtn{"
                         "border: 0px;"
@@ -383,12 +465,27 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
     QString a = arg1;
     if (a == "1"){
         // 1开头的时候边框置红，不能开始录屏
-        ui->fpsEdit->setStyleSheet("background-color:#222222;"
-                                   "border:1px solid #ff4444;"
+        ui->fpsEdit->setStyleSheet("QLineEdit#fpsEdit{"
+                                   "background-color:#222222;"
+                                   "border:1px solid #fa4949;"
                                    "border-radius:6px;"
                                    "color:#fff;"
-                                   "padding-left:10px;");
-        ui->label_11->setStyleSheet("color:#ff4444");
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:hover{"
+                                   "background-color:#222222;"
+                                   "border:1px solid #2eb3ff;"
+                                   "border-radius:6px;"
+                                   "color:#fff;"
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:disabled{"
+                                   "background-color:#393939;"
+                                   "border-radius:6px;"
+                                   "color:#919191;"
+                                   "padding-left:10px;"
+                                   "}");
+        ui->label_11->setStyleSheet("color:#fa4949");
     }else if (a.startsWith("0") || a.length() == 0){
         // 有种情况是0000000开头，强行设为最低2
         ui->fpsEdit->setText("2");
@@ -411,6 +508,12 @@ void Widget::on_fpsEdit_textChanged(const QString &arg1)
                                    "border:1px solid #2eb3ff;"
                                    "border-radius:6px;"
                                    "color:#fff;"
+                                   "padding-left:10px;"
+                                   "}"
+                                   "QLineEdit#fpsEdit:disabled{"
+                                   "background-color:#393939;"
+                                   "border-radius:6px;"
+                                   "color:#919191;"
                                    "padding-left:10px;"
                                    "}");
         ui->label_11->setStyleSheet("color:#999999");
@@ -546,6 +649,89 @@ void Widget::on_cancelPasswordBtn_clicked()
     ui->UserBody->show();
 }
 
+void Widget::on_savePasswordBtn_clicked()
+{
+    bool hasError = false;
+    QString old_pw = ui->oldPasswordEdit->text();
+    QString new_pw = ui->newPasswordEdit->text();
+    QString cf_pw = ui->confirmPasswordEdit->text();
+    QString chk_pw = checkNewPassword(new_pw);
+    if (old_pw != base64ToStr(m_currentUserInfo["passwd"].toString())){
+        hasError = true;
+        ui->oldPasswordEdit->setProperty("isError", true);
+        ui->oldPasswordEdit->style()->polish(ui->oldPasswordEdit);
+        ui->label_24->show();
+    }
+    if (chk_pw.length() != 0){
+        hasError = true;
+        ui->newPasswordEdit->setProperty("isError", true);
+        ui->newPasswordEdit->style()->polish(ui->newPasswordEdit);
+        ui->label_25->setText(chk_pw);
+    }
+    if (QString::compare(new_pw,cf_pw,Qt::CaseSensitive) != 0){
+        hasError = true;
+        ui->confirmPasswordEdit->setProperty("isError", true);
+        ui->confirmPasswordEdit->style()->polish(ui->confirmPasswordEdit);
+        ui->label_26->show();
+    }
+    if (!hasError){
+        // {"user":"test", "old_passwd"="123", role="sysadm", "passwd"="1234"}
+        QString toSetInfo = QString("{\"user\":\"%1\", \"old_passwd\":\"%2\", \"role\":\"%3\", \"passwd\":\"%4\"}")
+                .arg(m_currentUserInfo["user"].toString())
+                .arg(strTobase64(old_pw))
+                .arg(m_currentUserInfo["role"].toString())
+                .arg(strTobase64(new_pw));
+        m_dbusInterface->ModifyUserInfo(toSetInfo);
+        emit log_out();
+        this->hide();
+    }
+}
+
+void Widget::on_oldPasswordEdit_textChanged(const QString &arg1)
+{
+    ui->oldPasswordEdit->setProperty("isError", false);
+    ui->oldPasswordEdit->style()->polish(ui->oldPasswordEdit);
+    ui->label_24->hide();
+}
+
+void Widget::on_newPasswordEdit_textChanged(const QString &arg1)
+{
+    ui->newPasswordEdit->setProperty("isError", false);
+    ui->newPasswordEdit->style()->polish(ui->newPasswordEdit);
+    ui->label_25->clear();
+}
+
+void Widget::on_confirmPasswordEdit_textChanged(const QString &arg1)
+{
+    ui->confirmPasswordEdit->setProperty("isError", false);
+    ui->confirmPasswordEdit->style()->polish(ui->confirmPasswordEdit);
+    ui->label_26->hide();
+}
+
+void Widget::on_logoutBtn_clicked()
+{
+    emit log_out();
+    this->hide();
+}
+
+QString Widget::checkNewPassword(QString inputpw)
+{
+    QString retString = "";
+    QRegExp charReg = QRegExp("[\\x0020-\\x002f\\x003a-\\x0040\\x005b-\\x0060\\x007b-\\x007e]+");
+    if (inputpw.length() > 30 || inputpw.length() < 8){
+        retString = "密码长度需要在8-30位之间";
+    }else if(inputpw.contains(QRegExp("[\\x4e00-\\x9fa5]+"))){
+        retString = "密码不能包含中文字符";
+    }else if(!inputpw.contains(charReg)){
+        retString = "密码必须包含一位特殊字符";
+    }else if(!inputpw.contains(QRegExp("[0-9]+"))){
+        retString = "密码必须包含一位数字";
+    }else if(!inputpw.contains(QRegExp("[a-zA-Z]+"))){
+        retString = "密码必须包含一个字母";
+    }
+
+    return retString;
+}
 
 void Widget::playVideo()
 {
@@ -648,8 +834,6 @@ QString Widget::getVideoDuration(QString absPath)
 }
 
 void Widget::createList(){
-    // 构建模型表头
-    m_model = new QStandardItemModel();
     QList<QString> headers;
     headers << "视频名" << "时长" << "大小" << "日期"<<"操作";
     for (int i = 0; i < headers.size(); i++)
@@ -698,11 +882,11 @@ void Widget::createList(){
 
 void Widget::refreshList(QString regName)
 {
-    if (m_model != NULL){
-        m_model->clear();
-        m_model = NULL;
+    int modelRowNum = m_model->rowCount();
+    if (modelRowNum > 0){
+        m_model->removeRows(0,modelRowNum);
     }
-    createList();
+
     // 添加内容
     QList<QFileInfo>* testList;
     testList = getVideos(ui->pathLabel->text(), regName);
@@ -736,6 +920,8 @@ void Widget::refreshList(QString regName)
         m_model->item(p,3)->setFont( QFont("Sans Serif", 10) );
         m_model->setItem(p, 4, new QStandardItem());
         ui->videoList->setIndexWidget(m_model->index(p,4), createOperationBtn(p));
+//        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        QCoreApplication::processEvents();
     }
 
 }
@@ -757,7 +943,7 @@ QLineEdit *Widget::createVideoNameEdit(QString fileName)
 void Widget::readConfig()
 {
     QString value = m_dbusInterface->GetAuditInfo();
-    QJsonDocument doc = QJsonDocument::fromJson(value.toLatin1());
+    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
     m_configure = doc.isObject() ? doc.object() : m_configure;
 }
 
@@ -893,9 +1079,32 @@ void Widget::realClose()
     this->close();
 }
 
-void Widget::show_widget_page()
+void Widget::show_widget_page(QJsonObject arg)
 {
-    KLOG_DEBUG() << "show widget!";
+    KLOG_DEBUG() << "[show widget arg]:" << arg["user"].toString() << arg["passwd"].toString();
+    m_currentUserInfo = arg;
+    QString currentUserName = m_currentUserInfo["user"].toString();
+    if (currentUserName == "audadm"){
+        initAudadmUi();
+        ui->userLevelEdit->setText("审计管理员");
+    }else if(currentUserName == "sysadm"){
+        initSysadmUi();
+        ui->userLevelEdit->setText("系统管理员");
+    }else if(currentUserName == "secadm"){
+        initSecadmUi();
+        ui->userLevelEdit->setText("安全管理员");
+    }
+
     this->show();
 }
 
+QString Widget::strTobase64(QString inputStr)
+{
+    QByteArray byteArr(inputStr.toStdString().data());
+    return byteArr.toBase64();
+}
+
+QString Widget::base64ToStr(QString inputStr)
+{
+    return QByteArray::fromBase64(QVariant(inputStr).toByteArray()).toStdString().data();
+}

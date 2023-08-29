@@ -14,4 +14,5 @@ install(FILES ${DATA_DIR}/com.kylinsec.Kiran.VauditConfigure.conf
 
 install(FILES ${DATA_DIR}/ks-vaudit-configure
               ${DATA_DIR}/ks-vaudit-configure
-        DESTINATION /etc/init.d/)
+        DESTINATION /etc/init.d/
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

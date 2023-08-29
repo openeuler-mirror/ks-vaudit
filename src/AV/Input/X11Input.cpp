@@ -201,7 +201,7 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
 }
 
 
-X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_full_screen, bool is_use_watermarking) {
+X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool record_cursor, bool follow_cursor, bool follow_full_screen, bool is_use_watermarking, bool is_only_audio) {
 
 	m_x = x;
 	m_y = y;
@@ -227,6 +227,17 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
    	m_x11_shm_server_attached = false;
  
 	m_is_use_watermarking = is_use_watermarking;
+	m_is_only_audio = is_only_audio;
+	if (m_is_only_audio)
+	{
+		int image_size = m_height * m_width * 4;
+		m_audio_image_data.resize(image_size, 0);
+		for (int i = 0; i < image_size; i++)
+		{
+			if ((i + 1) % 4 == 0)
+				m_audio_image_data[i] = 0xff;
+		}
+	}
 
 	m_screen_bbox = Rect(m_x, m_y, m_x + m_width, m_y + m_height);
 
@@ -614,6 +625,15 @@ void X11Input::InputThread() {
 			// swap image buffer
 			int old_img_idx = m_x11_img_idx;
 			m_x11_img_idx = m_x11_img_idx == 0 ? 1 : 0;
+
+			if (m_is_only_audio)
+			{
+				int image_stride = grab_width * 4;
+				PushVideoFrame(grab_width, grab_height, m_audio_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp);
+				++m_frame_counter;
+				last_timestamp = timestamp;
+				continue;
+			}
 
 			// get the image
 			if(m_x11_use_shm) {

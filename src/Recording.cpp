@@ -1124,6 +1124,10 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	}else if(op == "stop"){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSave(); //结束视频录制但不退出
+	}else if(op == "exit"){
+		Logger::LogInfo("[Recording::SwitchControl] exit signal");
+		OnRecordSave(); //结束视频录制但不退出
+		exit(0);
 	}
 
 	//后台审计不需要提示

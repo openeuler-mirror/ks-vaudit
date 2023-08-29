@@ -26,6 +26,10 @@ Login::Login(QWidget *parent) :
 Login::~Login()
 {
     delete ui;
+    if (m_dbusInterface){
+        delete m_dbusInterface;
+        m_dbusInterface = NULL;
+    }
 }
 
 QJsonObject Login::getCurrentUserInfo()

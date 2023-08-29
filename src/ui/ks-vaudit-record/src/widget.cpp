@@ -36,20 +36,33 @@ Widget::Widget(QWidget *parent) :
 //    setAttribute(Qt::WA_NoSystemBackground, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
 
-    m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
+    m_dbusInterface = new ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     m_activatePage = new ActivatePage();
     m_isActivated = m_activatePage->getActivation();
     init_ui();
     if (!m_isActivated){
         m_activatePage->exec();
     }
-
 }
 
 Widget::~Widget()
 {
     delete ui;
-
+    if(m_recordP){
+        sendSwitchControl(m_selfPID, m_recordPID, "exit");
+        m_recordP->close();
+        delete m_recordP;
+        m_recordP = NULL;
+    }
+    if (m_dbusInterface){
+        delete m_dbusInterface;
+        m_dbusInterface = NULL;
+    }
+    if (m_model){
+        m_model->clear();
+        delete m_model;
+        m_model = NULL;
+    }
 }
 
 
@@ -238,8 +251,6 @@ void Widget::on_pushButton_clicked()
             dirPath = dirPath.replace(0,1,QDir::homePath());
         }
         setConfig("FilePath", dirPath);
-        m_model->clear();
-        createList();
         refreshList(m_regName);
     }else{
         KLOG_DEBUG("Invalid path, abort!");
@@ -257,11 +268,11 @@ void Widget::onTableBtnClicked()
     ui->videoList->selectRow(l);
 
     // 获取视频
-    m_folderAction->setProperty("S_DIR", m_fileList->at(m).absolutePath());
-    m_playAction->setProperty("S_FILEPATH", m_fileList->at(m).filePath());
-    m_deleteAction->setProperty("S_FILEPATH", m_fileList->at(m).filePath());
-    m_renameAction->setProperty("S_OLDNAME", m_fileList->at(m).fileName());
-    m_renameAction->setProperty("S_OLDPATH", m_fileList->at(m).filePath());
+    m_folderAction->setProperty("S_DIR", m_fileList.at(m).absolutePath());
+    m_playAction->setProperty("S_FILEPATH", m_fileList.at(m).filePath());
+    m_deleteAction->setProperty("S_FILEPATH", m_fileList.at(m).filePath());
+    m_renameAction->setProperty("S_OLDNAME", m_fileList.at(m).fileName());
+    m_renameAction->setProperty("S_OLDPATH", m_fileList.at(m).filePath());
 
     m_rightMenu->popup(QCursor::pos());
 }
@@ -434,12 +445,6 @@ void Widget::on_waterprintText_returnPressed()
     }
 }
 
-void Widget::on_searchBar_editingFinished()
-{
-    m_regName = ui->searchBar->text();
-    refreshList(m_regName);
-}
-
 void Widget::on_searchBar_returnPressed()
 {
     m_regName = ui->searchBar->text();
@@ -560,11 +565,11 @@ void Widget::realRename()
 {
     QString oldName = m_renameDialog->getOldName();
     QString newName = m_renameDialog->getNewName();
-    for (int i = 0; i < m_fileList->size(); ++i){
-        KLOG_DEBUG() << m_fileList->at(i).fileName() << ":" << oldName;
-        if (m_fileList->at(i).fileName() == oldName){
-            QFile file(m_fileList->at(i).filePath());
-            bool ret = file.rename(QString("%1/%2").arg(m_fileList->at(i).absolutePath()).arg(newName));
+    for (int i = 0; i < m_fileList.size(); ++i){
+        KLOG_DEBUG() << m_fileList.at(i).fileName() << ":" << oldName;
+        if (m_fileList.at(i).fileName() == oldName){
+            QFile file(m_fileList.at(i).filePath());
+            bool ret = file.rename(QString("%1/%2").arg(m_fileList.at(i).absolutePath()).arg(newName));
             KLOG_DEBUG() << "rename file ok: " << ret;
             m_renameDialog->close();
             refreshList();
@@ -576,14 +581,14 @@ void Widget::realRename()
 void Widget::playVideo()
 {
     QString filePath = sender()->property("S_FILEPATH").toString();
-    QProcess *p = new QProcess(this);
-    p->setProcessChannelMode(QProcess::MergedChannels);
+    QProcess p;
+    p.setProcessChannelMode(QProcess::MergedChannels);
     QStringList commands;
 //    commands << "-slave";
 //    commands << "-quiet";
     commands << filePath;
     // 采用分离式启动(startDetached)mplayer/ffplay，因为和本录屏软件无关
-    p->startDetached("ffplay", commands);
+    p.startDetached("ffplay", commands);
 }
 
 void Widget::openDir()
@@ -631,28 +636,29 @@ QPushButton *Widget::createOperationBtn(int modelIndex, int listIndex)
     return aBtn;
 }
 
-QList<QFileInfo>* Widget::getVideos(QString path, QString regName = QString(""))
+QList<QFileInfo> Widget::getVideos(QString path, QString regName = QString(""))
 {
     if (path.startsWith("~")){
         path = path.replace(0,1,QDir::homePath());
     }
-    QDir *dir = new QDir(path);
+    QDir dir(path);
     QStringList filters;
     filters << "*.mp4" << "*.ogv";
-    dir->setNameFilters(filters);
+    dir.setNameFilters(filters);
     // 默认时间排序
-    dir->setSorting(QDir::Time);
-    dir->setFilter(QDir::Files | QDir::NoSymLinks);
-    QList<QFileInfo> *filesInfo = new QList<QFileInfo>(dir->entryInfoList());
-    QList<QFileInfo> *filesInfoRet = new QList<QFileInfo>();
-    for (int i = 0; i < filesInfo->size(); ++i){
+    dir.setSorting(QDir::Time);
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+    QList<QFileInfo> filesInfo(dir.entryInfoList());
+    QList<QFileInfo> filesInfoRet;
+    for (int i = 0; i < filesInfo.size(); ++i){
         if (regName.isEmpty()){
             break;
         }
-        if (filesInfo->at(i).fileName().contains(regName)){
-            filesInfoRet->append(filesInfo->at(i));
+        if (filesInfo.at(i).fileName().contains(regName)){
+            filesInfoRet.append(filesInfo.at(i));
         }
     }
+
     return regName.isEmpty() ? filesInfo : filesInfoRet;
 }
 
@@ -755,18 +761,16 @@ void Widget::refreshList(QString regName)
     }
 
     // 添加内容
-    QList<QFileInfo>* testList;
-    testList = getVideos(ui->pathLabel->text(), regName);
-    m_fileList = testList;
+    m_fileList = getVideos(ui->pathLabel->text(), regName);
 
-    for (int p,i = 0; p < testList->size(); ++p){
-        QString fileName = testList->at(p).fileName();
-        QString duration = getVideoDuration(testList->at(p).absoluteFilePath());
+    for (int p=0,i=0; p < m_fileList.size(); ++p){
+        QString fileName = m_fileList.at(p).fileName();
+        QString duration = getVideoDuration(m_fileList.at(p).absoluteFilePath());
         if (QString::compare(duration,"文件损坏") == 0){
             // 录制中的视频和其他原因打不开的视频不展示 #59083
             continue;
         }
-        qint64 sizeInt = testList->at(p).size();
+        qint64 sizeInt = m_fileList.at(p).size();
         QString fileSize = QString("%1").arg("0");
         if (sizeInt > 1073741824){
             fileSize = QString("%1GB").arg(((double)sizeInt / 1073741824),0,'f',1);
@@ -776,7 +780,7 @@ void Widget::refreshList(QString regName)
             fileSize = QString("%1KB").arg(((double)sizeInt / 1024),0,'f',1);
         }
 
-        QDateTime dateTime = testList->at(p).lastModified();
+        QDateTime dateTime = m_fileList.at(p).lastModified();
         QString modifyDate = dateTime.toString("yyyy/MM/dd hh:mm");
         QStandardItem *fileNameItem = new QStandardItem(fileName);
         fileNameItem->setToolTip(fileName);
@@ -792,8 +796,8 @@ void Widget::refreshList(QString regName)
         m_model->setItem(i, 4, new QStandardItem());
         ui->videoList->setIndexWidget(m_model->index(i,4), createOperationBtn(p,i));
 //        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        QCoreApplication::processEvents();
         i++;
+        QCoreApplication::processEvents();
     }
 
 }
@@ -902,7 +906,7 @@ int Widget::startRecrodProcess()
 {
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
-    pp->setStandardOutputFile("/var/log/ks-vaudit-record.out");
+    pp->setStandardOutputFile("/tmp/ks-vaudit-record.out");
 //    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
     QStringList arg;
     arg << "--record";
@@ -930,8 +934,8 @@ QLabel *Widget::createVideoDurationLabel(QString duration)
 
 void Widget::realClose()
 {
-    // 目前采用kill，不知道后端是否处理了kill或者exit信号
-    m_recordP->kill();
+    // 给后端发送exit信号
+    sendSwitchControl(m_selfPID, m_recordPID, "exit");
     this->close();
 }
 

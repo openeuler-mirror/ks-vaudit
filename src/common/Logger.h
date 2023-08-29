@@ -62,4 +62,87 @@ private:
 
 };
 
+#define NVENC_ENCODE_DEBUG
+#ifdef NVENC_ENCODE_DEBUG
+
+// test function for save local bmp
+inline void WriteBmp(const uint8_t *image, int imageWidth, int imageHeight)
+{
+	static int count = 0;
+	char fname_bmp[128] = {0};
+	snprintf(fname_bmp, sizeof(fname_bmp), "/tmp/ramfs/vaudit-%d.bmp", count);
+
+	unsigned char header[54] = {
+		0x42, 0x4d, 0, 0, 0, 0, 0, 0, 0, 0,
+		54, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 32, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0
+	};
+
+	long file_size = (long)imageWidth * (long)imageHeight * 4 + 54;
+	header[2] = (unsigned char)(file_size &0x000000ff);
+	header[3] = (file_size >> 8) & 0x000000ff;
+	header[4] = (file_size >> 16) & 0x000000ff;
+	header[5] = (file_size >> 24) & 0x000000ff;
+
+	long width = imageWidth;
+	header[18] = width & 0x000000ff;
+	header[19] = (width >> 8) &0x000000ff;
+	header[20] = (width >> 16) &0x000000ff;
+	header[21] = (width >> 24) &0x000000ff;
+
+	long height = imageHeight;
+	header[22] = height &0x000000ff;
+	header[23] = (height >> 8) &0x000000ff;
+	header[24] = (height >> 16) &0x000000ff;
+	header[25] = (height >> 24) &0x000000ff;
+
+	FILE *fp;
+	if (!(fp = fopen(fname_bmp, "wb"))) {
+		Logger::LogError("WriteBmp fopen failed, path: " + QString(fname_bmp));
+		return;
+	}
+
+	fwrite(header, sizeof(unsigned char), 54, fp);
+	fwrite(image, sizeof(unsigned char), (size_t)(long)imageWidth * imageHeight * 4, fp);
+
+	fflush(fp);
+	fclose(fp);
+	count ++;
+}
+
+inline void WriteRGB(const uint8_t * data, int width, int height) {
+	static FILE * fp = NULL;
+	const char * path= "/tmp/ramfs/vaudit.bgra";
+
+	if (fp == NULL) {
+		fp = fopen(path, "w");
+		if (fp == NULL) {
+			Logger::LogError("open debug file failed, path: " + QString(path));
+			return;
+		}
+	}
+
+	fwrite(data, width * height * 4, 1, fp);
+	fflush(fp);
+}
+
+inline void WriteNv12(uint8_t * data, size_t size) {
+	static FILE * fp = NULL;
+	const char * path = "/tmp/ramfs/vaudit.nv12";
+
+	if (fp == NULL) {
+		fp = fopen(path, "w");
+		if (fp == NULL) {
+			Logger::LogError("open debug file failed, path: " + QString(path));
+			return;
+		}
+	}
+
+	fwrite(data, size, 1, fp);
+	fflush(fp);
+}
+
+#endif
+
 Q_DECLARE_METATYPE(Logger::enum_type)

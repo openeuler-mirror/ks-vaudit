@@ -89,7 +89,7 @@ bool GeneralConfigure::setRecordConfigure(const QString &param)
         QString key = fullKey(m_itemMap[CONFIG_RECORD], k);
         m_lastMap[key] = jsonObj[k].toString();
 
-        KLOG_INFO() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
+        KLOG_DEBUG() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
     }
 
     m_confSettings->endGroup();
@@ -117,7 +117,7 @@ bool GeneralConfigure::setAuditConfigure(const QString &param)
         m_confSettings->setValue(k, jsonObj[k].toString());
         QString key = fullKey(m_itemMap[CONFIG_AUDIT], k);
         m_lastMap[key] = jsonObj[k].toString();
-        KLOG_INFO() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
+        KLOG_DEBUG() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
     }
 
     m_confSettings->endGroup();
@@ -177,7 +177,7 @@ void GeneralConfigure::initData()
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_BITRATE], "128");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT], "0");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_WATER_PRINT_TEXT], "kylinsec");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_TIMING_REMINDER], "0");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_TIMING_REMINDER], "30");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIC_VOLUME], "70");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_SPEAKER_VOLUME], "70");
 
@@ -433,9 +433,9 @@ void GeneralConfigure::onDirectoryChanged(QString)
             if (ret)
             {
                 if (key[0] == m_itemMap[CONFIG_RECORD])
-                    recordObj[k] = dataMap[k];
+                    recordObj[key[1]] = dataMap[k];
                 else
-                    auditObj[k] = dataMap[k];
+                    auditObj[key[1]] = dataMap[k];
                 m_lastMap[k] = dataMap[k];
             }
             else

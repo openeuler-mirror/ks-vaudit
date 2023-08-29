@@ -611,20 +611,8 @@ EncodeType OutputManager::ChooseEncodeType(QString container_name) {
 	}
 
 	if (QString::compare(container_name, "ogg", Qt::CaseInsensitive) == 0) {
-		// first check qsv
-		/*
-		ret = CheckEncodeType(container_name, "vp8_qsv");
-		if (ret >= 0) {
-			return EncodeTypeQsv;
-		}
-		*/
 
-		// check vaapi
-		ret = CheckEncodeType(container_name, "vp8_vaapi");
-		if (ret >= 0) {
-			return EncodeTypeVaapi;
-		}
-		
+		// ogg doesnot support hw acce
 		return EncodeTypeCpu;
 	}
 
@@ -653,7 +641,6 @@ void OutputManager::StartFragment() {
 	AudioEncoder *audio_encoder = NULL;
 
 	// check which encode type should be used, 
-	// to do, need more work
 	EncodeType enc_type = ChooseEncodeType(m_output_settings.container_avname);
 	QString enc_name;
 	int ret = 0;
@@ -668,20 +655,17 @@ void OutputManager::StartFragment() {
 		}
 	} else if(QString::compare(m_output_settings.container_avname, "ogg", Qt::CaseInsensitive) == 0) {
 		if (enc_type == EncodeTypeVaapi) {
-			enc_name = "vp8_vaapi";
+			// impossible
 		} else if (enc_type == EncodeTypeQsv) {
-			enc_name = "vp8_qsv";	
-			// Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: vp8_qsv in invalid"));
-			// return;
+			// impossible
 		} else {
-			enc_name = "libvpx";
+			enc_name = "libtheora";
+			m_output_settings.audio_codec_avname = QString("libvorbis");
 		}
 	} else {
 		Logger::LogError("[OutputManager::StartFragment] " + Logger::tr("Error: container avname only support mp4 or ogg, avname:%1").arg(m_output_settings.container_avname));
 		return;
 	}
-
-	Logger::LogInfo("[OutputManager::StartFragment] check and try to use enc type: " + enc_name);
 
 	// reset encode options according to encode type
 	// preset of libx264 and h264_vaapi: ultrafast superfast veryfast faster fast medium slow slower veryslow placebo
@@ -712,9 +696,12 @@ void OutputManager::StartFragment() {
 
 		vaapi_kbit_rate = vaapi_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
 		m_output_settings.video_kbit_rate = vaapi_kbit_rate;
-		
-		Logger::LogInfo("[OutputManager::StartFragment] m_output_settings.video_kbit_rate: " + QString::number(m_output_settings.video_kbit_rate));
 
+	} else if (enc_name == "libtheora") {
+		ret = unsetenv("LIBVA_DRIVER_NAME");
+
+		// 音频采样率为8k时，比特率不能为128，否则会初始化失败
+		m_output_settings.audio_kbit_rate = 32;
 	} else {
 		ret = unsetenv("LIBVA_DRIVER_NAME");
 
@@ -732,13 +719,27 @@ void OutputManager::StartFragment() {
 		Logger::LogError("setenv/unsetenv LIBVA_DRIVER_NAME failed");
 		return ;
 	}
-	
+
+	m_output_settings.video_codec_avname = enc_name;
+
+	Logger::LogInfo("[OutputManager::StartFragment]  video codec name:" + m_output_settings.video_codec_avname);
 	for(unsigned int i = 0; i < m_output_settings.video_options.size(); ++i) {
-                const QString &key = m_output_settings.video_options[i].first, &value = m_output_settings.video_options[i].second;
+		const QString &key = m_output_settings.video_options[i].first, &value = m_output_settings.video_options[i].second;
 		Logger::LogInfo("[OutputManager::StartFragment] video_options key: " + key + " val: " + value);
 	}
+	Logger::LogInfo("[OutputManager::StartFragment]  video kbit:" + QString::number(m_output_settings.video_kbit_rate));
+	Logger::LogInfo("[OutputManager::StartFragment]  video framerate:" + QString::number(m_output_settings.video_frame_rate));
 
-	video_encoder = muxer->AddVideoEncoder(enc_name, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
+	Logger::LogInfo("[OutputManager::StartFragment]  audio codec name:" + m_output_settings.audio_codec_avname);
+	for(unsigned int i = 0; i < m_output_settings.audio_options.size(); ++i) {
+		const QString &key = m_output_settings.audio_options[i].first, &value = m_output_settings.audio_options[i].second;
+		Logger::LogInfo("[OutputManager::StartFragment]  audio_options key: " + key + " val: " + value);
+	}
+	Logger::LogInfo("[OutputManager::StartFragment]  audio kbit:" + QString::number(m_output_settings.audio_kbit_rate));
+	Logger::LogInfo("[OutputManager::StartFragment]  audio channels:" + QString::number(m_output_settings.audio_channels));
+	Logger::LogInfo("[OutputManager::StartFragment]  audio samplerate:" + QString::number(m_output_settings.audio_sample_rate));
+
+	video_encoder = muxer->AddVideoEncoder(m_output_settings.video_codec_avname, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
 						   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
 
 	if(!m_output_settings.audio_codec_avname.isEmpty())

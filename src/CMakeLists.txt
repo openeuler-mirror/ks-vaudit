@@ -31,6 +31,10 @@ else()
 	find_package(Qt4 4.8 COMPONENTS QtGui REQUIRED)
 endif()
 
+IF(HIGH_VERSION)
+    ADD_DEFINITIONS(-DHIGH_VERSION)
+ENDIF(HIGH_VERSION)
+
 set(sources
 	AV/Input/ALSAInput.cpp
 	AV/Input/ALSAInput.h
@@ -105,7 +109,6 @@ set(sources
 	common/Config.h
 	common/Config.cpp
 	KyNotify.cpp
-	KyNotifyInterface.cpp
 	Recording.cpp
 	Recording.h
 	Benchmark.cpp

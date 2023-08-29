@@ -15,7 +15,7 @@
             <summary>Options and their values.</summary>
             <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingReminder, WaterPrint, WaterPrintText, MicVolume and SpeakerVolume can be set.
             Spelling needs to be consistent with those listed above, case sensitive.
-            One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps"="10"}</description>
+            One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps":"10"}</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>
@@ -37,7 +37,7 @@
             <summary>Options and their values.</summary>
             <description>The FilePath, FileType, RecordVideo, Fps, Quality, RecordAudio, Bitrate, TimingPause, WaterPrint and WaterPrintText,
             MinFreeSpace, MaxSaveDays, MaxFileSize and MaxRecordPerUser can be set. Spelling needs to be consistent with those listed above, case sensitive.
-            One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps"="10"}</description>
+            One or more can be specified, use json form, E.g {"FilePath":"ogv", "Fps":"10"}</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>
@@ -52,7 +52,7 @@
           <arg name="user_info" direction="in" type="s">
               <summary>The database passwd and user name</summary>
               <description>Database password must be entered, username is optional. The spelling of the options should be the same as in the example, case sensitive.
-              Parameters use json form, E.g {"db_passwd":"password", user="test"}.</description>
+              Parameters use json form, E.g {"db_passwd":"password", "user":"test"}.</description>
           </arg>
           <summary>Get the user configure info.</summary>
           <description>The specified user only returns the information of the current user, not all user information. return as json.</description>
@@ -62,7 +62,7 @@
           <arg name="user_info" direction="in" type="s">
             <summary>The user infomation</summary>
             <description>User, role and passwd all need to be set, The spelling of the options should be the same as in the example, case sensitive.
-            Parameters use json form, E.g {"user":"test", role="sysadm", "passwd"="123"}.</description>
+            Parameters use json form, E.g {"user":"test", "role:"sysadm", "passwd":"123"}.</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>
@@ -74,7 +74,7 @@
           <arg name="user_info" direction="in" type="s">
             <summary>User name and passwd.</summary>
             <description>Both user and passwd need to be set. The spelling of the options should be the same as in the example, case sensitive.
-            Parameters use json form, E.g {"user":"test", "passwd"="123"}.</description>
+            Parameters use json form, E.g {"user":"test", "passwd":"123"}.</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>
@@ -87,7 +87,7 @@
             <summary>The user infomation.</summary>
             <description>User and old password must be entered, role and new password optional.
             The spelling of the options should be the same as in the example, case sensitive.
-            Parameters use json form, E.g {"user":"test", "old_passwd"="123", role="sysadm", "passwd"="1234"}.</description>
+            Parameters use json form, E.g {"user":"test", "old_passwd":"123", "role":"sysadm", "passwd":"1234"}.</description>
           </arg>
           <arg name="result" direction="out" type="b">
             <summary>Return success or failure.</summary>

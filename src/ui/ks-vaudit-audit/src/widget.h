@@ -14,6 +14,7 @@
 #include <QProcess>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QStringList>
 #include "configure_interface.h"
 #include "activate-page.h"
 
@@ -39,7 +40,7 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
-    QPushButton* createOperationBtn(int);
+    QPushButton* createOperationBtn(int modelIndex, int listIndex);
     QList<QFileInfo>* getVideos(QString path, QString regName);
     QString getVideoDuration(QString absPath);
     void refreshList(QString regName = QString(""));
@@ -63,10 +64,6 @@ private slots:
     void onTableBtnClicked();
     void on_ConfigBtn_clicked();
     void on_minimize_clicked();
-    void on_fpsEdit_textChanged(const QString &arg1);
-    void on_pushButton_2_clicked();
-    void on_pushButton_3_clicked();
-    void on_fpsEdit_returnPressed();
     void on_searchBar_returnPressed();
     void playVideo();
     void openDir();
@@ -90,6 +87,7 @@ private slots:
     void on_confirmPasswordEdit_textChanged(const QString &arg1);
     void on_newPasswordEdit_textChanged(const QString &arg1);
     void on_aboutInfoBtn_clicked();
+    void on_fpsBox_currentIndexChanged(int index);
 
 signals:
     void log_out();
@@ -102,6 +100,7 @@ private:
     QIntValidator *m_intValidator;
     QStandardItemModel *m_model = NULL;
     QMenu *m_rightMenu = NULL;
+    QStringList m_fpsList;
 
     QAction *m_playAction = NULL;
     QAction *m_folderAction = NULL;

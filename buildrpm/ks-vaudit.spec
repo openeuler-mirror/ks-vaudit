@@ -91,7 +91,7 @@ cp ${qtpath} %{buildroot}/usr/local/ -rf
 cd ./build-release
 %make_install
 mkdir -p %{buildroot}/usr/bin/
-install ./src/ui/ks-vaudit-record/src/ks-vaudit-record %{buildroot}/usr/bin/
+#install ./src/ui/ks-vaudit-record/src/ks-vaudit-record %{buildroot}/usr/bin/
 sudo chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 
 %files

@@ -529,7 +529,7 @@ void Widget::on_typeBox_currentIndexChanged(int index)
     QString setValue = QString("MP4");
     if (index == 0){
         setValue = QString("MP4");
-    }else if (index = 1){
+    }else if (index == 1){
         setValue = QString("OGV");
     }
     setConfig(QString("FileType"), setValue);
@@ -670,6 +670,10 @@ QString Widget::getVideoDuration(QString absPath)
     int ret1 = avformat_find_stream_info(pCtx,NULL);
     if(ret1 < 0){
         KLOG_DEBUG() << "avformat_find_stream_info() failed:" << ret1;
+        if (pCtx != NULL){
+            avformat_close_input(&pCtx);
+            pCtx=NULL;
+        }
         return QString("文件损坏");
     }
 

@@ -143,7 +143,8 @@ private:
 	unsigned int m_audio_channels, m_audio_sample_rate;
 	enum_audio_backend m_audio_backend;
 
-	QString m_pulseaudio_source;
+	QString m_pulseaudio_source_input;
+	QString m_pulseaudio_source_output;
 
 	OutputSettings m_output_settings;
 	std::unique_ptr<OutputManager> m_output_manager;
@@ -155,6 +156,7 @@ private:
 
 	std::unique_ptr<X11Input> m_x11_input;
 	std::unique_ptr<PulseAudioInput> m_pulseaudio_input;
+	std::unique_ptr<PulseAudioInput> m_pulseaudio_output;
 	QSettings* settings;
 	ConfigureInterface* m_configure_interface;
 
@@ -181,7 +183,7 @@ public:
 	void OnRecordSave(bool confirm = true); //结束录制并刷新mp4容器
 	void OnRecordSaveAndExit(bool confirm);  //保存并退出
 	void OnRecordRestart(); //屏幕分辨率出现变化， 更新分辨率参数后重新开始录频
-	QString GetPulseAudioSourceName() {	return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
+	QString GetPulseAudioSourceName() {     return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
 	std::vector<QRect> GetScreenGeometries();
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);

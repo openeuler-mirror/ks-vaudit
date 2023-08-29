@@ -57,6 +57,7 @@ private:
         CONFIG_RECORD_TIMING_REMINDER,      // 定时提示，整数 0、5、10、30，默认30
         CONFIG_RECORD_MIC_VOLUME,           // 麦克风音量，整数 0 - 100，默认50
         CONFIG_RECORD_SPEAKER_VOLUME,       // 扬声器音量，整数 0 - 100，默认50
+        CONFIG_RECORD_MIN_FREE_SPACE,       // 最小剩余磁盘，少于就通知并停止录屏，默认1G，单位：Byte
 
         CONFIG_AUDIT,                       //审计
         CONFIG_AUDIT_FILEPATH,              // 文件保存路径，默认/opt

@@ -49,8 +49,10 @@ static void sig_handler(int sig){
 }
 
 int main(int argc, char* argv[]) {
+	//#59171 提权
+	setuid(0);
 
-	int klog_ret = klog_qt5_init("", "kylinsec-session", "ks-vaudit", "ks-vaudit");
+	int klog_ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit");
 	if (0 == klog_ret)
 		KLOG_DEBUG() << "init klog succeed";
 	signal(SIGINT, sig_handler);

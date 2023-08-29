@@ -12,8 +12,6 @@
 
 //dbus-send --system  --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Manager org.gnome.DisplayManager.Manager.GetDisplays
 //dbus-send --system --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Display2 org.gnome.DisplayManager.Display.GetX11DisplayName
-//get current display
-//KLOG_DEBUG() << "display:" << getenv("DISPLAY");
 //张三_192.168.1.1_20220621_153620.mp4
 
 #define TIMEOUT_MS 5000
@@ -27,6 +25,7 @@ Monitor::Monitor(QObject *parent)
     m_vauditBin = "/usr/bin/ks-vaudit";
     m_pTimer = new QTimer();
     connect(m_pTimer, SIGNAL(timeout()), this, SLOT(monitorProcess()));
+    connect(&MonitorDisk::instance(), SIGNAL(SignalNotification(int, QString)), this, SLOT(receiveNotification(int, QString)));
     monitorProcess();
 }
 
@@ -60,9 +59,30 @@ void Monitor::monitorProcess()
     {
         DealSession();
         MonitorDisk::instance().fileDiskLimitProcess();
+        MonitorDisk::instance().fileSizeProcess(m_videoFileName);
     }
 
     m_pTimer->start(2000);
+}
+
+void Monitor::receiveNotification(int pid, QString message)
+{
+    KLOG_DEBUG() << pid << message << "m_sessionInfos size:" << m_sessionInfos.size() << "m_videoFileName size:" <<  m_videoFileName.size();
+
+    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
+    {
+        auto &process = it.value().process;
+        if (process && process->pid() == pid)
+        {
+            QFileInfo fileinfo(message);
+            const QString &suffix = fileinfo.suffix();
+            if (suffix == "mp4" || suffix == "ogv" || suffix == "MP4" || suffix == "OGV")
+                m_videoFileName.insert(pid, message);
+
+            return;
+        }
+    }
+
 }
 
 QMap<QString, QString> Monitor::getXorgLoginName()
@@ -130,7 +150,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
         QString str(data.toStdString().data());
         QStringList strlist = str.split("\n");
         strlist.removeAll("");
-        KLOG_DEBUG() << "Xorg info:" << strlist << strlist.size();
+        //KLOG_DEBUG() << "Xorg info:" << strlist << strlist.size();
         for (QString v : strlist)
         {
             QStringList arr = v.split(" ");
@@ -252,6 +272,10 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
             auto &process = value.process;
             if (process)
             {
+                auto fileit = m_videoFileName.find(process->pid());
+                if (fileit != m_videoFileName.end())
+                    m_videoFileName.erase(fileit);
+
                 process->execute("taskkill", QStringList() << "-PID" << QString("%1").arg(process->processId()) << "-F" <<"-T");
                 process->close();
                 delete process;
@@ -260,7 +284,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
             m_sessionInfos.erase(it);
             if (QProcess::ExitStatus::CrashExit == exitStatus)
             {
-                value.process = startRecordWithDisplay(tmp);
+                tmp.process = startRecordWithDisplay(tmp);
                 m_sessionInfos.insert(tmp.userName, tmp);
             }
         }
@@ -275,7 +299,6 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
 void Monitor::DealSession()
 {
     int maxRecordPerUser = MonitorDisk::instance().getMaxRecordPerUser();
-    KLOG_DEBUG() << "maxRecordPerUser" << maxRecordPerUser;
     QVector<sessionInfo> infos = getXorgInfo();
     QVector<sessionInfo> xvncInfos = getXvncInfo();
     infos.append(xvncInfos);
@@ -305,11 +328,12 @@ void Monitor::DealSession()
                 delete process;
                 process = nullptr;
             }
+            KLOG_DEBUG() << "not contain and erase:" << it.key() << info.displayName;
             m_sessionInfos.erase(it++);
             continue;
         }
 
-         ++it;
+        ++it;
     }
 
     for (sessionInfo info : infos)

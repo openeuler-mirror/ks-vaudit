@@ -193,8 +193,17 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
     cairo_set_font_size(cr, 36);
     double xmove = grab_width - 790;
     cairo_move_to(cr, xmove, grab_height - 80);
-	//cairo_show_text(cr, "湖南麒麟信安科技股份有限公司!");
-	cairo_show_text(cr, watermark_content.toStdString().c_str());
+
+	if(!CommandLineOptions::GetFrontRecord()){ //后台录屏添加时间+用户名水印
+		QDateTime current_date_time = QDateTime::currentDateTime();
+		QString cdt = current_date_time.toString("yyyy-MM-dd hh:mm:ss ddd"); //录制时间
+		QString name = qgetenv("USER"); //当前系统用户名
+		QString watermark_content_all = watermark_content + cdt + name;		
+		cairo_show_text(cr, watermark_content_all.toStdString().c_str());
+	}else{
+		cairo_show_text(cr, watermark_content.toStdString().c_str());
+	}
+	
 	cairo_surface_flush(surface);
 	uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
 
@@ -711,6 +720,7 @@ void X11Input::InputThread() {
 				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 0);
 			} else if (m_is_use_watermarking) {
 				watermark_content = settings_ptr ->value("record/water_print_text").toString();
+
 				// 开启水印
 				uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
 				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);

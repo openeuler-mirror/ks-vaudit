@@ -738,7 +738,7 @@ void Recording::StartInput() {
 			Logger::LogInfo("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx开启视频录制XXXXXXXXXXXXXXXXXXXXXXXXXX");
 			// start the video input
 			if(m_video_area == VIDEO_AREA_SCREEN || m_video_area == VIDEO_AREA_FIXED || m_video_area == VIDEO_AREA_CURSOR) {
-				m_x11_input.reset(new X11Input(m_video_x, m_video_y, m_video_in_width, m_video_in_height, false,
+				m_x11_input.reset(new X11Input(m_video_x, m_video_y, m_video_in_width, m_video_in_height, true,
 							m_video_area == VIDEO_AREA_CURSOR, m_video_area_follow_fullscreen));
 
 				//connect(m_x11_input.get(), SIGNAL(CurrentRectangleChanged()), this, SLOT(OnUpdateRecordingFrame()), Qt::QueuedConnection);

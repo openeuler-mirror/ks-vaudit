@@ -13,6 +13,7 @@ struct sessionInfo{
     QString displayName;
     QString authFile;
     QProcess *process;
+    bool bNotify;
 
     friend bool operator==(const sessionInfo &ob1, const sessionInfo &ob2)
     {
@@ -40,7 +41,11 @@ private:
     QVector<sessionInfo> getXorgInfo();
     QVector<sessionInfo> getXvncInfo();
     QProcess* startRecordWithDisplay(sessionInfo info);
-    void DealSession();
+    void DealSession(bool isDiskOk);
+    bool isLicenseActive();
+    void clearSessionInfos();
+    void clearProcess(QProcess *process);
+    void removeSession(sessionInfo *pInfo = nullptr, QProcess::ExitStatus = QProcess::ExitStatus::NormalExit);
 
 private slots:
     void monitorProcess();
@@ -50,6 +55,8 @@ signals:
     void exitProgram();
 
 private:
+    bool m_isActive;
+    int m_lastMaxRecordPerUser;
     QString m_filePath;
     QString m_vauditBin;
     QTimer *m_pTimer;

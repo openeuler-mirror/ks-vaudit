@@ -38,7 +38,7 @@ bool DBusUtils::creatObjectName()
     return false;
 }
 
-static QString GetLicense()
+QString DBusUtils::GetLicense()
 {
     QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(LICENSE_MANAGER_DBUS_NAME,
                                                                 QString(LICENSE_OBJECT_OBJECT_PATH) + "/" + LICENSE_OBJECT_RECORD_NAME,
@@ -65,7 +65,7 @@ static QString GetLicense()
     return "";
 }
 
-static bool ActivateByActivationCode(QString activation_Code, QString &errorMsg)
+bool DBusUtils::ActivateByActivationCode(QString activation_Code, QString &errorMsg)
 {
     QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(LICENSE_MANAGER_DBUS_NAME,
                                                                 QString(LICENSE_OBJECT_OBJECT_PATH) + "/" + LICENSE_OBJECT_RECORD_NAME,

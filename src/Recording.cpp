@@ -27,7 +27,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Synchronizer.h"
 #include "X11Input.h"
 #include "SimpleSynth.h"
-#include "KyNotifyInterface.h"
+#include "KyNotify.h"
 #include "kiran-log/qt5-log-i.h"
 
 ENUMSTRINGS(Recording::enum_video_area) = {
@@ -214,6 +214,7 @@ void Recording::OnRecordTimer() {
 
 	QString msg = QString("totaltime ") + ReadableTime(total_time);
 	m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, msg);
+	KyNotify::instance().setRecordTime(total_time);
 	// Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
 }
 
@@ -579,7 +580,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	m_output_settings.encode_quality = jsonObj["Quality"].toString();
 
 	key = "TimingReminder";
-	KyNotifyInterface::instance().setTiming( jsonObj[key].toString().toInt());
+	KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
 }
 
 void Recording::StopPage(bool save) {
@@ -973,7 +974,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				settings->setValue("encode/quality", jsonObj[key].toString());
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
 			} else if (key == "TimingReminder") {
-				KyNotifyInterface::instance().setTiming( jsonObj[key].toString().toInt());
+				KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
 			}else if(key == "is_use_watermark"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
 			}
@@ -1032,18 +1033,16 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	if(op == "start"){
 		Logger::LogInfo("[Recording::SwitchControl] start record");
 		OnRecordStart();
-		KyNotifyInterface::instance().sendNotify(KSVAUDIT_START);
 	}else if(op == "pause"){
 		Logger::LogInfo("[Recording::SwitchControl] pause record");
 		OnRecordPause();
-		KyNotifyInterface::instance().sendNotify(KSVAUDIT_PAUSE);
 	}else if(op == "restart"){
 		Logger::LogInfo("[Recording::SwitchControl] restart record");
-		KyNotifyInterface::instance().sendNotify(KSVAUDIT_START);
 		OnRecordStartPause();
 	}else if(op == "stop"){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSave(); //结束视频录制但不退出
-		KyNotifyInterface::instance().sendNotify(KSVAUDIT_STOP);
 	}
+
+	KyNotify::instance().sendNotify(op);
 }

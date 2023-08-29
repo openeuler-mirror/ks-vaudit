@@ -93,12 +93,12 @@ bool VauditConfigureDbus::ModifyUserInfo(const QString info)
 
 void VauditConfigureDbus::SwitchControl(int from_pid, int to_pid, const QString &operate)
 {
-    KLOG_INFO() << from_pid << to_pid << operate;
+    KLOG_DEBUG() << from_pid << to_pid << operate;
     this->SignalSwitchControl(from_pid, to_pid, operate);
 }
 
 void VauditConfigureDbus::externalConfigureChanged(QString which, QString changed_config)
 {
-    KLOG_INFO() << which << changed_config;
+    KLOG_DEBUG() << which << changed_config;
     this->ConfigureChanged(which, changed_config);
 }

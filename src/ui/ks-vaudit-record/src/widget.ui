@@ -491,7 +491,7 @@ QCheckBox#waterprintCheck::indicator:unchecked{
        <string/>
       </property>
       <property name="placeholderText">
-       <string>请输入文字</string>
+       <string>请输入0～20以内文字</string>
       </property>
      </widget>
     </widget>
@@ -1272,9 +1272,9 @@ border-radius:4px;
     </widget>
     <zorder>SideBar</zorder>
     <zorder>ListBody</zorder>
-    <zorder>NormalBody</zorder>
     <zorder>NormalFooterBar</zorder>
     <zorder>ConfigBody</zorder>
+    <zorder>NormalBody</zorder>
    </widget>
   </widget>
  </widget>

@@ -24,6 +24,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "SourceSink.h"
 #include "MutexDataPair.h"
 #include <cairo/cairo.h>
+#include "CommandLineOptions.h"
 
 class X11Input : public QObject, public VideoSource {
 	Q_OBJECT

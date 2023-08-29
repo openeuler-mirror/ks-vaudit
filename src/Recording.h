@@ -157,7 +157,7 @@ private:
 	std::unique_ptr<X11Input> m_x11_input;
 	std::unique_ptr<PulseAudioInput> m_pulseaudio_input;
 	std::unique_ptr<PulseAudioInput> m_pulseaudio_output;
-	QSettings* settings;
+	QSettings* m_settings;
 	ConfigureInterface* m_configure_interface;
 
 	QScreen* m_main_screen; //监测分辨率
@@ -189,6 +189,7 @@ public:
 	void SaveSettings(QSettings* settings);
 	bool IsOutputStarted(){return m_output_started ;}
 	void AuditParamDeal();
+	void SetFileTypeSetting();
 
 private:
 	void FinishOutput();

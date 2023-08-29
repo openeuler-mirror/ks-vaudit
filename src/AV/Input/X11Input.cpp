@@ -643,7 +643,7 @@ void X11Input::InputThread() {
 			if (m_is_only_audio)
 			{
 				int image_stride = grab_width * 4;
-				PushVideoFrame(grab_width, grab_height, m_audio_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp);
+				PushVideoFrame(grab_width, grab_height, m_audio_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
 				++m_frame_counter;
 				last_timestamp = timestamp;
 				continue;
@@ -707,15 +707,15 @@ void X11Input::InputThread() {
 
 			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
 			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
-				PushVideoFrame(grab_width, grab_height, NULL, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 0);
 			} else if (m_is_use_watermarking) {
 				watermark_content = settings_ptr ->value("record/water_print_text").toString();
 				// 开启水印
 				uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
-				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
 				
 			} else {
-				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp);
+				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
 			}
     
 			last_timestamp = timestamp;

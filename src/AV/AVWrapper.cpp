@@ -56,7 +56,7 @@ public:
 AVFrameWrapper::AVFrameWrapper(const std::shared_ptr<AVFrameData>& refcounted_data) {
 	m_refcounted_data = refcounted_data;
 	m_encoded = 0;
-	m_vpacket = NULL;
+	m_frame_size = 0;
 #if SSR_USE_AV_FRAME_ALLOC
 	m_frame = av_frame_alloc();
 #else

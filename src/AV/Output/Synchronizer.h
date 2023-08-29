@@ -100,13 +100,15 @@ private:
 		std::shared_ptr<AVFrameData> m_last_video_frame_data;
 		// check if last read frame is encoded by nvenc
 		int m_last_video_frame_encoded;
-		std::shared_ptr<std::vector<std::vector<uint8_t> > > m_last_video_frame_vpacket;;
+		// std::shared_ptr<std::vector<std::vector<uint8_t> > > m_last_video_frame_vpacket;;
+		size_t m_last_video_frame_size;
 
 		// to check if image changed
 		std::shared_ptr<AVFrameData> m_last_video_read_data;
 		// check if last read frame is encoded by nvenc
 		int m_last_video_read_encoded;
 		std::shared_ptr<std::vector<std::vector<uint8_t> > > m_last_video_read_vpacket;;
+		size_t m_last_video_read_size;
 
 		std::vector<ChannelData> m_channel_data;
 		int m_has_voice;
@@ -174,7 +176,7 @@ public:
 
 public: // internal
 	virtual int64_t GetNextVideoTimestamp() override;
-	virtual void ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp) override;
+	virtual void ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp, int changed) override;
 	virtual void ReadVideoPing(int64_t timestamp) override;
 	virtual void ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) override;
 	virtual void ReadAudioHole() override;

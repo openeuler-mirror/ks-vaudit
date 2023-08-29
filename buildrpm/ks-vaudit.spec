@@ -34,6 +34,8 @@ BuildRequires: libnotify-devel
 BuildRequires: kylin-license-devel
 BuildRequires: mesa-libGL-devel
 BuildRequires: nv-codec-headers
+BuildRequires: qrencode-devel
+BuildRequires: freeglut-devel
 
 Requires:      libX11
 Requires:      ffmpeg >= 4.3.4
@@ -45,6 +47,8 @@ Requires:      unixODBC
 Requires:      mesa-libGL
 Requires:      kylin-license-client
 Requires:      kylin-license-core
+Requires:      qrencode
+Requires:      freeglut
 
 %define debug_package %{nil}
 %define __spec_install_post\

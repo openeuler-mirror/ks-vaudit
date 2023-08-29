@@ -104,7 +104,7 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 		if(add_timestamp) {
 			if(!newfile.isEmpty())
 				newfile += "-";
-			newfile += now.toString("yyyy-MM-dd_hh.mm.ss");
+                        newfile += now.toString("yyyyMMdd_hhmmss");
 		}
 		if(counter != 1) {
 			if(!newfile.isEmpty())
@@ -579,7 +579,8 @@ void Recording::SaveSettings(QSettings* settings) {
 		Logger::LogError("the video codec error \n");
 		qApp->quit();
 	}
-	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
+//	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
+    settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/video_allow_frame_skipping", true);
@@ -1016,10 +1017,9 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
 			} else if (key == "TimingReminder") {
 				KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
-			}else if(key == "is_use_watermark"){
+                        }else if(key == "WaterPrint"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}
-			else if(key == "WaterPrintText"){
+			}else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
 			}else if(key == "RecordVideo"){ //更新是否开启视频配置
 				settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
@@ -1051,10 +1051,9 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				}
 			}else if(key == "FileType"){
 				settings->setValue("output/container_av", jsonObj[key].toString());
-			}else if(key == "is_use_watermark"){
+                        }else if(key == "WaterPrint"){
 				settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}
-			else if(key == "WaterPrintText"){
+			}else if(key == "WaterPrintText"){
 				settings->setValue("record/water_print_text", jsonObj[key].toString());
 			} else if (key == "TimingPause") {
 				m_timingPause = jsonObj[key].toString().toInt();

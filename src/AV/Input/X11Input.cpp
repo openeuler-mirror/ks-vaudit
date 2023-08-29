@@ -185,13 +185,14 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
 	//水印处理, pixel format为PBGRA格式
 	cairo_surface_t * surface;
 	cairo_t* cr;
-	surface = cairo_image_surface_create_for_data(image_data, CAIRO_FORMAT_RGB24, grab_width, grab_height, grab_width * 4);
+    surface = cairo_image_surface_create_for_data(image_data, CAIRO_FORMAT_ARGB32, grab_width, grab_height, grab_width * 4);
 	cr = cairo_create(surface);
-	cairo_set_source_rgb(cr, 0, 1, 0);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.5);
 	cairo_set_line_width(cr, 8);
 	cairo_select_font_face(cr, "STSong", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-	cairo_set_font_size(cr, 40);
-	cairo_move_to(cr, grab_width/2 - 150, grab_height -70);
+    cairo_set_font_size(cr, 36);
+    double xmove = grab_width - 790;
+    cairo_move_to(cr, xmove, grab_height - 80);
 	//cairo_show_text(cr, "湖南麒麟信安科技股份有限公司!");
 	cairo_show_text(cr, watermark_content.toStdString().c_str());
 	cairo_surface_flush(surface);

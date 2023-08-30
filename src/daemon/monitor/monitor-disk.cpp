@@ -133,8 +133,8 @@ void MonitorDisk::checkRecordFreeSpace(QString filePath, const quint64 &minFreeS
     quint64 availsize = diskInfo.f_bavail * diskInfo.f_bsize;
     if (availsize < minFreeSpace)
     {
-        KLOG_DEBUG("minFreeSpace: %lluB(%lluM)(%lluG), availsize:%lluB(%lluM)(%lluG)",
-            minFreeSpace, (minFreeSpace>>20), (minFreeSpace>>30), availsize, (availsize>>20), (availsize>>30));
+        //KLOG_DEBUG("minFreeSpace: %lluB(%lluM)(%lluG), availsize:%lluB(%lluM)(%lluG)",
+        //    minFreeSpace, (minFreeSpace>>20), (minFreeSpace>>30), availsize, (availsize>>20), (availsize>>30));
         sendSwitchControl(0, "DiskSpace");
     }
 }
@@ -182,7 +182,7 @@ void MonitorDisk::UpdateConfigureData(QString key, QString value)
     if ("audit" == key)
     {
         parseConfigureInfo(value);
-        KLOG_DEBUG() << "audit: FilePath:" << m_filePath << "MinFreeSpace:" << m_minFreeSpace << "maxSaveDays:" << m_maxSaveDays << "MaxRecordPerUser:" << m_maxRecordPerUser;
+        KLOG_DEBUG() << "audit: FilePath:" << m_filePath << "MinFreeSpace:" << m_minFreeSpace << "maxSaveDays:" << m_maxSaveDays << "MaxRecordPerUser:" << m_maxRecordPerUser << "m_maxFileSize:" << m_maxFileSize;
     }
     else if ("record" == key)
     {

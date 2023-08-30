@@ -251,6 +251,10 @@ void Recording::OnRecordTimer() {
 }
 
 void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
+	//不录制屏幕 不处理
+	if (!m_settings->value("input/video_enabled").toInt())
+		return;
+
 	//没有开始录屏但分辨率出现变动,只更新分辨率
 	if(!m_page_started){
 		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");

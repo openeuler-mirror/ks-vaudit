@@ -1,7 +1,6 @@
 #include "monitor.h"
 #include "kiran-log/qt5-log-i.h"
 #include <QCoreApplication>
-#include "monitor.h"
 
 int main(int argc, char **argv)
 {

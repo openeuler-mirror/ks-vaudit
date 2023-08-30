@@ -57,7 +57,7 @@ void MonitorDisk::checkSaveDays(const QString &filePath, const int &maxSaveDays)
 {
     QDir dir(filePath);
     QStringList nameFilters;
-    nameFilters << "*.mp4" << "*.ogv" << "*.MP4" << "*.OGV" << "*.mp4.tmp" << "*.ogv.tmp" << "*.MP4.tmp" << "*.OGV.tmp";
+    nameFilters << "*.mp4" << "*.ogv" << "*.mkv" << "*.MP4" << "*.OGV" << "*.MKV" << "*.mp4.tmp" << "*.ogv.tmp" << "*.mkv.tmp" << "*.MP4.tmp" << "*.OGV.tmp" << "*.MKV.tmp";
     QDateTime currTime = QDateTime::currentDateTime();
     QFileInfoList files = dir.entryInfoList(nameFilters, QDir::NoDotAndDotDot | QDir::Files, QDir::Time | QDir::Reversed); //Sort by time (modification time)
     for (auto file : files)
@@ -81,7 +81,7 @@ bool MonitorDisk::checkFreeSpace(const QString &filePath, const quint64 &minFree
     //少于最小可用空间，停止录像并弹框提示
     if (availsize < minFreeSpace)
     {
-        KLOG_DEBUG() << "availsize" << availsize << "minFreeSpace" << minFreeSpace << "filePath:" << filePath;
+        //KLOG_DEBUG() << "availsize" << availsize << "minFreeSpace" << minFreeSpace << "filePath:" << filePath;
         return false;
     }
 

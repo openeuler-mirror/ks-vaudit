@@ -541,6 +541,8 @@ void Recording::StartPage() {
 	m_output_settings.file = QString(""); // will be set later
 	if(m_settings->value("output/container_av", QString()).toString() == "ogv"){
 		m_output_settings.container_avname = "ogg";
+	}else if (m_settings->value("output/container_av", QString()).toString() == "mkv"){
+		m_output_settings.container_avname = "matroska";
 	}else{
 		m_output_settings.container_avname = m_settings->value("output/container_av", QString()).toString();
 	}
@@ -692,7 +694,8 @@ void Recording::SaveSettings(QSettings* settings) {
 	key = "RecordAudio";
 	QString audio_codec_name = "";
 	QString video_type = jsonObj["FileType"].toString().toLower();
-	if(QString::compare(video_type, "mp4", Qt::CaseInsensitive) == 0) {
+	if(QString::compare(video_type, "mp4", Qt::CaseInsensitive) == 0
+		|| QString::compare(video_type, "mkv", Qt::CaseInsensitive) == 0) {
 		audio_codec_name = "aac";
 	}else if (QString::compare(video_type, "ogv", Qt::CaseInsensitive) == 0){
 		audio_codec_name = "libvorbis";
@@ -747,7 +750,16 @@ void Recording::SaveSettings(QSettings* settings) {
 		settings->setValue("output/video_kbit_rate", 128);
 		settings->setValue("output/video_h264_crf", 23);
 		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
+	}else if(QString::compare(file_type, "mkv", Qt::CaseInsensitive) == 0){
+		file_suffix = ".mkv";
+
+		settings->setValue("output/container_av", QString("mkv")); //mp4 ogv 格式等
+		settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
+		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
+		settings->setValue("output/video_codec_av", "libx264"); //硬件加速用h264_vaapi
+		settings->setValue("output/video_kbit_rate", 128);
+		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
+        }else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
 		file_suffix = ".ogv";
 
 		settings->setValue("output/container_av", QString("ogv")); //mp4 ogv 格式等

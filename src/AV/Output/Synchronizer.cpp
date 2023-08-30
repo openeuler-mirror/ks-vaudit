@@ -347,6 +347,9 @@ void Synchronizer::Init() {
 
 	}
 
+	m_audio_input_received = 0;
+	m_audio_output_received = 0;
+
 	// start synchronizer thread
 	m_should_stop = false;
 	m_error_occurred = false;
@@ -770,10 +773,12 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 		lock->m_audio_buffer_input.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
 		double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
 		lock->m_segment_audio_stop_time_input = lock->m_segment_audio_start_time_input + (int64_t) round(new_sample_length * 1.0e6);
+		m_audio_input_received = 1;
 	} else {
 		lock->m_audio_buffer_output.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
 		double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
 		lock->m_segment_audio_stop_time_output = lock->m_segment_audio_start_time_output + (int64_t) round(new_sample_length * 1.0e6);
+		m_audio_output_received = 1;
 
 	}
 
@@ -1046,6 +1051,7 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 	int speaker_size = lock->m_audio_buffer_output.GetSize();
 
 	if (mic_size > 0 && speaker_size > 0) {
+		// Logger::LogInfo("[Synchronizer::FlushAudioBuffer] mic_size and speaker_size: " + QString::number(mic_size) + " " + QString::number(speaker_size));
 		audio_type = RECORD_AUDIO_ALL;
 		
 		int i = 0;
@@ -1055,12 +1061,22 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 		}
 		lock->m_audio_buffer_input.Pop(i);
 	} else if (mic_size > 0) {
+		if (m_audio_output_received) {
+			// wait speaker voice
+			return;
+		}
+		// Logger::LogInfo("[Synchronizer::FlushAudioBuffer] mic_size: " + QString::number(mic_size));
 		audio_type = RECORD_AUDIO_MIC;
 
 		float* in_data = (float*)lock->m_audio_buffer_input.GetData();
 		lock->m_audio_buffer_output.Push(in_data, mic_size);
 		lock->m_audio_buffer_input.Clear();
-	} else if (speaker_size > 0) {
+	} else if (speaker_size > 0) {  
+		if (m_audio_input_received) {
+			// wait microphone voice
+			return;
+		}
+		// Logger::LogInfo("[Synchronizer::FlushAudioBuffer] speaker_size: " + QString::number(speaker_size));
 		audio_type = RECORD_AUDIO_SPEAKER;
 	} else {
 		return;

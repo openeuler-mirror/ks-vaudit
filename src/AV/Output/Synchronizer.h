@@ -150,6 +150,8 @@ private:
 	MutexDataPair<VideoData> m_video_data;
 	MutexDataPair<AudioData> m_audio_data_input;
 	MutexDataPair<AudioData> m_audio_data_output;
+	int m_audio_input_received;
+	int m_audio_output_received;
 	MutexDataPair<SharedData> m_shared_data;
 	std::atomic<bool> m_should_stop, m_error_occurred;
 

@@ -31,6 +31,7 @@ protected:
     QString strTobase64(QString);
     QString base64ToStr(QString);
     bool checkActivation();
+    void keyPressEvent(QKeyEvent *event);
 
 private slots:
     void on_accept_clicked();
@@ -54,7 +55,6 @@ private:
     QJsonObject m_currentUserInfo;
     ActivatePage *m_activation;
     bool m_isActivated = false;
-    void keyPressEvent(QKeyEvent *event);
 
 };
 

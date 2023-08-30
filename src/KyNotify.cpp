@@ -115,7 +115,7 @@ bool KyNotify::getContinueNotify()
 
 void KyNotify::setReserveSize(quint64 value)
 {
-	m_reserveSize = value / 1073741824;
+	m_reserveSize = value / 1073741824 + 10;
 	KLOG_INFO() << "m_reserveSize:" << m_reserveSize << "value:" << value;
 }
 

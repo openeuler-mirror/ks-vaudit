@@ -25,7 +25,7 @@ static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 	}
 }
 
-KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_pDiskNotify(nullptr)
+KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_lastSecond(0), m_pDiskNotify(nullptr)
 {
 	initNotify();
 	if (!notify_init(_("kylin verify")))
@@ -79,13 +79,19 @@ void KyNotify::setRecordTime(uint64_t recordTime)
 	if (recordTime && m_bStart && m_timing)
 	{
 		unsigned int time = (recordTime + 500000) / 1000000;
-		if (time % 60 != 0)
+		int second = time % 60;
+		// m_lastSecond == 0: 上次已经提示过或者第一次进来；second != 0 && m_lastSecond < second: 解决跳秒不提示
+		if (m_lastSecond == 0 || (second != 0 && m_lastSecond < second))
+		{
+			m_lastSecond = second;
 			return;
+		}
 
 		int minute = time / 60;
 		if (minute % m_timing == 0)
 			notify(KSVAUDIT_TIMING, minute);
-		KLOG_DEBUG() << "m_timing:" << m_timing << "recordTime:" << recordTime << "time:" << time << "minute:" << minute << "reminder:" << (minute % m_timing);
+		KLOG_DEBUG() << "notify m_timing:" << m_timing << "recordTime:" << recordTime << "time:" << time << "minute:" << minute << "reminder:" << (minute % m_timing) << "second:" << second << "m_lastSecond" << m_lastSecond;
+		m_lastSecond = 0;
 	}
 }
 

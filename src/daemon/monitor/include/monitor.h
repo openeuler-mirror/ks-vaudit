@@ -14,6 +14,7 @@ struct sessionInfo{
     QString authFile;
     QProcess *process;
     bool bNotify;
+    bool isRun;
 
     friend bool operator==(const sessionInfo &ob1, const sessionInfo &ob2)
     {
@@ -33,6 +34,7 @@ class Monitor : public QObject
 public:
     explicit Monitor(QObject *parent = NULL);
     ~Monitor();
+    QProcess* startRecordWithDisplay(sessionInfo info);
 
 private:
     QMap<QString, QString> getXorgLoginName();
@@ -40,7 +42,6 @@ private:
     QString getRemotIP(const QString &pid);
     QVector<sessionInfo> getXorgInfo();
     QVector<sessionInfo> getXvncInfo();
-    QProcess* startRecordWithDisplay(sessionInfo info);
     void DealSession(bool isDiskOk);
     bool isLicenseActive();
     void clearSessionInfos();
@@ -54,6 +55,10 @@ private slots:
 signals:
     void exitProgram();
 
+public:
+    QMultiMap<QString, sessionInfo> m_sessionInfos;
+    QMap<int, QString> m_videoFileName;
+
 private:
     bool m_isActive;
     int m_lastMaxRecordPerUser;
@@ -62,8 +67,6 @@ private:
     QTimer *m_pTimer;
     QMutex m_mutex;
     QProcess *m_process;
-    QMap<int, QString> m_videoFileName;
-    QMultiMap<QString, sessionInfo> m_sessionInfos;
 };
 
 #endif // MONITOR_H

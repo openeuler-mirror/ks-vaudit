@@ -24,6 +24,9 @@ install(FILES "images/a96px.png"
 install(FILES "images/a128px.png"
         DESTINATION ${AUDIT_UI_ICON_INSTALL_PATH}/128x128/apps RENAME ks-vaudit-audit.png)
 
+install(FILES "images/24pxaudit.svg"
+        DESTINATION ${AUDIT_UI_ICON_INSTALL_PATH}/scalable/apps RENAME ks-vaudit-audit.svg)
+
 set(AUDIT_UI_BIN_DIR ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
 
 configure_file("ks-vaudit-audit.desktop.in"

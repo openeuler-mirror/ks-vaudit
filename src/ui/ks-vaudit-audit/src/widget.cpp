@@ -517,13 +517,11 @@ void Widget::on_pauseBox_currentIndexChanged(int index)
 
 void Widget::on_typeBox_currentIndexChanged(int index)
 {
-    QString setValue = QString("MP4");
+    QString setValue = QString("MKV");
     if (index == 0){
-        setValue = QString("MP4");
-    }else if (index == 1) {
         setValue = QString("MKV");
-    }else if (index == 2){
-        setValue = QString("OGV");
+    }else if (index == 1) {
+        setValue = QString("MP4");
     }
     testConfig(QString("FileType"), setValue);
 }

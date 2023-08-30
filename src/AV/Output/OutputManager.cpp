@@ -597,13 +597,15 @@ out:
 QString OutputManager::ChooseEncodeName(QString container_name) {
 
 	if ((QString::compare(container_name, "mp4", Qt::CaseInsensitive) != 0) && 
+		QString::compare(container_name, "matroska", Qt::CaseInsensitive) != 0 && 
 		QString::compare(container_name, "ogg", Qt::CaseInsensitive) != 0) {
 		Logger::LogWarning("[OutputManager::ChooseEncodeName] container name invalid: " + container_name);
 		return QString("");
 	}
 
 	int ret = 0;
-	if (QString::compare(container_name, "mp4", Qt::CaseInsensitive) == 0) {
+	if (QString::compare(container_name, "mp4", Qt::CaseInsensitive) == 0 ||
+		QString::compare(container_name, "matroska", Qt::CaseInsensitive) == 0) {
 
 		// check nvenc
 		ret = CheckEncodeName(container_name, "h264_nvenc");

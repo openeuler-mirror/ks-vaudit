@@ -321,10 +321,11 @@ bool GeneralConfigure::checkPath(QString path)
 
 bool GeneralConfigure::checkType(QString type)
 {
-    if (type == "mp4" || type == "MP4" || type == "ogv" || type == "OGV")
+    if (type == "mp4" || type == "MP4" || type == "ogv" || type == "OGV" 
+	|| type == "mkv" || type == "MKV")
         return true;
 
-    KLOG_INFO() << "file type is " << type << ", and needs to be mp4 or ogv";
+    KLOG_INFO() << "file type is " << type << ", and needs to be mp4 or ogv or mkv";
     return false;
 }
 

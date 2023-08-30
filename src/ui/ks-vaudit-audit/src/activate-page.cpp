@@ -16,7 +16,8 @@ ActivatePage::ActivatePage(QWidget *parent) : QDialog(parent)
 
     this->setWindowFlags(Qt::Dialog|Qt::FramelessWindowHint);
     this->setAttribute(Qt::WA_TranslucentBackground, true);
-
+    this->setFocusPolicy(Qt::StrongFocus);
+    this->setFocus();
 }
 
 ActivatePage::~ActivatePage()
@@ -313,4 +314,19 @@ void ActivatePage::genQRcode(QLabel *l)
     qrPix = QPixmap::fromImage(qrimage);
     l->setPixmap(qrPix);
 
+}
+
+void ActivatePage::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key())
+    {
+    case Qt::Key_Return:
+        break;
+    case Qt::Key_Enter:
+        break;
+    case Qt::Key_Escape:
+        break;
+    default:
+        QDialog::keyPressEvent(event);
+    }
 }

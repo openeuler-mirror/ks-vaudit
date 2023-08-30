@@ -906,12 +906,13 @@ int Widget::startRecrodProcess()
 {
     QProcess *pp = new QProcess();
     pp->setProcessChannelMode(QProcess::MergedChannels);
-    pp->setStandardOutputFile("/tmp/ks-vaudit-record.out");
+    QString logfile = QDir::homePath() + "/.cache/ks-vaudit-record.out";
+    pp->setStandardOutputFile(logfile);
 //    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
     QStringList arg;
     arg << "--record";
     pp->start("/usr/bin/ks-vaudit",arg);
-    KLOG_DEBUG() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid();
+    KLOG_DEBUG() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid() << "logfile:" << logfile;
     m_recordP = pp;
 
     return pp->pid();

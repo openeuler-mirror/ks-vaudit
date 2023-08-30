@@ -682,7 +682,6 @@ void Recording::StartOutput() {
 				m_output_settings.file = GetAuditNewSegmentFile(m_file_base, m_auditBaseFileName, m_add_timestamp);
 				m_configure_interface->MonitorNotification(getpid(), m_output_settings.file);
 			}
-			WatchFile();
 
 			KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
 
@@ -714,6 +713,7 @@ void Recording::StartOutput() {
 			//Logger::LogInfo("the m_output_settings.container_avname is --->" + m_output_settings.container_avname);
 			//Logger::LogInfo("the m_output_settings.video_codec_avname  is --->" + m_output_settings.video_codec_avname);
 			m_output_manager.reset(new OutputManager(m_output_settings));
+			WatchFile();
 
 		} else {
 

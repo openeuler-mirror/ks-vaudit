@@ -13,8 +13,9 @@ struct sessionInfo{
     QString displayName;
     QString authFile;
     QProcess *process;
-    bool bNotify;
-    bool isRun;
+    bool bNotify;   // 磁盘空间不足是否在提示
+    bool bStart;    // 是否开始录屏
+    time_t stTime;  // 启动进程的时间，仅用于录屏程序被杀掉后判断查找到的是否为同一进程
 
     friend bool operator==(const sessionInfo &ob1, const sessionInfo &ob2)
     {

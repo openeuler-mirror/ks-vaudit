@@ -31,6 +31,7 @@ private:
     QPushButton *m_activateBtn;
     QLineEdit *m_licenseCodeEdit;
     QLineEdit *m_dateCodeEdit;
+    void keyPressEvent(QKeyEvent *event);
 
 };
 

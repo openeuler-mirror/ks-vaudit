@@ -249,10 +249,27 @@ void Recording::OnRecordTimer() {
 	// Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
 }
 
-void Recording::ScreenChangedHandler(const QRect& changed_screen_rect){
-	//没有开始录屏 不处理
-	if(!m_page_started)
-		return;
+void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
+	//没有开始录屏但分辨率出现变动,只更新分辨率
+	if(!m_page_started){
+		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+		Logger::LogInfo("the screen geometry changed \n");
+		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+
+		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+		QRect rect = CombineScreenGeometries(screen_geometries);
+		
+		//update the qsettings
+		settings_ptr->setValue("input/video_x", rect.left()); //X
+		settings_ptr->setValue("input/video_y", rect.top()); //Y
+		settings_ptr->setValue("input/video_w", rect.width()); //width
+		settings_ptr->setValue("input/video_h", rect.height()); //height
+		m_video_in_width = rect.width();
+		m_video_in_height = rect.height();
+		m_output_settings.video_height = m_video_in_height;
+		m_output_settings.video_width = m_video_in_width;
+		return ;
+	}
 
 	//分辨率变化后的处理
 	m_separate_files = true;

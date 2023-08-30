@@ -41,6 +41,7 @@ Widget::Widget(QWidget *parent) :
     m_isActivated = m_activatePage->getActivation();
     init_ui();
     if (!m_isActivated){
+        m_activatePage->setFocus();
         m_activatePage->exec();
     }
 }
@@ -345,6 +346,7 @@ void Widget::on_playBtn_clicked()
 {
     m_isActivated = m_activatePage->getActivation();
     if (!m_isActivated){
+        m_activatePage->setFocus();
         m_activatePage->exec();
         return;
     }
@@ -553,7 +555,7 @@ void Widget::renameVideo()
 
 //    KLOG_DEBUG() << oldName << "left:" << oldName.left(oldName.lastIndexOf(".")) << "right:" << oldName.right(4);
     if (m_renameDialog != NULL){
-        delete m_renameDialog;
+//        delete m_renameDialog;
         m_renameDialog = NULL;
     }
     m_renameDialog = new Dialog(this, QString("rename"), oldName);
@@ -985,5 +987,6 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
 
 void Widget::openActivate()
 {
+    m_activatePage->setFocus();
     m_activatePage->exec();
 }

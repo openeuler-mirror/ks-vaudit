@@ -114,8 +114,6 @@ set(sources
 	common/ScreenScaling.cpp
 	common/ScreenScaling.h
 	common/TempBuffer.h
-	common/Config.h
-	common/Config.cpp
 	kidletime.cpp
 	xsyncbasedpoller.cpp
 	fixx11h.h

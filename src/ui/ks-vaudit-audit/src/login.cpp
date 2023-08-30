@@ -178,3 +178,14 @@ void Login::on_activationBtn_clicked()
     ui->activationBtn->clearFocus();
     checkActivation();
 }
+
+void Login::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key())
+    {
+    case Qt::Key_Escape:
+        break;
+    default:
+        QDialog::keyPressEvent(event);
+    }
+}

@@ -56,19 +56,17 @@ void MonitorDisk::getAuditInfo()
 void MonitorDisk::checkSaveDays(const QString &filePath, const int &maxSaveDays)
 {
     QDir dir(filePath);
+    QStringList nameFilters;
+    nameFilters << "*.mp4" << "*.ogv" << "*.MP4" << "*.OGV" << "*.mp4.tmp" << "*.ogv.tmp" << "*.MP4.tmp" << "*.OGV.tmp";
     QDateTime currTime = QDateTime::currentDateTime();
-    QFileInfoList files = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Files, QDir::Time | QDir::Reversed); //Sort by time (modification time)
+    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::NoDotAndDotDot | QDir::Files, QDir::Time | QDir::Reversed); //Sort by time (modification time)
     for (auto file : files)
     {
-        QString suffix = file.suffix();
-        if (suffix == "mp4" || suffix == "MP4" || suffix == "ogv" || suffix == "OGV")
+        const qint64 &diffTime = file.lastModified().daysTo(currTime);
+        if (diffTime > maxSaveDays)
         {
-            const qint64 &diffTime = file.lastModified().daysTo(currTime);
-            if (diffTime > maxSaveDays)
-            {
-                KLOG_DEBUG() << "remove file:" << file.absoluteFilePath() << "filetime:" << file.lastModified().date() << "currtime:" << currTime.date() << "diff days:" << diffTime ;
-                dir.remove(file.absoluteFilePath());
-            }
+            KLOG_WARNING() << "remove file:" << file.absoluteFilePath() << "filetime:" << file.lastModified().date() << "currtime:" << currTime.date() << "diff days:" << diffTime ;
+            dir.remove(file.absoluteFilePath());
         }
     }
 }

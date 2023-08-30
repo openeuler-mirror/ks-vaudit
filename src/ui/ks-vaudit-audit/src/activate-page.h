@@ -30,6 +30,7 @@ private:
     QString m_machineCode, m_activateCode, m_expiredDate;
     QPushButton *m_activateBtn;
     QLineEdit *m_licenseCodeEdit;
+    QLineEdit *m_dateCodeEdit;
 
 };
 

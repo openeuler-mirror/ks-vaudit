@@ -222,9 +222,11 @@ void Widget::mouseReleaseEvent(QMouseEvent *event)
 
 void Widget::on_exit_clicked()
 {
-    Dialog *confirm = new Dialog(this, QString("exit"));
-    connect(confirm, SIGNAL(close_window()), this, SLOT(realClose()));
-    confirm->exec();
+    // 审计不需要确认，直接退出
+//    Dialog *confirm = new Dialog(this, QString("exit"));
+//    connect(confirm, SIGNAL(close_window()), this, SLOT(realClose()));
+//    confirm->exec();
+    this->close();
 }
 
 
@@ -444,6 +446,11 @@ void Widget::on_pushButton_clicked()
     if (!dirPath.isEmpty()){
         ui->pathLabel->setText(dirPath);
         ui->pathLabel->setToolTip(dirPath);
+        QJsonObject obj;
+        obj["FilePath"] = dirPath;
+        QJsonDocument doc(obj);
+        QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
+        m_dbusInterface->SetAuditItemValue(a);
         refreshList(m_regName);
     }else{
         KLOG_DEBUG("Invalid path, abort!");

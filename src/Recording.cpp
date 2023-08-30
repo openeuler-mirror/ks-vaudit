@@ -1370,6 +1370,7 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		// 应该用qApp->quit()来退出 清理qt控件
 //		exit(0);
 	} else if(op == "disk_notify"){
+		m_configure_interface->MonitorNotification(getpid(), op);
 		KyNotify::instance().sendNotify(op);
 	} else if(op == "disk_notify_stop") {
 		KyNotify::instance().setContinueNotify(false);

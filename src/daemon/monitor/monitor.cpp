@@ -54,7 +54,7 @@ void Monitor::monitorProcess()
         if (file.exists())
         {
             bool bRet = MonitorDisk::instance().fileDiskLimitProcess();
-            DealSession(bRet); //启停进程W
+            DealSession(bRet); //启停进程
             MonitorDisk::instance().fileSizeProcess(m_videoFileName); //文件达到指定大小，切换文件
         }
     }
@@ -264,6 +264,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
         sessionInfo tmp = info;
+        sleep(1);
         auto it = m_sessionInfos.find(tmp.userName, tmp);
         if (it != m_sessionInfos.end())
         {

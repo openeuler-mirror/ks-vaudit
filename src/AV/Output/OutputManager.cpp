@@ -689,6 +689,11 @@ void OutputManager::StartFragment() {
 
 		if (m_output_settings.encode_quality == "0") {
 			vaapi_kbit_rate = 2048;
+
+			// bug 61543, 3.2-8H + p400 + nvenc, cpu usage bigger than 20%
+			if (enc_name.contains("nvenc")) {
+				vaapi_kbit_rate = 1024;
+			}
 		} else if (m_output_settings.encode_quality == "1") {
 			vaapi_kbit_rate = 4096;
 		} else if (m_output_settings.encode_quality == "2") {

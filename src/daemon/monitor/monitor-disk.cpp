@@ -12,7 +12,9 @@
 
 #define TIMEOUT_MS 5000
 
-MonitorDisk::MonitorDisk(QWidget *parent)
+MonitorDisk::MonitorDisk(QWidget *parent) : m_maxSaveDays(30), m_maxRecordPerUser(0), m_minFreeSpace(10737418240),
+                                            m_maxFileSize(2147483648), m_recordMinFreeSpace(1073741824),
+                                            m_filePath("/opt/ks-vaudit"), m_recordFilePath("~/videos/ks-vaudit")
 {
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     if (!m_dbusInterface)
@@ -81,7 +83,7 @@ bool MonitorDisk::checkFreeSpace(const QString &filePath, const quint64 &minFree
     //少于最小可用空间，停止录像并弹框提示
     if (availsize < minFreeSpace)
     {
-        //KLOG_DEBUG() << "availsize" << availsize << "minFreeSpace" << minFreeSpace;
+        KLOG_DEBUG() << "availsize" << availsize << "minFreeSpace" << minFreeSpace << "filePath:" << filePath;
         return false;
     }
 
@@ -162,7 +164,7 @@ void MonitorDisk::parseRecordConfigureInfo(QString value)
     }
 }
 
-bool MonitorDisk::filePathOk(QString filePath)
+bool MonitorDisk::filePathOk(QString &filePath)
 {
     if (filePath.isEmpty())
         return false;

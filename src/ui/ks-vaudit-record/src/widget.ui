@@ -1116,17 +1116,12 @@ border-radius:4px;
       </property>
       <item>
        <property name="text">
-        <string>MP4</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
         <string>MKV</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>OGV</string>
+        <string>MP4</string>
        </property>
       </item>
      </widget>

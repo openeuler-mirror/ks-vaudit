@@ -280,7 +280,7 @@ void Widget::on_ListBtn_clicked()
                         "text-align:left center;"
                         "padding-left:10px;"
                         "};");
-    refreshList();
+    refreshList(m_regName);
 }
 
 void Widget::on_ConfigBtn_clicked()
@@ -752,6 +752,14 @@ QString Widget::getVideoDuration(QString absPath)
     if (pCtx->duration != AV_NOPTS_VALUE){
         int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
         secs = duration / AV_TIME_BASE;
+        // #59083 过滤掉时长为0播放不了的视频
+        if (secs == 0){
+            if (pCtx != NULL){
+                avformat_close_input(&pCtx);
+                pCtx=NULL;
+            }
+            return QString("文件损坏");
+        }
         mins = secs / 60;
         secs %= 60;
         hours = mins / 60;
@@ -767,7 +775,7 @@ QString Widget::getVideoDuration(QString absPath)
     }
     // 目前假设单个视频文件超过99小时
     if (hours > 99){
-        return QString("%1").arg("大于99小时");
+        return QString("%1").arg("大于100小时");
     }
     return QString("%1:%2:%3").arg(hours,2,10,QLatin1Char('0')).arg(mins,2,10,QLatin1Char('0')).arg(secs,2,10,QLatin1Char('0'));
 }
@@ -806,7 +814,7 @@ void Widget::createList(){
 
     ui->videoList->horizontalHeader()->setFixedWidth(628);
     ui->videoList->setColumnWidth(0,202);
-    ui->videoList->setColumnWidth(1,108);
+    ui->videoList->setColumnWidth(1,120);
     ui->videoList->setColumnWidth(2,100);
     ui->videoList->setColumnWidth(3,155);
     ui->videoList->setColumnWidth(4,70);

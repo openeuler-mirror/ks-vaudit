@@ -278,14 +278,18 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 
 	//分辨率变化后的处理
 	m_separate_files = true;
+//	OnRecordSave();
 	OnRecordPause();
+
 	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 	QRect rect = CombineScreenGeometries(screen_geometries); 
 	m_video_in_width = rect.width();
 	m_video_in_height = rect.height();
 	m_output_settings.video_height = m_video_in_height;
 	m_output_settings.video_width = m_video_in_width;
+	ReNameFile();
 	OnRecordStartPause();
+//	OnRecordStart();
 }
 
 Recording::~Recording() {}
@@ -671,13 +675,7 @@ void Recording::StopPage(bool save) {
 		}
 		else
 		{
-			// #60874 前端无法获取准确的正在录制的视频时长，因此正在录制的视频后缀为.tmp
-			// 完成录制后移除.tmp后缀
-			QString fileName = m_output_settings.file;
-			QString fileBaseName = fileName.left(fileName.lastIndexOf("."));
-			if (QFile(fileName).exists()){
-				QFile(fileName).rename(fileName, fileBaseName);
-			}
+			ReNameFile();
 //			Logger::LogInfo("************** " + fileName + " | " + fileBaseName);
 		}
 
@@ -785,7 +783,7 @@ void Recording::StopOutput(bool final) {
 		m_output_manager.reset();
 
 		// change the file name
-		m_output_settings.file = QString();
+//		m_output_settings.file = QString();
 
 		// reset the output video size
 		m_output_settings.video_width = 0;
@@ -1023,16 +1021,32 @@ void Recording::OnRecordSave(bool confirm) {
 }
 
 void Recording::OnRecordSaveAndExit(bool confirm) {
-    if(!m_page_started)
-        return;
-    if(m_wait_saving)
-        return;
+	if(!m_page_started) {
+		qApp->quit();
+		return;
+	}
+	if(m_wait_saving) {
+		return;
+	}
     if(!m_recorded_something && confirm) {
 		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
         return;
     }
     StopPage(true);
-    qApp->quit();
+	qApp->quit();
+}
+
+void Recording::ReNameFile()
+{
+	// #60874 前端无法获取准确的正在录制的视频时长，因此正在录制的视频后缀为.tmp
+	// 完成录制后移除.tmp后缀
+	QString fileName = m_output_settings.file;
+	QString fileBaseName = fileName.left(fileName.lastIndexOf("."));
+	Logger::LogInfo("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	if (QFile(fileName).exists()){
+		Logger::LogInfo(".,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,");
+		QFile(fileName).rename(fileName, fileBaseName);
+	}
 }
 
 void Recording::UpdateResolutionParameter(){
@@ -1108,7 +1122,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			Logger::LogError("Cann't get the DBus configure!");
 			return;
 		}
-
+		bool needRestart = false;
 		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
@@ -1116,13 +1130,20 @@ void Recording::UpdateConfigureData(QString key, QString value){
 			//修改settings
 			if(key == "Fps"){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
+				needRestart = true;
 			}else if(key == "RecordAudio"){
 				m_settings->setValue("input/audio_enabled",jsonObj[key].toString());
+				needRestart = true;
+			}else if(key == "Quality"){
+				m_settings->setValue("encode/quality", jsonObj[key].toString());
+				m_output_settings.encode_quality = jsonObj["Quality"].toString();
+				needRestart = true;
 			}else if(key == "FilePath" || key == "FileType"){
 				// 修改fileType需要一起修改filePath
 				QString file_path(jsonObj[key].toString());
 				QString file_suffix;
 				QString fileType = jsonObj["FileType"].toString();
+				needRestart = true;
 				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
 					file_suffix = ".mp4";
 					m_settings->setValue("output/container_av", "mp4");
@@ -1144,6 +1165,10 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
 			}
 
+		}
+		if (needRestart){
+			OnRecordSave();
+			OnRecordStart();
 		}
 	}
 }
@@ -1172,7 +1197,8 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 	}else if(op == "exit"){
 		Logger::LogInfo("[Recording::SwitchControl] exit signal");
 		OnRecordSaveAndExit(true);
-		exit(0);
+		// 应该用qApp->quit()来退出 清理qt控件
+//		exit(0);
 	} else if(op == "disk_notify"){
 		KyNotify::instance().sendNotify(op);
 	} else if(op == "disk_notify_stop") {

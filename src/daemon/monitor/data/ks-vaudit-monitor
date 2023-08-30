@@ -11,6 +11,7 @@
 
 RETVAL=0
 procname=ks-vaudit-monitor
+lockfile=/var/lock/subsys/$procname
 
 start(){
         __pids_var_run "${procname}" "$pid_file"
@@ -23,14 +24,17 @@ start(){
                 exit 0
         fi
 
-	export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib:$LD_LIBRARY_PATH
         /usr/bin/${procname} &
-        if [ $? -eq 0 ];then
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ];then
                 echo_success
         else
                 echo_failure
         fi
         echo "Start ${procname} service: "
+        [ $RETVAL -eq 0 ] && touch $lockfile
+        return $RETVAL
 }
 
 stop(){

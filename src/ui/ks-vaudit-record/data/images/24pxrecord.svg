@@ -1,0 +1,28 @@
+<svg id="_128px" data-name="128px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 120 120">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-2 {
+        fill: #ffdada;
+      }
+
+      .cls-2, .cls-3 {
+        fill-rule: evenodd;
+      }
+
+      .cls-3 {
+        fill: #ff5454;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="60" y1="120" x2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff3030"/>
+      <stop offset="1" stop-color="#ff755a"/>
+    </linearGradient>
+  </defs>
+  <rect id="矩形_1" data-name="矩形 1" class="cls-1" width="120" height="120" rx="24" ry="24"/>
+  <path id="形状_1" data-name="形状 1" class="cls-2" d="M1145.71,2894.13l-11.42,6.28v-12.96a5.6,5.6,0,0,0-5.72-5.45h-52.86a5.593,5.593,0,0,0-5.71,5.45v49.1a5.593,5.593,0,0,0,5.71,5.45h52.86a5.6,5.6,0,0,0,5.72-5.45v-12.96l11.42,6.28a2.86,2.86,0,0,0,4.29-2.35v-31.03a2.861,2.861,0,0,0-4.29-2.36h0Z" transform="translate(-1050 -2852)"/>
+  <path id="形状_1_拷贝" data-name="形状 1 拷贝" class="cls-3" d="M1082.86,2896.74h10a0.7,0.7,0,0,0,.71-0.68v-4.1a0.7,0.7,0,0,0-.71-0.68h-10a0.7,0.7,0,0,0-.72.68v4.1a0.7,0.7,0,0,0,.72.68h0Zm0,0" transform="translate(-1050 -2852)"/>
+</svg>

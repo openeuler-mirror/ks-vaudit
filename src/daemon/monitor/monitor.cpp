@@ -12,6 +12,8 @@
 #include <QMutexLocker>
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QtDBus>
+#include <iostream>
+#include <thread>
 
 //dbus-send --system  --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Manager org.gnome.DisplayManager.Manager.GetDisplays
 //dbus-send --system --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Display2 org.gnome.DisplayManager.Display.GetX11DisplayName
@@ -68,18 +70,19 @@ void Monitor::monitorProcess()
 
 void Monitor::receiveNotification(int pid, QString message)
 {
-    KLOG_DEBUG() << pid << message << "m_sessionInfos size:" << m_sessionInfos.size() << "m_videoFileName size:" <<  m_videoFileName.size();
+    KLOG_INFO() << pid << message << "m_sessionInfos size:" << m_sessionInfos.size() << "m_videoFileName size:" <<  m_videoFileName.size();
+    if (message.size() < 8)
+        return;
 
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
     {
         auto &process = it.value().process;
         if (process && process->pid() == pid)
         {
-            QFileInfo fileinfo(message);
-            const QString &suffix = fileinfo.suffix();
-            if (suffix == "mp4" || suffix == "ogv" || suffix == "MP4" || suffix == "OGV")
+            QString suffix = message.mid(message.size() - 8, message.size());
+            if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp")
                 m_videoFileName.insert(pid, message);
-
+            it.value().isRun = true;
             return;
         }
     }
@@ -167,7 +170,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false};
+            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false};
             vecInfo.push_back(info);
         }
     }
@@ -239,12 +242,38 @@ QVector<sessionInfo> Monitor::getXvncInfo()
                 continue;
 
             QString tmp = strlist[index2];
-            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false};
+            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false, false};
             vecInfo.push_back(info);
         }
     }
 
     return vecInfo;
+}
+
+void thread_function(sessionInfo tmp, void *user)
+{
+    sleep(2);
+    Monitor *pThis = (Monitor *)user;
+    auto it = pThis->m_sessionInfos.find(tmp.userName, tmp);
+    if (it != pThis->m_sessionInfos.end())
+    {
+        auto &value = it.value();
+        KLOG_INFO() << "restart bin, find" << it.key() << value.displayName;
+        auto &process = value.process;
+        if (process)
+        {
+            auto fileit = pThis->m_videoFileName.find(process->pid());
+            if (fileit != pThis->m_videoFileName.end())
+                pThis->m_videoFileName.erase(fileit);
+
+            process->close();
+            delete process;
+            process = nullptr;
+        }
+        value.process = pThis->startRecordWithDisplay(tmp);
+        value.isRun = false;
+    }
+    KLOG_DEBUG() << "deal CrashExit end";
 }
 
 QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
@@ -264,27 +293,8 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
         sessionInfo tmp = info;
-        sleep(1);
-        auto it = m_sessionInfos.find(tmp.userName, tmp);
-        if (it != m_sessionInfos.end())
-        {
-            auto &value = it.value();
-            KLOG_INFO() << "restart bin, find" << it.key() << value.displayName;
-            auto &process = value.process;
-            if (process)
-            {
-                auto fileit = m_videoFileName.find(process->pid());
-                if (fileit != m_videoFileName.end())
-                    m_videoFileName.erase(fileit);
-
-                process->close();
-                delete process;
-                process = nullptr;
-            }
-            value.process = startRecordWithDisplay(tmp);
-            MonitorDisk::instance().sendSwitchControl(process->processId(), "start");
-        }
-        KLOG_DEBUG() << "deal CrashExit end";
+        std::thread t(&thread_function, tmp, this);
+        t.detach();
     });
 
     process->start(m_vauditBin, arg);
@@ -325,6 +335,13 @@ void Monitor::DealSession(bool isDiskOk)
             it.value().bNotify = false;
             MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
         }
+
+        //杀掉进程后，重启进程直接start可能接收不到，以收到文件名字为判断
+        if (!it.value().isRun && isDiskOk)
+        {
+            KLOG_INFO() << "record not run and start";
+            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
+        }
     }
 
     QMultiMap<QString, sessionInfo> sessionInfos;
@@ -338,7 +355,7 @@ void Monitor::DealSession(bool isDiskOk)
         auto &info = it.value();
         if (!sessionInfos.contains(it.key(), info))
         {
-            KLOG_DEBUG() << "not contain and erase:" << it.key() << info.displayName;
+            KLOG_INFO() << "not contain and erase:" << it.key() << info.displayName;
             auto process = it.value().process;
             m_sessionInfos.erase(it++);
             clearProcess(process);
@@ -378,7 +395,7 @@ bool Monitor::isLicenseActive()
                                                                  "com.kylinsec.Kiran.LicenseObject",
                                                                 "GetLicense");
     QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, TIMEOUT_MS);
-    KLOG_DEBUG() << "msgReply " << msgReply;
+    //KLOG_DEBUG() << "msgReply " << msgReply;
     QString errorMsg;
 
     if (msgReply.type() == QDBusMessage::ReplyMessage)
@@ -387,7 +404,6 @@ bool Monitor::isLicenseActive()
         if (args.size() >= 1)
         {
             QVariant firstArg = args.takeFirst();
-            KLOG_WARNING() << firstArg.toString();
             QJsonParseError jsonerror;
             QJsonDocument doc = QJsonDocument::fromJson(firstArg.toString().toLatin1(), &jsonerror);
             if (doc.isNull() || jsonerror.error != QJsonParseError::NoError || !doc.isObject())
@@ -402,7 +418,6 @@ bool Monitor::isLicenseActive()
                 if ("activation_status" == key)
                 {
                     int activation_status = jsonObj[key].toDouble();
-                    KLOG_INFO() << "activation_status:" << activation_status;
                     return activation_status != LicenseActivationStatus::LAS_ACTIVATED ? false : true;
                 }
             }

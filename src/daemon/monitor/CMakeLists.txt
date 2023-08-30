@@ -41,6 +41,7 @@ target_include_directories(${TARGET_NAME} PRIVATE
 
 target_link_libraries(${TARGET_NAME}
         klog-qt5
+        pthread
         Qt5::DBus
         Qt5::Core)
 

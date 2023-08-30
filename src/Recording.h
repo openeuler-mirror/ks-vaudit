@@ -172,6 +172,11 @@ private:
 	bool m_auditFirstStart;
 	QString m_auditBaseFileName;
 
+	//音频格式
+	QString m_lastAlsaInput;
+	QString m_lastAlsaOutput;
+	QTimer *m_audioTimer;
+
 public:
 	// 是否停止录像，用于结束监测文件是否被删除
 	bool m_bStopRecord;
@@ -186,6 +191,7 @@ public:
 	void OnRecordCancel(bool confirm = true); //取消录制
 	void OnRecordSave(bool confirm = true); //结束录制并刷新mp4容器
 	void OnRecordSaveAndExit(bool confirm);  //保存并退出
+	void ReNameFile();
 	void OnRecordRestart(); //屏幕分辨率出现变化， 更新分辨率参数后重新开始录频
 	QString GetPulseAudioSourceName() {     return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
 	std::vector<QRect> GetScreenGeometries();
@@ -217,6 +223,7 @@ public slots:
 	void ScreenChangedHandler(const QRect&);
 	// 用于定时向前端发送录屏时间信息
 	void OnRecordTimer();
+	void OnAudioTimer();
 
 private slots:
 	//后台录屏无操作处理

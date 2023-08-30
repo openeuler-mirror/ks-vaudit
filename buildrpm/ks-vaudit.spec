@@ -1,6 +1,6 @@
 Name:           ks-vaudit
 Version:        1.0.0
-Release:        2
+Release:        3
 Summary:        kylinsec vaudit
 
 License:        GPL
@@ -121,6 +121,7 @@ sudo chkconfig ks-vaudit-monitor on
 %preun
 sudo service ks-vaudit-configure stop
 sudo service ks-vaudit-monitor stop
+sudo ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -v grep | xargs kill -2 > /dev/null 2>&1
 sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean
@@ -128,6 +129,9 @@ qtpath=%_topdir/BUILD/Qt5.7.1
 rm -rf $RPM_BUILD_ROOT ${qtpath}
 
 %changelog
+* Tue Aug 30 2022 zhenggongping <zhenggongping@kylinsec.com.cn> - 1.0.0-3
+- KYOS-F: fix bugs of tests. (Related #60501)
+
 * Tue Aug 30 2022 fanliwei <fanliwei@kylinsec.com.cn> - 1.0.0-2
 - KYOS-F: support record mic and speaker. (Related #59481)
 - KYOS-F: support nvenc. (Related #58872)

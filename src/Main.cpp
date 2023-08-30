@@ -39,7 +39,7 @@ QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){
-	KLOG_DEBUG() << "receive signal, cur display:" << getenv("DISPLAY") << "sig:" << sig;
+	KLOG_INFO() << "receive signal, cur display:" << getenv("DISPLAY") << "sig:" << sig;
 	if(sig == SIGINT){
 		if(recording_screen->IsOutputStarted()){
 			recording_screen->OnRecordSaveAndExit(true);
@@ -141,11 +141,12 @@ int main(int argc, char* argv[]) {
 	if(CommandLineOptions::GetBenchmark()) {
 		Benchmark();
 	}
-
-	static QSettings settings(CommandLineOptions::GetSettingsFile(), QSettings::IniFormat);
+	pid_t selfPID = getpid();
+	QString settingPath = QString("%1%2%3%4").arg(QDir::homePath()).arg("/.ssr/setting-").arg(selfPID).arg(".conf");
+	static QSettings settings(settingPath, QSettings::IniFormat);
 	settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
 	settings_ptr = &settings;
-	settings.clear();
+//	settings.clear();
 
 	recording_screen.reset(new Recording(&settings));
 	recording_screen->SaveSettings(&settings);
@@ -157,5 +158,11 @@ int main(int argc, char* argv[]) {
 	// stop main program
 	//Logger::LogInfo("==================== " + Logger::tr("SSR stopped") + " ====================");
 
-	return application.exec();
+	int result = application.exec();
+
+	settings.clear();
+	settings.sync();
+	QFile::remove(settings.fileName());
+
+	return result;
 }

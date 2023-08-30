@@ -41,6 +41,7 @@ private:
     bool m_bContinue;
     int m_timing;
     int m_reserveSize;
+    int m_lastSecond;
     void *m_pDiskNotify;
 };
 

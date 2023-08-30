@@ -183,12 +183,9 @@ bool SQLConfigure::initDB()
                 KLOG_INFO() << "Error: Fail to create table." << m_query->lastError();
             }
 
-            QByteArray byteArrSys("sys123456#");
-            createUser("sysadm", byteArrSys.toBase64(), "sysadm");
-            QByteArray byteArrAud("aud123456@");
-            createUser("audadm", byteArrAud.toBase64(), "audadm");
-            QByteArray byteArrSec("sec123456$");
-            createUser("secadm", byteArrSec.toBase64(), "secadm");
+            createUser("sysadm", "c3lzMTIzNDU2Iw==", "sysadm");
+            createUser("audadm", "YXVkMTIzNDU2QA==", "audadm");
+            createUser("secadm", "c2VjMTIzNDU2JA==", "secadm");
         }
     }
 

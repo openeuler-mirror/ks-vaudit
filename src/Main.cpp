@@ -39,7 +39,7 @@ QSettings* settings_ptr = NULL;
 
 
 static void sig_handler(int sig){
-	KLOG_DEBUG() << "receive signal, cur display:" << getenv("DISPLAY") << "sig:" << sig;
+	KLOG_INFO() << "receive signal, cur display:" << getenv("DISPLAY") << "sig:" << sig;
 	if(sig == SIGINT){
 		if(recording_screen->IsOutputStarted()){
 			recording_screen->OnRecordSaveAndExit(true);

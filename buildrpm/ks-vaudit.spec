@@ -121,6 +121,7 @@ sudo chkconfig ks-vaudit-monitor on
 %preun
 sudo service ks-vaudit-configure stop
 sudo service ks-vaudit-monitor stop
+sudo ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -v grep | xargs kill -2 > /dev/null 2>&1
 sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean

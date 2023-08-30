@@ -117,7 +117,8 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 			newfile += "." + fi.suffix();
 		newfile = fi.path() + "/" + newfile;
 	} while(QFileInfo(newfile).exists());
-	return newfile;
+	// 录制中的文件添加后缀 .tmp 不展示出来
+	return newfile+".tmp";
 }
 
 //审计录屏文件以用户名_IP_YYYYMMDD_hhmmss命名，示例：张三_192.168.1.1_20220621_153620.mp4
@@ -143,7 +144,7 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 			newfile += "." + fi.suffix();
 		newfile = fi.path() + "/" + newfile;
 	} while (QFileInfo(newfile).exists());
-	return newfile;
+	return newfile+".tmp";
 }
 
 static std::vector<std::pair<QString, QString> > GetOptionsFromString(const QString& str) {
@@ -250,6 +251,10 @@ void Recording::OnRecordTimer() {
 }
 
 void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
+	//不录制屏幕 不处理
+	if (!m_settings->value("input/video_enabled").toInt())
+		return;
+
 	//没有开始录屏但分辨率出现变动,只更新分辨率
 	if(!m_page_started){
 		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
@@ -659,9 +664,21 @@ void Recording::StopPage(bool save) {
 		m_output_manager.reset();
 
 		// delete the file if it isn't needed
+		// 原ssr界面里取消保存的功能
 		if(!save && m_file_protocol.isNull()) {
 			if(QFileInfo(m_output_settings.file).exists())
 				QFile(m_output_settings.file).remove();
+		}
+		else
+		{
+			// #60874 前端无法获取准确的正在录制的视频时长，因此正在录制的视频后缀为.tmp
+			// 完成录制后移除.tmp后缀
+			QString fileName = m_output_settings.file;
+			QString fileBaseName = fileName.left(fileName.lastIndexOf("."));
+			if (QFile(fileName).exists()){
+				QFile(fileName).rename(fileName, fileBaseName);
+			}
+//			Logger::LogInfo("************** " + fileName + " | " + fileBaseName);
 		}
 
 	}

@@ -673,11 +673,11 @@ void OutputManager::StartFragment() {
 	if (enc_name.contains("qsv")) {
 
 		if (m_output_settings.encode_quality == "0") {
-			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(15)));
-		} else if (m_output_settings.encode_quality == "1") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(14)));
+		} else if (m_output_settings.encode_quality == "1") {
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(12)));
 		} else if (m_output_settings.encode_quality == "2") {
-			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(13)));
+			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(10)));
 		}
 
 	} else if (enc_name.contains("vaapi") ||

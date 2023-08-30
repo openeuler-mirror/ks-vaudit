@@ -1312,6 +1312,7 @@ bool Recording::AuditParamDeal()
 	QStringList strlist = args[1].split("-");
 	strlist.removeAll("");
 	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
+	m_settings->setValue("record/user", strlist[1]);
 	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);
 	KIdleTime::instance().catchNextResumeEvent();

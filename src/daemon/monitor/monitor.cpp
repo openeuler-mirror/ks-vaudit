@@ -74,19 +74,45 @@ void Monitor::receiveNotification(int pid, QString message)
     if (message.size() < 8)
         return;
 
+    // 查找是否为后台录屏进程的文件名，并记录后台录屏进程的pid
+    bool bInsert{};
+    QMap<int, int>map;
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
     {
         auto &process = it.value().process;
-        if (process && process->pid() == pid)
+        if (process)
         {
-            QString suffix = message.mid(message.size() - 8, message.size());
-            if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp")
-                m_videoFileName.insert(pid, message);
-            it.value().isRun = true;
-            return;
+            map.insert(process->pid(), 0);
+            if (process->pid() == pid)
+            {
+                QString suffix = message.mid(message.size() - 8, message.size());
+                if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp")
+                    bInsert = true;
+                it.value().bStart = true;
+            }
         }
     }
 
+    // 清掉不存在的进程文件信息，进程挂掉后信号内的进程id为0
+    for (auto it = m_videoFileName.begin(); it != m_videoFileName.end();)
+    {
+        auto iter = map.find(it.key());
+        if (iter == map.end())
+        {
+            KLOG_INFO() << "erase" << it.key() << it.value();
+            m_videoFileName.erase(it++);
+            continue;
+        }
+
+        ++it;
+    }
+
+    if (bInsert)
+    {
+        m_videoFileName.insert(pid, message);
+    }
+
+    KLOG_INFO() << "is insert" << bInsert;
 }
 
 QMap<QString, QString> Monitor::getXorgLoginName()
@@ -170,7 +196,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false};
+            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL)};
             vecInfo.push_back(info);
         }
     }
@@ -242,38 +268,12 @@ QVector<sessionInfo> Monitor::getXvncInfo()
                 continue;
 
             QString tmp = strlist[index2];
-            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false, false};
+            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL)};
             vecInfo.push_back(info);
         }
     }
 
     return vecInfo;
-}
-
-void thread_function(sessionInfo tmp, void *user)
-{
-    sleep(2);
-    Monitor *pThis = (Monitor *)user;
-    auto it = pThis->m_sessionInfos.find(tmp.userName, tmp);
-    if (it != pThis->m_sessionInfos.end())
-    {
-        auto &value = it.value();
-        KLOG_INFO() << "restart bin, find" << it.key() << value.displayName;
-        auto &process = value.process;
-        if (process)
-        {
-            auto fileit = pThis->m_videoFileName.find(process->pid());
-            if (fileit != pThis->m_videoFileName.end())
-                pThis->m_videoFileName.erase(fileit);
-
-            process->close();
-            delete process;
-            process = nullptr;
-        }
-        value.process = pThis->startRecordWithDisplay(tmp);
-        value.isRun = false;
-    }
-    KLOG_DEBUG() << "deal CrashExit end";
 }
 
 QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
@@ -290,100 +290,132 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     QStringList arg;
     arg << (QString("--audit-") + info.userName + QString("-") + info.ip + QString("-") + info.displayName);
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
+    connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
-        sessionInfo tmp = info;
-        std::thread t(&thread_function, tmp, this);
-        t.detach();
+	    QSharedPointer<sessionInfo> ptrTmp(new sessionInfo(info));
+
+        sleep(1);
+        sessionInfo &tmp = *ptrTmp.data();
+        auto it = m_sessionInfos.find(tmp.userName, tmp);
+        if (it != m_sessionInfos.end())
+        {
+            auto &value = it.value();
+            // 找到的不是同一个进程
+            if (value.stTime != tmp.stTime)
+                return;
+
+            KLOG_INFO() << "restart bin, find" << it.key() << value.ip << value.displayName << value.authFile << value.stTime;
+            auto &process = value.process;
+            if (process)
+            {
+                process->close();
+                delete process;
+                process = nullptr;
+            }
+            value.process = startRecordWithDisplay(tmp);
+            value.bStart = false;
+            KLOG_INFO() << "deal CrashExit end";
+        }
     });
 
     process->start(m_vauditBin, arg);
 
-    KLOG_DEBUG() << "env display:" << info.displayName << info.authFile << process->pid() << process->program() << process->arguments();
+    KLOG_INFO() << "env display:" << info.displayName << info.authFile << process->pid() << process->program() << process->arguments();
     return process;
 }
 
 void Monitor::DealSession(bool isDiskOk)
 {
+    // 最大会话数改变处理：关闭之前的进程，并清理会话信息
     int maxRecordPerUser = MonitorDisk::instance().getMaxRecordPerUser();
     if (m_lastMaxRecordPerUser != maxRecordPerUser)
     {
+        KLOG_INFO() << "maxRecordPerUser changed, restart all record exec" << maxRecordPerUser << m_lastMaxRecordPerUser;
+        m_videoFileName.clear();
         clearSessionInfos();
         m_lastMaxRecordPerUser = maxRecordPerUser;
     }
+
+    // 获取所有图形会话信息(本地和vnc)
     QVector<sessionInfo> infos = getXorgInfo();
     QVector<sessionInfo> xvncInfos = getXvncInfo();
     infos.append(xvncInfos);
 
-    QMap<QString, int>mapCnt;
-    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
-    {
-        mapCnt.insert(it.key(), ++mapCnt[it.key()]);
-
-        //连续状态，不需要操作，保持之前的操作
-        if (!isDiskOk && !it.value().bNotify) //磁盘空间不足，且有在录像 ==》停止录像并提示
-        {
-            KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
-            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
-            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
-            it.value().bNotify = true;
-        }
-        else if (isDiskOk && it.value().bNotify) //磁盘空间恢复正常，但之前不足 ==》停止提示，并开始录像
-        {
-            KLOG_INFO() << "disk space returned to normal, stop notify and start record pid:" << it.value().process->processId();
-            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify_stop");
-            it.value().bNotify = false;
-            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
-        }
-
-        //杀掉进程后，重启进程直接start可能接收不到，以收到文件名字为判断
-        if (!it.value().isRun && isDiskOk)
-        {
-            KLOG_INFO() << "record not run and start";
-            MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
-        }
-    }
-
+    // 将图形信息按用户名为key，保存为map，便于统计一个用户下有多个会话
     QMultiMap<QString, sessionInfo> sessionInfos;
     for (sessionInfo info : infos)
     {
         sessionInfos.insert(info.userName, info);
     }
 
+    // 清除关闭的会话录屏信息并统计单个用户有多少个会话
+    QMap<QString, int>mapCnt;
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
     {
         auto &info = it.value();
         if (!sessionInfos.contains(it.key(), info))
         {
-            KLOG_INFO() << "not contain and erase:" << it.key() << info.displayName;
+            KLOG_INFO() << "not contain and erase:" << it.key() << info.ip << info.displayName;
             auto process = it.value().process;
             m_sessionInfos.erase(it++);
             clearProcess(process);
             continue;
         }
 
+        // 统计单个用户有多少个会话
+        mapCnt.insert(it.key(), ++mapCnt[it.key()]);
         ++it;
     }
 
+    // 拉起新启的会话的录屏进程
     for (sessionInfo info : infos)
     {
         if (!m_sessionInfos.contains(info.userName, info))
         {
+            // 单个用户最大录屏会话数处理；0 为不限制
             if (maxRecordPerUser > 0 && mapCnt[info.userName] >= maxRecordPerUser)
             {
-                KLOG_INFO() << info.userName << "max limit reached:" << mapCnt[info.userName] << ">" << maxRecordPerUser;
+                //KLOG_INFO() << info.userName << "max limit reached:" << mapCnt[info.userName] << ">" << maxRecordPerUser;
                 continue;
             }
+
             mapCnt.insert(info.userName, ++mapCnt[info.userName]);
             info.process = startRecordWithDisplay(info);
-            KLOG_DEBUG() << "isDiskOk:" << isDiskOk;
-            //启动进程后，马上发送消息，后台进程可能没收到，下一轮再操作
-            if (isDiskOk)
+            m_sessionInfos.insert(info.userName, info);
+        }
+    }
+
+    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
+    {
+        auto &val = it.value();
+        // 磁盘空间正常
+        if (isDiskOk)
+        {
+            // 进程存在，但是没有录屏(以收到录屏文件为准)，发送开始录屏信息
+            if (!val.bStart)
             {
-                info.bNotify = true; //下一次磁盘空间正常，开启录像
+                KLOG_INFO() << "record not start and start";
+                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
             }
 
-            m_sessionInfos.insert(info.userName, info);
+            // 关闭提示磁盘空间不足
+            if (val.bNotify)
+            {
+                KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << it.value().process->processId();
+                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify_stop");
+                val.bNotify = false;
+            }
+        }
+        else
+        {
+            //磁盘空间不足处理，如果停止过录像并正在提示不处理
+            if (!val.bNotify)
+            {
+                KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
+                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
+                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
+                val.bNotify = true;
+            }
         }
     }
 }

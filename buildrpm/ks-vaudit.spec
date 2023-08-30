@@ -79,7 +79,7 @@ export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:/lib:/lib64:/usr/lib64:/u
 export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri
 export LIBVA_DRIVER_NAME=iHD
 
-ls -l /usr/bin/cmake > /dev/null 2>&1 || sudo ln -s /usr/bin/cmake3 /usr/bin/cmake
+ls -l /usr/bin/cmake > /dev/null 2>&1 || ln -s /usr/bin/cmake3 /usr/bin/cmake
 bash simple-build-and-install
 
 %if %{with tests}
@@ -96,7 +96,7 @@ cd ./build-release
 %make_install
 mkdir -p %{buildroot}/usr/bin/
 #install ./src/ui/ks-vaudit-record/src/ks-vaudit-record %{buildroot}/usr/bin/
-sudo chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
+chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 
 %files
 /usr/local/ks-vaudit/Qt5.7.1
@@ -113,15 +113,18 @@ cat /etc/bashrc | grep "export LIBVA_DRIVERS_PATH=" > /dev/null 2>&1 || echo "ex
 cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:${qtlib}/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
 cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:${qtlib}:\$LD_LIBRARY_PATH" >> /etc/bashrc 
 
-sudo service ks-vaudit-configure restart
-sudo chkconfig ks-vaudit-configure on
-sudo service ks-vaudit-monitor restart
-sudo chkconfig ks-vaudit-monitor on
+# icons缓存刷新展示图标
+gtk-update-icon-cache /usr/share/icons/hicolor/
+
+service ks-vaudit-configure restart
+chkconfig ks-vaudit-configure on
+service ks-vaudit-monitor restart
+chkconfig ks-vaudit-monitor on
 
 %preun
-sudo service ks-vaudit-configure stop
-sudo service ks-vaudit-monitor stop
-sudo ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -v grep | xargs kill -2 > /dev/null 2>&1
+service ks-vaudit-configure stop
+service ks-vaudit-monitor stop
+ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -v grep | xargs kill -2 > /dev/null 2>&1
 sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean

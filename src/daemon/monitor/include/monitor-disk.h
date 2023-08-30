@@ -26,7 +26,7 @@ private:
     void parseConfigureInfo(QString);
     void checkRecordFreeSpace(QString filePath, const quint64 &minFreeSpace);
     void parseRecordConfigureInfo(QString value);
-    bool filePathOk(QString filePath);
+    bool filePathOk(QString &filePath);
 
 private slots:
     void UpdateConfigureData(QString, QString);

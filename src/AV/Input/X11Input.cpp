@@ -197,15 +197,20 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
 	if(!CommandLineOptions::GetFrontRecord()){ //后台录屏添加时间+用户名水印
 		QDateTime current_date_time = QDateTime::currentDateTime();
 		QString cdt = current_date_time.toString("yyyy/MM/dd hh:mm:ss"); //录制时间
-		QString name = qgetenv("USER"); //当前系统用户名
+//		QString name = qgetenv("USER"); //当前系统用户名
+		QString name = settings_ptr->value("record/user", QString("root")).toString(); //当前系统用户名
+
 		QString watermark_content_all = QString("%1 %2").arg(name).arg(cdt);
 		cairo_show_text(cr, watermark_content_all.toStdString().c_str());
 	}else{
 		cairo_show_text(cr, watermark_content.toStdString().c_str());
 	}
-	
+	cairo_destroy(cr);
 	cairo_surface_flush(surface);
 	uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
+	cairo_surface_destroy(surface);
+	cr = NULL;
+	surface = NULL;
 
 	return imagedata_front;
 }
@@ -671,7 +676,7 @@ void X11Input::InputThread() {
 				if(m_x11_image[m_x11_img_idx] != NULL) {
 					XDestroyImage(m_x11_image[m_x11_img_idx]);
 					m_x11_image[m_x11_img_idx] = NULL;
-                                }
+				}
 				m_x11_image[m_x11_img_idx] = XGetImage(m_x11_display, m_x11_root, grab_x, grab_y, grab_width, grab_height, AllPlanes, ZPixmap);
 				if(m_x11_image[m_x11_img_idx] == NULL) {
 					Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (not using shared memory)!\n"
@@ -716,15 +721,14 @@ void X11Input::InputThread() {
 			}
 
 			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
+			// 需要先打水印再判断是否变化
+			if (m_is_use_watermarking) {
+				watermark_content = settings_ptr ->value("record/water_print_text").toString();
+				X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
+			}
+
 			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
 				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 0);
-			} else if (m_is_use_watermarking) {
-				watermark_content = settings_ptr ->value("record/water_print_text").toString();
-
-				// 开启水印
-				uint8_t* image_watermark = X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
-				PushVideoFrame(grab_width, grab_height, image_watermark, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
-				
 			} else {
 				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
 			}

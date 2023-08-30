@@ -161,6 +161,7 @@ private:
 	ConfigureInterface* m_configure_interface;
 
 	QScreen* m_main_screen; //监测分辨率
+
 	// 用于定时向前端发送录屏时间信息
 	uint64_t m_last_send_time;
 	pid_t m_recordUiPID;
@@ -216,6 +217,7 @@ public slots:
 	void UpdateConfigureData(QString, QString); //配置发生变化 响应槽
 	void SwitchControl(int, int, QString); //启动、停止等控制开关 响应槽
 	void ScreenChangedHandler(const QRect&);
+	void SlaveScreenChangedHandler(const QRect&);
 	// 用于定时向前端发送录屏时间信息
 	void OnRecordTimer();
 

@@ -221,7 +221,15 @@ Recording::Recording(QSettings* qsettings){
 	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int,int, QString)), this, SLOT(SwitchControl(int,int,QString)));
 	m_main_screen = qApp->primaryScreen();
 
-	connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)));
+	for(QScreen *screen :  QApplication::screens()) {
+		if(screen != m_main_screen){
+			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(SlaveScreenChangedHandler(const QRect&)));
+		}else if(screen == m_main_screen){
+			Logger::LogInfo("===================the screen is m_main_screen ==================================");
+			connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&))); //主屏幕分辨率出现变化
+		}
+	}
+
 
 	m_selfPID = getpid();
 	m_recordUiPID = getppid();
@@ -257,9 +265,7 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 
 	//没有开始录屏但分辨率出现变动,只更新分辨率
 	if(!m_page_started){
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
 		Logger::LogInfo("the screen geometry changed \n");
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
 
 		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 		QRect rect = CombineScreenGeometries(screen_geometries);
@@ -275,6 +281,84 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		m_output_settings.video_width = m_video_in_width;
 		return ;
 	}
+   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+   Logger::LogInfo("LINE301--->: the main screen geometry changed \n");
+   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+   //判断两块屏宽、高是否一致
+   int main_screen_width = 0;
+   int main_screen_height = 0;
+   int slave_screen_width = 0;
+   int slave_screen_height = 0;
+	QList<QScreen *> screen_list = QApplication::screens();
+   if(screen_list.size() >= 2){
+	   main_screen_width = screen_list[0]->geometry().width();
+	   main_screen_height = screen_list[0]->geometry().height();
+	   slave_screen_width = screen_list[1]->geometry().width();
+	   slave_screen_height = screen_list[1]->geometry().height();
+	   if(!(main_screen_width == slave_screen_width && main_screen_height == slave_screen_height)){
+		   return;
+	   }
+   }
+
+	//分辨率变化后的处理
+	m_separate_files = true;
+//	OnRecordSave();
+	OnRecordPause();
+
+	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+	QRect rect = CombineScreenGeometries(screen_geometries); 
+	m_video_in_width = rect.width();
+	m_video_in_height = rect.height();
+	m_output_settings.video_height = m_video_in_height;
+	m_output_settings.video_width = m_video_in_width;
+	ReNameFile();
+	OnRecordStartPause();
+//	OnRecordStart();
+}
+
+void Recording::SlaveScreenChangedHandler(const QRect& hanged_screen_rect){
+	//不录制屏幕 不处理
+	if (!m_settings->value("input/video_enabled").toInt())
+		return;
+
+	//没有开始录屏但分辨率出现变动,只更新分辨率
+	if(!m_page_started){
+		Logger::LogInfo("the screen geometry changed \n");
+
+		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+		QRect rect = CombineScreenGeometries(screen_geometries);
+		
+		//update the qsettings
+		settings_ptr->setValue("input/video_x", rect.left()); //X
+		settings_ptr->setValue("input/video_y", rect.top()); //Y
+		settings_ptr->setValue("input/video_w", rect.width()); //width
+		settings_ptr->setValue("input/video_h", rect.height()); //height
+		m_video_in_width = rect.width();
+		m_video_in_height = rect.height();
+		m_output_settings.video_height = m_video_in_height;
+		m_output_settings.video_width = m_video_in_width;
+		return ;
+	}
+	
+   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+   Logger::LogInfo("LINE348--->: the slave screen geometry changed \n");
+   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
+
+   //判断两块屏幕宽、高是否一致
+   int main_screen_width = 0;
+   int main_screen_height = 0;
+   int slave_screen_width = 0;
+   int slave_screen_height = 0;
+   QList<QScreen *> screen_list = QApplication::screens();
+   if(screen_list.size() >= 2){
+	   main_screen_width = screen_list[0]->geometry().width();
+	   main_screen_height = screen_list[0]->geometry().height();
+	   slave_screen_width = screen_list[1]->geometry().width();
+	   slave_screen_height = screen_list[1]->geometry().height();
+	   if(!(main_screen_width == slave_screen_width && main_screen_height == slave_screen_height)){
+		   return;
+	   }
+   }
 
 	//分辨率变化后的处理
 	m_separate_files = true;
@@ -608,7 +692,7 @@ void Recording::SaveSettings(QSettings* settings) {
 		qApp->quit();
 	}
 //	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
-    settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
+	settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/video_allow_frame_skipping", true);
@@ -762,7 +846,7 @@ void Recording::StartOutput() {
 		UpdateInput();
 
 	} catch(...) {
-        Logger::LogError("[PageRecord::StartOutput] " + tr("Error: Something went wrong during initialization."));
+		Logger::LogError("[PageRecord::StartOutput] " + tr("Error: Something went wrong during initialization."));
 	}
 
 }
@@ -1008,16 +1092,18 @@ void Recording::OnRecordStartPause() {
 
 
 void Recording::OnRecordSave(bool confirm) {
-    if(!m_page_started)
-        return;
-    if(m_wait_saving)
-        return;
-    if(!m_recorded_something && confirm) {
-		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
-        return;
-    }
-    StopPage(true);
+	if(!m_page_started)
+		return;
 
+	if(m_wait_saving)
+		return;
+	
+	if(!m_recorded_something && confirm) {
+		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
+		return;
+	}
+
+	StopPage(true);
 }
 
 void Recording::OnRecordSaveAndExit(bool confirm) {
@@ -1028,11 +1114,12 @@ void Recording::OnRecordSaveAndExit(bool confirm) {
 	if(m_wait_saving) {
 		return;
 	}
-    if(!m_recorded_something && confirm) {
+	if(!m_recorded_something && confirm) {
 		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
-        return;
-    }
-    StopPage(true);
+		return;
+	}
+
+	StopPage(true);
 	qApp->quit();
 }
 

@@ -185,7 +185,7 @@ void GeneralConfigure::initConfig()
 void GeneralConfigure::initData()
 {
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILEPATH], "~/videos/ks-vaudit");
-    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILETYPE], "MP4");
+    m_lastMap.insert(m_itemMap[CONFIG_RECORD_FILETYPE], "MKV");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_RECORD_VIDIO], "1");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_FPS], "25");
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_QUALITY], "1");
@@ -199,7 +199,7 @@ void GeneralConfigure::initData()
     m_lastMap.insert(m_itemMap[CONFIG_RECORD_MIN_FREE_SPACE], "1073741824");
 
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILEPATH], "/opt/ks-vaudit");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILETYPE], "MP4");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FILETYPE], "MKV");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_VIDIO], "1");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FPS], "10");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_QUALITY], "1");

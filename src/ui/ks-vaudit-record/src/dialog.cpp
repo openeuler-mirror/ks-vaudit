@@ -56,6 +56,8 @@ void Dialog::initUI()
         initQRcode();
     }else if(m_dialogType == QString("DiskSpace")){
         ui->label->setText("磁盘空间不足，已为您保存当前录屏，请清理空间后再进行录制");
+    }else if(m_dialogType == QString("Warning")){
+        ui->label->setText("重命名失败，该文件名已存在，请重新输入！");
     }
 }
 
@@ -157,7 +159,14 @@ void Dialog::initRenameUI()
                                     "border:1px solid #2eb3ff;"
                                     "}");
     m_fileNameEditor->setGeometry(24,24,264,36);
-    connect(m_fileNameEditor, SIGNAL(returnPressed()), this, SLOT(emitRename()));
+//	 connect(m_fileNameEditor, SIGNAL(returnPressed()), this, SLOT());
+    connect(m_fileNameEditor, SIGNAL(textEdited(QString)), this, SLOT(checkName(QString)));
+    m_warningLabel = new QLabel(ui->bodyWidget);
+    m_warningLabel->setGeometry(24,53,264,36);
+    m_warningLabel->setAlignment(Qt::AlignCenter);
+    m_warningLabel->setStyleSheet("color:#fa1919;");
+    m_warningLabel->setText("重命名失败，请重新输入");
+    m_warningLabel->hide();
     m_fileNameEditor->setFocus();
     m_fileNameEditor->selectAll();
 }
@@ -231,4 +240,15 @@ void Dialog::exitDialog()
 void Dialog::emitRename()
 {
     emit rename_file();
+}
+
+void Dialog::checkName(QString inputName)
+{
+    if (inputName.isEmpty() || inputName.startsWith(".") || inputName.startsWith("/")){
+        ui->accept->setDisabled(true);
+        m_warningLabel->show();
+    }else{
+        ui->accept->setDisabled(false);
+        m_warningLabel->hide();
+    }
 }

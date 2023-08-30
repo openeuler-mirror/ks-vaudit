@@ -33,6 +33,7 @@ private slots:
     void on_cancel_clicked();
     void exitDialog();
     void emitRename();
+    void checkName(QString);
 
 signals:
     void close_window();
@@ -49,6 +50,7 @@ private:
     QString m_fileName;
     QString m_oldName;
     QLabel *m_qrCodeLabel;
+    QLabel *m_warningLabel;
 
 };
 

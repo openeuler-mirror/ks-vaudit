@@ -1,7 +1,7 @@
 /* 表格 */
 QHeaderView{
 background-color:rgb(57,57,57);
-padding-left:20px;
+padding-left:10px;
 margin-right:-20px;
 padding-bottom:-4px;
 height:24px;
@@ -19,7 +19,7 @@ background-color: transparent;
 }
 
 QTableView#videoList::item{
-padding-left:20px;
+padding-left:10px;
 padding-right:20px;
 background-color:rgb(57,57,57);
 color:rgb(255,255,255);

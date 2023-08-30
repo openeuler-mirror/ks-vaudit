@@ -537,6 +537,8 @@ void Widget::on_typeBox_currentIndexChanged(int index)
     if (index == 0){
         setValue = QString("MP4");
     }else if (index == 1){
+        setValue = QString("MKV");
+    }else if (index == 2){
         setValue = QString("OGV");
     }
     setConfig(QString("FileType"), setValue);

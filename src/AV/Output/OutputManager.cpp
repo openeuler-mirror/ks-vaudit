@@ -397,6 +397,12 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 		av_opt_set(context->priv_data, "preset", "fast", 0);	
 		
 	} else 	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
+		error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
+                        goto out;
+		}
+
 		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
 		if (error < 0) {
 			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create qsv device failed, codecname: " + codecname);
@@ -408,6 +414,12 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 		context->hw_device_ctx = av_buffer_ref(hw_device_ctx_ref);
 
 	} else if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+		
+		error = setenv("LIBVA_DRIVER_NAME", "i965", 1);
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=i965 failed, codecname: " + codecname);
+                        goto out;
+		}
 
 #if !SSR_USE_AVCODEC_PRIVATE_PRESET
 		X264Preset(context, "superfast");
@@ -464,11 +476,6 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 	frame->height = context->height;
 
 	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
-		error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
-                        goto out;
-		}
 
 		frame->format = context->pix_fmt;
 		error = av_frame_get_buffer(frame, 32);
@@ -486,12 +493,6 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 
 	} else if (codecname.contains("vaapi", Qt::CaseInsensitive) ||
 			codecname.contains("nvenc", Qt::CaseInsensitive)) {
-
-		error = unsetenv("LIBVA_DRIVER_NAME");
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] unsetenv LIBVA_DRIVER_NAME failed, codecname: " + codecname);
-                        goto out;
-		}
 
 		frame->format = AV_PIX_FMT_NV12;
 
@@ -655,18 +656,18 @@ void OutputManager::StartFragment() {
 	VideoEncoder *video_encoder = NULL;
 	AudioEncoder *audio_encoder = NULL;
 
-	// check which encode type should be used, 
-	QString enc_name = ChooseEncodeName(m_output_settings.container_avname);
-	int ret = 0;
-	
-	// reset encode options according to encode type
-	// preset of libx264 and h264_vaapi: ultrafast superfast veryfast faster fast medium slow slower veryslow placebo
-	// quality of qsv: global_quality [1-51] lower num mean higher quality
-	ret = unsetenv("LIBVA_DRIVER_NAME");
+	int ret = unsetenv("LIBVA_DRIVER_NAME");
 	if (ret < 0) {
 		Logger::LogError("unsetenv LIBVA_DRIVER_NAME failed");
 		return ;
 	}
+
+	// check which encode type should be used, 
+	QString enc_name = ChooseEncodeName(m_output_settings.container_avname);
+	
+	// reset encode options according to encode type
+	// preset of libx264 and h264_vaapi: ultrafast superfast veryfast faster fast medium slow slower veryslow placebo
+	// quality of qsv: global_quality [1-51] lower num mean higher quality
 
 	std::vector<std::pair<QString, QString> >().swap(m_output_settings.video_options);
 	if (enc_name.contains("qsv")) {
@@ -677,12 +678,6 @@ void OutputManager::StartFragment() {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(14)));
 		} else if (m_output_settings.encode_quality == "2") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(13)));
-		}
-		
-		ret = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
-		if (ret < 0) {
-			Logger::LogError("setenv LIBVA_DRIVER_NAME failed");
-			return ;
 		}
 
 	} else if (enc_name.contains("vaapi") ||

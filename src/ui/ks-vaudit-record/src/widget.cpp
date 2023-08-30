@@ -228,7 +228,7 @@ void Widget::on_ListBtn_clicked()
                                  "text-align:left center;"
                                  "padding-left:10px;"
                                  "};");
-    refreshList();
+    refreshList(m_regName);
 
 }
 
@@ -565,6 +565,10 @@ void Widget::realRename()
 {
     QString oldName = m_renameDialog->getOldName();
     QString newName = m_renameDialog->getNewName();
+    if (QString::compare(oldName, newName) == 0){
+        Dialog warningDialog(this,"Warning");
+        warningDialog.exec();
+    }
     for (int i = 0; i < m_fileList.size(); ++i){
         KLOG_DEBUG() << m_fileList.at(i).fileName() << ":" << oldName;
         if (m_fileList.at(i).fileName() == oldName){
@@ -686,6 +690,14 @@ QString Widget::getVideoDuration(QString absPath)
     if (pCtx->duration != AV_NOPTS_VALUE){
         int64_t duration = pCtx->duration + (pCtx->duration <= INT64_MAX - 5000 ? 5000 : 0);
         secs = duration / AV_TIME_BASE;
+        // #59083 过滤掉时长为0播放不了的视频
+        if (secs == 0){
+            if (pCtx != NULL){
+                avformat_close_input(&pCtx);
+                pCtx=NULL;
+            }
+            return QString("文件损坏");
+        }
         mins = secs / 60;
         secs %= 60;
         hours = mins / 60;
@@ -701,7 +713,7 @@ QString Widget::getVideoDuration(QString absPath)
     }
     // 目前假设单个视频文件超过99小时
     if (hours > 99){
-        return QString("%1").arg("大于99小时");
+        return QString("%1").arg("大于100小时");
     }
     return QString("%1:%2:%3").arg(hours,2,10,QLatin1Char('0')).arg(mins,2,10,QLatin1Char('0')).arg(secs,2,10,QLatin1Char('0'));
 }
@@ -740,7 +752,7 @@ void Widget::createList(){
 
     ui->videoList->horizontalHeader()->setFixedWidth(628);
     ui->videoList->setColumnWidth(0,202);
-    ui->videoList->setColumnWidth(1,108);
+    ui->videoList->setColumnWidth(1,120);
     ui->videoList->setColumnWidth(2,100);
     ui->videoList->setColumnWidth(3,155);
     ui->videoList->setColumnWidth(4,70);
@@ -853,18 +865,29 @@ void Widget::readConfig()
                 ui->clarityBox->setCurrentIndex(jsonObj[k].toString().toInt());
             }else if(k == "RecordAudio"){
                 int setIndex = 0;
-                if (jsonObj[k].toString() == QString("all")){
+                QVariant v(1|32);
+                QString auditType = jsonObj[k].toString();
+                if (auditType == QString("all")){
                     setIndex = 0;
-                }else if(jsonObj[k].toString() == QString("speaker")){
+                }else if(auditType == QString("speaker")){
                     setIndex = 1;
-                }else if(jsonObj[k].toString() == QString("mic")){
+                }else if(auditType == QString("mic")){
                     setIndex = 2;
-                }else if(jsonObj[k].toString() == QString("none")){
+                }else if(auditType == QString("none")){
                     setIndex = 3;
+                    v.setValue(0);
                 }
+
+                ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
                 ui->audioBox->setCurrentIndex(setIndex);
             }else if(k == "RecordVideo"){
-                ui->resolutionBox->setCurrentIndex(jsonObj[k].toString().toInt());
+                int index = jsonObj[k].toString().toInt();
+                ui->resolutionBox->setCurrentIndex(index);
+                QVariant v(1|32);
+                if (index == 0){
+                    v.setValue(0);
+                }
+                ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
             }else if(k == "TimingReminder"){
                 int setIndex = 0;
                 if (jsonObj[k].toString().toInt() == 0){

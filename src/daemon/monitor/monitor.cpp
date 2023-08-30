@@ -85,10 +85,19 @@ void Monitor::receiveNotification(int pid, QString message)
             map.insert(process->pid(), 0);
             if (process->pid() == pid)
             {
+                if (message == "disk_notify")
+                {
+                    it.value().bNotify = true;
+                    KLOG_INFO() << "audit receive disk space notify";
+                    return;
+                }
                 QString suffix = message.mid(message.size() - 8, message.size());
-                if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp")
+                if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp"
+                    || suffix == ".mkv.tmp" || suffix == ".MKV.tmp")
+                {
                     bInsert = true;
-                it.value().bStart = true;
+                    it.value().bStart = true;
+                }
             }
         }
     }
@@ -99,7 +108,7 @@ void Monitor::receiveNotification(int pid, QString message)
         auto iter = map.find(it.key());
         if (iter == map.end())
         {
-            KLOG_INFO() << "erase" << it.key() << it.value();
+            KLOG_INFO() << "m_videoFileName erase" << it.key() << it.value();
             m_videoFileName.erase(it++);
             continue;
         }
@@ -149,7 +158,7 @@ QStringList Monitor::getVncProcessId()
     QProcess process;
     process.setProcessChannelMode(QProcess::MergedChannels);
     process.setProgram("sh");
-    process.setArguments(QStringList() << "-c" << "ps aux | grep Xvnc | grep -v grep | awk '{print $2}'");
+    process.setArguments(QStringList() << "-c" << "ps aux | grep Xvnc | grep -v grep | awk -v FS=' ' '{print $1,$2}'");
     process.start();
     if (process.waitForFinished())
     {
@@ -234,8 +243,14 @@ QVector<sessionInfo> Monitor::getXvncInfo()
 {
     QVector<sessionInfo> vecInfo;
     QStringList pids = getVncProcessId();
-    for (auto pid : pids)
+    for (auto v : pids)
     {
+        QStringList lists = v.split(" ");
+        if (lists.size() != 2)
+            continue;
+
+        QString user = lists[0];
+        QString pid = lists[1];
         QString ip = getRemotIP(pid);
         if (ip.isEmpty())
             continue;
@@ -261,14 +276,12 @@ QVector<sessionInfo> Monitor::getXvncInfo()
                 str = str + data[i];
             }
 
-            int index = strlist.indexOf("/usr/bin/Xvnc");
-            int index1 = strlist.indexOf(QRegularExpression("^-auth"));
-            int index2 = strlist.indexOf(QRegExp("\\(.*\\)"));
-            if (index == -1 || index1 == -1 || index2 == -1)
+            int index = strlist.indexOf(QRegularExpression(".*Xvnc$"));
+            int index1 = strlist.indexOf(QRegularExpression("^-rfbauth"));
+            if (index == -1 || index1 == -1)
                 continue;
 
-            QString tmp = strlist[index2];
-            struct sessionInfo info = {tmp.mid(1, tmp.size() - 2), ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL)};
+            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL)};
             vecInfo.push_back(info);
         }
     }
@@ -302,7 +315,10 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
             auto &value = it.value();
             // 找到的不是同一个进程
             if (value.stTime != tmp.stTime)
+            {
+                KLOG_INFO() << "not find, killed process start time" << tmp.stTime << "find time" << tmp.stTime;
                 return;
+            }
 
             KLOG_INFO() << "restart bin, find" << it.key() << value.ip << value.displayName << value.authFile << value.stTime;
             auto &process = value.process;
@@ -414,7 +430,6 @@ void Monitor::DealSession(bool isDiskOk)
                 KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
                 MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
                 MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
-                val.bNotify = true;
             }
         }
     }
@@ -470,14 +485,14 @@ void Monitor::clearSessionInfos()
         clearProcess(process);
     }
 
-    KLOG_DEBUG() << "remove all end";
+    KLOG_INFO() << "remove all end";
 }
 
 void Monitor::clearProcess(QProcess *process)
 {
     if (process)
     {
-        KLOG_DEBUG() << "call exit signal, remove "<< process->processId();
+        KLOG_INFO() << "call exit signal, remove "<< process->processId();
         MonitorDisk::instance().sendSwitchControl(process->processId(), "exit");
         if (process->waitForFinished())
         {
@@ -485,6 +500,6 @@ void Monitor::clearProcess(QProcess *process)
             delete process;
             process = nullptr;
         }
-        KLOG_DEBUG() << "remove success";
+        KLOG_INFO() << "remove success";
     }
 }

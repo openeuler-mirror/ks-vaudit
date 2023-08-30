@@ -128,6 +128,7 @@ private:
 
 private:
 	bool m_page_started, m_input_started, m_output_started;
+	bool m_pause_state; //判断是否处于暂停状态
 	bool m_recorded_something, m_wait_saving, m_error_occurred;
 
 	enum_video_area m_video_area;

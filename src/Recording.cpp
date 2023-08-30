@@ -217,6 +217,7 @@ Recording::Recording(QSettings* qsettings){
 	m_page_started = false;
 	m_input_started = false;
 	m_output_started = false;
+	m_pause_state = false;
 	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 	m_last_send_time = 0;
 
@@ -382,6 +383,18 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		m_output_settings.video_height = m_video_in_height;
 		m_output_settings.video_width = m_video_in_width;
 		return ;
+	}
+
+	if(m_pause_state == true){
+		m_separate_files = true;
+		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+		QRect rect = CombineScreenGeometries(screen_geometries); 
+		m_video_in_width = rect.width();
+		m_video_in_height = rect.height();
+		m_output_settings.video_height = m_video_in_height;
+		m_output_settings.video_width = m_video_in_width;
+		ReNameFile();
+		return;
 	}
    //判断两块屏宽、高是否一致
    int main_screen_width = 0;
@@ -1126,6 +1139,7 @@ void Recording::OnRecordPause() {
 		return;
 	if(m_output_started)
 		StopOutput(false);
+	m_pause_state = true;
 }
 
 void Recording::OnRecordStartPause() {
@@ -1133,6 +1147,7 @@ void Recording::OnRecordStartPause() {
 		OnRecordPause();
 	} else {
 		OnRecordStart();
+		m_pause_state = false;
 	}
 }
 

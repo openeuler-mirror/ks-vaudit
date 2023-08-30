@@ -142,7 +142,8 @@ int main(int argc, char* argv[]) {
 		Benchmark();
 	}
 	pid_t selfPID = getpid();
-	QString settingPath = QString("%1%2%3%4").arg(QDir::homePath()).arg("/.ssr/setting-").arg(selfPID).arg(".conf");
+	// 使用sudo service 启动monitor服务无法获取到准确的HomePath，统一存放到/tmp下
+	QString settingPath = QString("%1%2%3").arg("/tmp/.ks-vaudit/setting-").arg(selfPID).arg(".conf");
 	static QSettings settings(settingPath, QSettings::IniFormat);
 	settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
 	settings_ptr = &settings;

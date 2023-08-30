@@ -433,7 +433,17 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 }
 
 
-Recording::~Recording() {}
+Recording::~Recording() {
+	if (m_tm){
+		delete m_tm;
+		m_tm = nullptr;
+	}
+	if (m_audioTimer){
+		delete m_audioTimer;
+		m_audioTimer = nullptr;
+	}
+
+}
 
 bool Recording::TryStartPage() {
 	if(m_page_started)
@@ -1215,10 +1225,11 @@ void Recording::OnRecordRestart()	{
 /**
  * 配置发生改变
  **/
-void Recording::UpdateConfigureData(QString key, QString value){
+void Recording::UpdateConfigureData(QString keyStr, QString value){
 	//Logger::LogInfo("%%%%%%%%%%%%%  UpdateConfigureData 信号槽函数 %%%%%%%%%%%%%%");
 	//Logger::LogInfo("the first is " + key + "the second is " + value);
-	if(key == "record"){
+	bool isRecord = CommandLineOptions::GetFrontRecord();
+	if(keyStr == "record" && isRecord){
 		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 		if(!doc.isObject()){
 			Logger::LogError("Cann't get the DBus configure!");
@@ -1227,7 +1238,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 
 		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
-			Logger::LogInfo("[Recording::UpdateConfigureData] --------------keys and value is -------------" + key + "==========" + jsonObj[key].toString());
+			Logger::LogInfo("[Recording::UpdateConfigureData:record] --------------keys and value is -------------" + key + "==========" + jsonObj[key].toString());
 
 			//修改settings
 			if(key == "Fps"){
@@ -1263,7 +1274,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 				m_settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
 			}
 		}
-	}else { //后台审计
+	}else if (keyStr == "audit" && !isRecord){ //后台审计
 		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 		if(!doc.isObject()){
 			Logger::LogError("Cann't get the DBus configure!");
@@ -1272,7 +1283,7 @@ void Recording::UpdateConfigureData(QString key, QString value){
 		bool needRestart = false;
 		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
-			Logger::LogInfo("[Recording::UpdateConfigureData] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
+			Logger::LogInfo("[Recording::UpdateConfigureData:audit] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
 
 			//修改settings
 			if(key == "Fps"){

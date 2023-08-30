@@ -113,6 +113,12 @@ cat /etc/bashrc | grep "export LIBVA_DRIVERS_PATH=" > /dev/null 2>&1 || echo "ex
 cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:${qtlib}/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
 cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:${qtlib}:\$LD_LIBRARY_PATH" >> /etc/bashrc 
 
+# 配置文件存放目录
+if [ ! -d "/tmp/.ks-vaudit" ];then
+mkdir -p /tmp/.ks-vaudit
+chmod 777 /tmp/.ks-vaudit
+fi
+
 # icons缓存刷新展示图标
 gtk-update-icon-cache /usr/share/icons/hicolor/
 

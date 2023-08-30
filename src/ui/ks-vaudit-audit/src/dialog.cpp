@@ -12,6 +12,7 @@ Dialog::Dialog(QWidget *parent, QString dialogType) :
     ui->setupUi(this);
     this->setWindowFlags(Qt::Dialog|Qt::FramelessWindowHint);
     this->setAttribute(Qt::WA_TranslucentBackground, true);
+    this->setAttribute(Qt::WA_DeleteOnClose, true);
     initUI();
 }
 

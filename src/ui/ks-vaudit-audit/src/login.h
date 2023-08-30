@@ -54,6 +54,7 @@ private:
     QJsonObject m_currentUserInfo;
     ActivatePage *m_activation;
     bool m_isActivated = false;
+    void keyPressEvent(QKeyEvent *event);
 
 };
 

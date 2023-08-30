@@ -11,10 +11,14 @@ Login::Login(QWidget *parent) :
     ui(new Ui::Login)
 {
     ui->setupUi(this);
+    this->setFocusPolicy(Qt::StrongFocus);
+    this->setFocus();
     m_activation = new ActivatePage();
 
     if (!checkActivation()){
+        m_activation->setFocus();
         m_activation->exec();
+        this->clearFocus();
     }
     this->setWindowFlags(Qt::Dialog|Qt::FramelessWindowHint);
     this->setAttribute(Qt::WA_TranslucentBackground, true);
@@ -48,14 +52,16 @@ void Login::on_accept_clicked()
 {
     bool isActivated = checkActivation();
     if (!isActivated){
+        m_activation->setFocus();
         m_activation->exec();
+        this->clearFocus();
         checkActivation();
         return;
     }
     bool passwordConfirmed = checkLogin();
     if(passwordConfirmed){
-        emit show_widget(m_currentUserInfo);
         this->hide();
+        emit show_widget(m_currentUserInfo);
         KLOG_INFO() << ui->userBox->currentText() << "login succeed!";
     }else{
         ui->label_3->show();
@@ -167,6 +173,8 @@ void Login::on_passwdEdit_textChanged(const QString &arg1)
 
 void Login::on_activationBtn_clicked()
 {
+    m_activation->setFocus();
     m_activation->exec();
+    ui->activationBtn->clearFocus();
     checkActivation();
 }

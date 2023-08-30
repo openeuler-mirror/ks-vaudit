@@ -836,7 +836,6 @@ void Widget::refreshList(QString regName)
 
     // 添加内容
     m_fileList = getVideos(ui->pathLabel->text(), regName);
-
     for (int p=0,i=0; p < m_fileList.size(); ++p){
         QString fileName = m_fileList.at(p).fileName();
         QString duration = getVideoDuration(m_fileList.at(p).absoluteFilePath());
@@ -1050,6 +1049,8 @@ void Widget::show_widget_page(QJsonObject arg)
     KLOG_DEBUG() << "[show widget arg]:" << arg["user"].toString() << arg["passwd"].toString();
     m_currentUserInfo = arg;
     QString currentUserName = m_currentUserInfo["user"].toString();
+    // 审计管理员界面需要先展示界面再刷新列表，不然会阻塞界面
+    this->show();
     if (currentUserName == "audadm"){
         initAudadmUi();
         ui->userLevelEdit->setText("审计管理员");
@@ -1061,7 +1062,6 @@ void Widget::show_widget_page(QJsonObject arg)
         ui->userLevelEdit->setText("安全管理员");
     }
 
-    this->show();
 }
 
 QString Widget::strTobase64(QString inputStr)
@@ -1082,5 +1082,6 @@ void Widget::getActivationInfo()
 
 void Widget::on_aboutInfoBtn_clicked()
 {
+    m_activatedPage->setFocus();
     m_activatedPage->exec();
 }

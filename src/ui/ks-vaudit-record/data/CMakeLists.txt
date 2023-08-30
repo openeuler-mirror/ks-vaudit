@@ -24,6 +24,9 @@ install(FILES "images/96px.png"
 install(FILES "images/128px.png"
 	DESTINATION ${RECORD_UI_ICON_INSTALL_PATH}/128x128/apps RENAME ks-vaudit-record.png)
 
+install(FILES "images/24pxrecord.svg"
+    DESTINATION ${RECORD_UI_ICON_INSTALL_PATH}/scalable/apps RENAME ks-vaudit-record.svg)
+
 set(RECORD_UI_BIN_DIR ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
 
 configure_file("ks-vaudit-record.desktop.in"

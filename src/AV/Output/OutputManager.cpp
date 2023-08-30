@@ -254,7 +254,7 @@ void OutputManager::Free() {
 }
 
 int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt)
-{   
+{
 	int result = -1;
 	int error = 0;
 	
@@ -297,7 +297,7 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 		Logger::LogInfo("[OutputManager::Encode] avcodec_send_frame failed");
 		goto out;
 	}
-    
+
 	while (error >= 0) {
 		error = avcodec_receive_packet(enc_ctx, pkt);
 		if (error == AVERROR(EAGAIN) || error == AVERROR_EOF) {
@@ -309,7 +309,7 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 			result = -1;
 			goto out;
 		}
-        
+
 		// succeed
 		av_packet_unref(pkt);
 	}
@@ -341,8 +341,8 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 	const AVCodec *codec = NULL;
 	AVCodecContext *context = NULL;
 
-        AVBufferRef *hw_device_ctx_ref = NULL;
-        AVBufferRef *hw_frames_ctx_ref = NULL;
+	AVBufferRef *hw_device_ctx_ref = NULL;
+	AVBufferRef *hw_frames_ctx_ref = NULL;
 	AVFrame *frame = NULL;
 	AVPacket *pkt = NULL;
 	AVDictionary* options = NULL;
@@ -400,7 +400,7 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 		error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
 		if (error < 0) {
 			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
-                        goto out;
+			goto out;
 		}
 
 		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
@@ -418,7 +418,7 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 		error = setenv("LIBVA_DRIVER_NAME", "i965", 1);
 		if (error < 0) {
 			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=i965 failed, codecname: " + codecname);
-                        goto out;
+			goto out;
 		}
 
 #if !SSR_USE_AVCODEC_PRIVATE_PRESET
@@ -435,25 +435,25 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 
 		context->pix_fmt = AV_PIX_FMT_VAAPI;
 
-                hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
-                assert(hw_frames_ctx_ref != NULL);
+		hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
+		assert(hw_frames_ctx_ref != NULL);
 
-                AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)hw_frames_ctx_ref->data;
-                hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
-                hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
-                hw_frames_ctx->initial_pool_size = 0;
-                hw_frames_ctx->width     = context->width;
-                hw_frames_ctx->height    = context->height;
+		AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)hw_frames_ctx_ref->data;
+		hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
+		hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
+		hw_frames_ctx->initial_pool_size = 0;
+		hw_frames_ctx->width     = context->width;
+		hw_frames_ctx->height    = context->height;
 
-                error = av_hwframe_ctx_init(hw_frames_ctx_ref);
-                if (error < 0) {
+		error = av_hwframe_ctx_init(hw_frames_ctx_ref);
+		if (error < 0) {
 			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_hwframe_ctx_init failed, codecname: " + codecname);
 			goto out;
 		}
 
 		// bind frame ref
-                context->hw_frames_ctx = av_buffer_ref(hw_frames_ctx_ref);
-                // context->hw_frames_ctx = hw_frames_ctx_ref;
+		context->hw_frames_ctx = av_buffer_ref(hw_frames_ctx_ref);
+		// context->hw_frames_ctx = hw_frames_ctx_ref;
 	}
 
 	error = avcodec_open2(context, codec, &options);
@@ -725,12 +725,12 @@ void OutputManager::StartFragment() {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("fast")));
 		} else if (m_output_settings.encode_quality == "2") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("veryslow")));
-                }
+		}
 
 	} else {
 		Logger::LogInfo("[OutputManager::StartFragment] enc name invalid");
 		return;
-	} 
+	}
 
 	m_output_settings.video_codec_avname = enc_name;
 	Logger::LogInfo("[OutputManager::StartFragment]  video codec name:" + m_output_settings.video_codec_avname);
@@ -752,7 +752,7 @@ void OutputManager::StartFragment() {
 	Logger::LogInfo("[OutputManager::StartFragment]  audio samplerate:" + QString::number(m_output_settings.audio_sample_rate));
 
 	video_encoder = muxer->AddVideoEncoder(m_output_settings.video_codec_avname, m_output_settings.video_options, m_output_settings.video_kbit_rate * 1000,
-						   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
+										   m_output_settings.video_width, m_output_settings.video_height, m_output_settings.video_frame_rate);
 
 	if(!m_output_settings.audio_codec_avname.isEmpty()){
 		audio_encoder = muxer->AddAudioEncoder(m_output_settings.audio_codec_avname, m_output_settings.audio_options, m_output_settings.audio_kbit_rate * 1000,

@@ -196,9 +196,9 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
 
 	if(!CommandLineOptions::GetFrontRecord()){ //后台录屏添加时间+用户名水印
 		QDateTime current_date_time = QDateTime::currentDateTime();
-		QString cdt = current_date_time.toString("yyyy-MM-dd hh:mm:ss ddd"); //录制时间
+		QString cdt = current_date_time.toString("yyyy/MM/dd hh:mm:ss"); //录制时间
 		QString name = qgetenv("USER"); //当前系统用户名
-		QString watermark_content_all = watermark_content + cdt + name;		
+		QString watermark_content_all = QString("%1 %2").arg(name).arg(cdt);
 		cairo_show_text(cr, watermark_content_all.toStdString().c_str());
 	}else{
 		cairo_show_text(cr, watermark_content.toStdString().c_str());

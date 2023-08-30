@@ -230,6 +230,12 @@ Recording::Recording(QSettings* qsettings){
 	m_tm->setInterval(1000);
 	connect(m_tm, SIGNAL(timeout()), this, SLOT(OnRecordTimer()));
 	m_tm->start();
+
+	m_audioTimer = new QTimer();
+	m_audioTimer->setInterval(2000);
+	connect(m_audioTimer, SIGNAL(timeout()), this, SLOT(OnAudioTimer()));
+	m_audioTimer->start();
+
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 }
 
@@ -250,6 +256,38 @@ void Recording::OnRecordTimer() {
 	// Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
 }
 
+void Recording::OnAudioTimer() {
+	if (m_output_manager == NULL)
+		return;
+
+	if (!m_audio_enabled || m_audio_backend != AUDIO_BACKEND_PULSEAUDIO)
+		return;
+
+	QString defualtAudioInput = QAudioDeviceInfo::defaultInputDevice().deviceName();
+	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
+	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
+	bool bChangeAudio{};
+	if ((audio_enabled == "mic" || audio_enabled == "all") && defualtAudioInput != m_lastAlsaInput) {
+		KLOG_INFO() << "mic change:" << "cur input:" << defualtAudioInput << "m_lastAlsaInput:" << m_lastAlsaInput;
+		m_lastAlsaInput = defualtAudioInput;
+		bChangeAudio = true;
+
+	}
+	if ((audio_enabled == "speaker" || audio_enabled == "all") && defualtAudioOutput != m_lastAlsaOutput) { //扬声器
+		KLOG_INFO() << "speaker change" << m_lastAlsaInput << "cur Output:" << defualtAudioOutput << "m_lastAlsaOutput:" << m_lastAlsaOutput;
+		m_lastAlsaOutput = defualtAudioOutput;
+		bChangeAudio = true;
+	}
+
+	if (bChangeAudio)
+	{
+		KLOG_WARNING() << "audio source change, restart record!";
+		Logger::LogInfo("audio source change, restart record!");
+		OnRecordPause();
+		OnRecordStartPause();
+	}
+}
+
 void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 	//不录制屏幕 不处理
 	if (!m_settings->value("input/video_enabled").toInt())
@@ -257,9 +295,7 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 
 	//没有开始录屏但分辨率出现变动,只更新分辨率
 	if(!m_page_started){
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
 		Logger::LogInfo("the screen geometry changed \n");
-		Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
 
 		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 		QRect rect = CombineScreenGeometries(screen_geometries);
@@ -337,6 +373,8 @@ void Recording::StartPage() {
 	// 音频相关设置
 	QString defualtAudioInput = QAudioDeviceInfo::defaultInputDevice().deviceName();
 	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
+	m_lastAlsaInput = defualtAudioInput;
+	m_lastAlsaOutput = defualtAudioOutput;
 
 	m_pulseaudio_source_input = "";
 	m_pulseaudio_source_output = "";
@@ -608,7 +646,7 @@ void Recording::SaveSettings(QSettings* settings) {
 		qApp->quit();
 	}
 //	settings->setValue("output/file", file_path + "/" + sys_user + file_suffix); //只能用绝对路径， 有空优化一下这地方
-    settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
+	settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
 	settings->setValue("output/separate_files", true);
 	settings->setValue("output/add_timestamp", true);
 	settings->setValue("output/video_allow_frame_skipping", true);
@@ -762,7 +800,7 @@ void Recording::StartOutput() {
 		UpdateInput();
 
 	} catch(...) {
-        Logger::LogError("[PageRecord::StartOutput] " + tr("Error: Something went wrong during initialization."));
+		Logger::LogError("[PageRecord::StartOutput] " + tr("Error: Something went wrong during initialization."));
 	}
 
 }
@@ -1008,16 +1046,18 @@ void Recording::OnRecordStartPause() {
 
 
 void Recording::OnRecordSave(bool confirm) {
-    if(!m_page_started)
-        return;
-    if(m_wait_saving)
-        return;
-    if(!m_recorded_something && confirm) {
-		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
-        return;
-    }
-    StopPage(true);
+	if(!m_page_started)
+		return;
 
+	if(m_wait_saving)
+		return;
+	
+	if(!m_recorded_something && confirm) {
+		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
+		return;
+	}
+
+	StopPage(true);
 }
 
 void Recording::OnRecordSaveAndExit(bool confirm) {
@@ -1028,11 +1068,12 @@ void Recording::OnRecordSaveAndExit(bool confirm) {
 	if(m_wait_saving) {
 		return;
 	}
-    if(!m_recorded_something && confirm) {
+	if(!m_recorded_something && confirm) {
 		Logger::LogInfo("You haven't recorded anything, there is nothing to save.");
-        return;
-    }
-    StopPage(true);
+		return;
+	}
+
+	StopPage(true);
 	qApp->quit();
 }
 
@@ -1042,9 +1083,7 @@ void Recording::ReNameFile()
 	// 完成录制后移除.tmp后缀
 	QString fileName = m_output_settings.file;
 	QString fileBaseName = fileName.left(fileName.lastIndexOf("."));
-	Logger::LogInfo("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	if (QFile(fileName).exists()){
-		Logger::LogInfo(".,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,");
 		QFile(fileName).rename(fileName, fileBaseName);
 	}
 }

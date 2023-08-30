@@ -520,7 +520,9 @@ void Widget::on_typeBox_currentIndexChanged(int index)
     QString setValue = QString("MP4");
     if (index == 0){
         setValue = QString("MP4");
-    }else if (index == 1){
+    }else if (index == 1) {
+        setValue = QString("MKV");
+    }else if (index == 2){
         setValue = QString("OGV");
     }
     testConfig(QString("FileType"), setValue);
@@ -710,7 +712,7 @@ QList<QFileInfo> Widget::getVideos(QString path, QString regName = QString(""))
     }
     QDir dir(path);
     QStringList filters;
-    filters << "*.mp4" << "*.ogv";
+    filters << "*.mp4" << "*.mkv" << "*.ogv";
     dir.setNameFilters(filters);
     // 默认时间排序
     dir.setSorting(QDir::Time);

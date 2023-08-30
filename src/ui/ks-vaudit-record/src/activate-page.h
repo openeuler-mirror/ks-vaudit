@@ -19,6 +19,7 @@ protected:
     void initUI();
     void getLicenseInfo();
     void genQRcode(QLabel *);
+    void keyPressEvent(QKeyEvent *event);
 
 private slots:
     void acceptBtnClicked();
@@ -30,7 +31,6 @@ private:
     QPushButton *m_activateBtn;
     QLineEdit *m_licenseCodeEdit;
     QLineEdit *m_dateCodeEdit;
-    void keyPressEvent(QKeyEvent *event);
 
 };
 

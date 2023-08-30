@@ -109,14 +109,23 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
                         newfile += now.toString("yyyyMMdd_hhmmss");
 		}
 		if(counter != 1) {
+			//处理重复视频文件
+			if(QFileInfo(newfile).exists()){
+				if(QFileInfo(newfile).size() == 0){
+					Logger::LogInfo("[Recording::GetNewSegmentFile] remove the same file " + newfile);
+					QFile(newfile).remove();
+				}
+			}
+
 			if(!newfile.isEmpty())
 				newfile += "-";
-			newfile += "(" + QString::number(counter) + ")";
+			newfile += QString::number(counter);
 		}
 		if(!fi.suffix().isEmpty())
 			newfile += "." + fi.suffix();
 		newfile = fi.path() + "/" + newfile;
 	} while(QFileInfo(newfile).exists());
+
 	// 录制中的文件添加后缀 .tmp 不展示出来
 	return newfile+".tmp";
 }
@@ -136,14 +145,22 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 		}
 
 		if (counter != 1) {
-			newfile += "_";
-			newfile += "(" + QString::number(counter) + ")";
+			//处理重复视频文件
+			if(QFileInfo(newfile).exists()){
+				if(QFileInfo(newfile).size() == 0){
+					Logger::LogInfo("[Recording::GetNewSegmentFile] remove the same file" + newfile);
+					QFile(newfile).remove();
+				}
+			}
+			newfile += "-";
+			newfile += QString::number(counter);
 		}
 
 		if (!fi.suffix().isEmpty())
 			newfile += "." + fi.suffix();
 		newfile = fi.path() + "/" + newfile;
 	} while (QFileInfo(newfile).exists());
+
 	return newfile+".tmp";
 }
 
@@ -220,13 +237,16 @@ Recording::Recording(QSettings* qsettings){
 	connect(m_configure_interface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(UpdateConfigureData(QString, QString)));
 	connect(m_configure_interface, SIGNAL(SignalSwitchControl(int,int, QString)), this, SLOT(SwitchControl(int,int,QString)));
 	m_main_screen = qApp->primaryScreen();
+	
+	//监控显示器热插拔
+	connect(qApp, SIGNAL(screenAdded(QScreen *)),this, SLOT(ScreenAddedOrRemovedHandler(QScreen* )), Qt::UniqueConnection);
+	connect(qApp, SIGNAL(screenRemoved(QScreen *)),this, SLOT(ScreenAddedOrRemovedHandler(QScreen*)), Qt::UniqueConnection);
 
 	for(QScreen *screen :  QApplication::screens()) {
 		if(screen != m_main_screen){
-			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(SlaveScreenChangedHandler(const QRect&)));
+			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)),  Qt::UniqueConnection);
 		}else if(screen == m_main_screen){
-			Logger::LogInfo("===================the screen is m_main_screen ==================================");
-			connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&))); //主屏幕分辨率出现变化
+			connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)),  Qt::UniqueConnection); //主屏幕分辨率出现变化
 		}
 	}
 
@@ -238,6 +258,12 @@ Recording::Recording(QSettings* qsettings){
 	m_tm->setInterval(1000);
 	connect(m_tm, SIGNAL(timeout()), this, SLOT(OnRecordTimer()));
 	m_tm->start();
+
+	m_audioTimer = new QTimer();
+	m_audioTimer->setInterval(2000);
+	connect(m_audioTimer, SIGNAL(timeout()), this, SLOT(OnAudioTimer()));
+	m_audioTimer->start();
+
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 }
 
@@ -256,6 +282,82 @@ void Recording::OnRecordTimer() {
 	m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, msg);
 	KyNotify::instance().setRecordTime(total_time);
 	// Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
+}
+
+void Recording::OnAudioTimer() {
+	if (m_output_manager == NULL)
+		return;
+
+	if (!m_audio_enabled || m_audio_backend != AUDIO_BACKEND_PULSEAUDIO)
+		return;
+
+	QString defualtAudioInput = QAudioDeviceInfo::defaultInputDevice().deviceName();
+	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
+	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
+	bool bChangeAudio{};
+	if ((audio_enabled == "mic" || audio_enabled == "all") && defualtAudioInput != m_lastAlsaInput) {
+		KLOG_INFO() << "mic change:" << "cur input:" << defualtAudioInput << "m_lastAlsaInput:" << m_lastAlsaInput;
+		m_lastAlsaInput = defualtAudioInput;
+		bChangeAudio = true;
+
+	}
+	if ((audio_enabled == "speaker" || audio_enabled == "all") && defualtAudioOutput != m_lastAlsaOutput) { //扬声器
+		KLOG_INFO() << "speaker change" << m_lastAlsaInput << "cur Output:" << defualtAudioOutput << "m_lastAlsaOutput:" << m_lastAlsaOutput;
+		m_lastAlsaOutput = defualtAudioOutput;
+		bChangeAudio = true;
+	}
+
+	if (bChangeAudio)
+	{
+		KLOG_WARNING() << "audio source change, restart record!";
+		Logger::LogInfo("audio source change, restart record!");
+		OnRecordPause();
+		OnRecordStartPause();
+	}
+}
+
+void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
+	//不录制屏幕 不处理
+	if (!m_settings->value("input/video_enabled").toInt())
+		return;
+
+	//没有开始录屏但screen被拔掉的情况
+	if(!m_page_started){
+		Logger::LogInfo("the screen geometry changed \n");
+
+		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+		QRect rect = CombineScreenGeometries(screen_geometries);
+		
+		//update the qsettings
+		settings_ptr->setValue("input/video_x", rect.left()); //X
+		settings_ptr->setValue("input/video_y", rect.top()); //Y
+		settings_ptr->setValue("input/video_w", rect.width()); //width
+		settings_ptr->setValue("input/video_h", rect.height()); //height
+		m_video_in_width = rect.width();
+		m_video_in_height = rect.height();
+		m_output_settings.video_height = m_video_in_height;
+		m_output_settings.video_width = m_video_in_width;
+		return ;
+	}
+	QList<QScreen *> screen_list = QApplication::screens();
+	for(QScreen *screen :  QApplication::screens()) { //绑定新添加的屏的geometryChanged 信号槽
+		connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
+	}
+
+	//拔掉或添加screen后,重新开始录制视频
+	m_separate_files = true;
+//	OnRecordSave();
+	OnRecordPause();
+
+	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+	QRect rect = CombineScreenGeometries(screen_geometries); 
+	m_video_in_width = rect.width();
+	m_video_in_height = rect.height();
+	m_output_settings.video_height = m_video_in_height;
+	m_output_settings.video_width = m_video_in_width;
+	ReNameFile();
+	OnRecordStartPause();
+//	OnRecordStart();
 }
 
 void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
@@ -281,75 +383,16 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		m_output_settings.video_width = m_video_in_width;
 		return ;
 	}
-   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
-   Logger::LogInfo("LINE301--->: the main screen geometry changed \n");
-   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
    //判断两块屏宽、高是否一致
    int main_screen_width = 0;
    int main_screen_height = 0;
    int slave_screen_width = 0;
    int slave_screen_height = 0;
 	QList<QScreen *> screen_list = QApplication::screens();
-   if(screen_list.size() >= 2){
-	   main_screen_width = screen_list[0]->geometry().width();
-	   main_screen_height = screen_list[0]->geometry().height();
-	   slave_screen_width = screen_list[1]->geometry().width();
-	   slave_screen_height = screen_list[1]->geometry().height();
-	   if(!(main_screen_width == slave_screen_width && main_screen_height == slave_screen_height)){
-		   return;
-	   }
-   }
-
-	//分辨率变化后的处理
-	m_separate_files = true;
-//	OnRecordSave();
-	OnRecordPause();
-
-	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
-	QRect rect = CombineScreenGeometries(screen_geometries); 
-	m_video_in_width = rect.width();
-	m_video_in_height = rect.height();
-	m_output_settings.video_height = m_video_in_height;
-	m_output_settings.video_width = m_video_in_width;
-	ReNameFile();
-	OnRecordStartPause();
-//	OnRecordStart();
-}
-
-void Recording::SlaveScreenChangedHandler(const QRect& hanged_screen_rect){
-	//不录制屏幕 不处理
-	if (!m_settings->value("input/video_enabled").toInt())
-		return;
-
-	//没有开始录屏但分辨率出现变动,只更新分辨率
-	if(!m_page_started){
-		Logger::LogInfo("the screen geometry changed \n");
-
-		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
-		QRect rect = CombineScreenGeometries(screen_geometries);
-		
-		//update the qsettings
-		settings_ptr->setValue("input/video_x", rect.left()); //X
-		settings_ptr->setValue("input/video_y", rect.top()); //Y
-		settings_ptr->setValue("input/video_w", rect.width()); //width
-		settings_ptr->setValue("input/video_h", rect.height()); //height
-		m_video_in_width = rect.width();
-		m_video_in_height = rect.height();
-		m_output_settings.video_height = m_video_in_height;
-		m_output_settings.video_width = m_video_in_width;
-		return ;
+	for(QScreen *screen :  QApplication::screens()) {
+			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
 	}
-	
-   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
-   Logger::LogInfo("LINE348--->: the slave screen geometry changed \n");
-   Logger::LogInfo("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
 
-   //判断两块屏幕宽、高是否一致
-   int main_screen_width = 0;
-   int main_screen_height = 0;
-   int slave_screen_width = 0;
-   int slave_screen_height = 0;
-   QList<QScreen *> screen_list = QApplication::screens();
    if(screen_list.size() >= 2){
 	   main_screen_width = screen_list[0]->geometry().width();
 	   main_screen_height = screen_list[0]->geometry().height();
@@ -375,6 +418,7 @@ void Recording::SlaveScreenChangedHandler(const QRect& hanged_screen_rect){
 	OnRecordStartPause();
 //	OnRecordStart();
 }
+
 
 Recording::~Recording() {}
 
@@ -421,6 +465,8 @@ void Recording::StartPage() {
 	// 音频相关设置
 	QString defualtAudioInput = QAudioDeviceInfo::defaultInputDevice().deviceName();
 	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
+	m_lastAlsaInput = defualtAudioInput;
+	m_lastAlsaOutput = defualtAudioOutput;
 
 	m_pulseaudio_source_input = "";
 	m_pulseaudio_source_output = "";
@@ -1104,6 +1150,7 @@ void Recording::OnRecordSave(bool confirm) {
 	}
 
 	StopPage(true);
+	SaveSettings(settings_ptr); //结束视频录制并保存但不退出程序, 这种情况下得刷新一下Qsettings
 }
 
 void Recording::OnRecordSaveAndExit(bool confirm) {
@@ -1129,9 +1176,7 @@ void Recording::ReNameFile()
 	// 完成录制后移除.tmp后缀
 	QString fileName = m_output_settings.file;
 	QString fileBaseName = fileName.left(fileName.lastIndexOf("."));
-	Logger::LogInfo("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	if (QFile(fileName).exists()){
-		Logger::LogInfo(".,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,");
 		QFile(fileName).rename(fileName, fileBaseName);
 	}
 }
@@ -1312,7 +1357,6 @@ bool Recording::AuditParamDeal()
 	QStringList strlist = args[1].split("-");
 	strlist.removeAll("");
 	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
-	m_settings->setValue("record/user", strlist[1]);
 	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);
 	KIdleTime::instance().catchNextResumeEvent();

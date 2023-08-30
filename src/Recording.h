@@ -173,6 +173,11 @@ private:
 	bool m_auditFirstStart;
 	QString m_auditBaseFileName;
 
+	//音频格式
+	QString m_lastAlsaInput;
+	QString m_lastAlsaOutput;
+	QTimer *m_audioTimer;
+
 public:
 	// 是否停止录像，用于结束监测文件是否被删除
 	bool m_bStopRecord;
@@ -217,9 +222,10 @@ public slots:
 	void UpdateConfigureData(QString, QString); //配置发生变化 响应槽
 	void SwitchControl(int, int, QString); //启动、停止等控制开关 响应槽
 	void ScreenChangedHandler(const QRect&);
-	void SlaveScreenChangedHandler(const QRect&);
+	void ScreenAddedOrRemovedHandler(QScreen*);
 	// 用于定时向前端发送录屏时间信息
 	void OnRecordTimer();
+	void OnAudioTimer();
 
 private slots:
 	//后台录屏无操作处理

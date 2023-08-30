@@ -10,6 +10,7 @@
 
 ActivatePage::ActivatePage(QWidget *parent) : QDialog(parent)
 {
+    m_dateCodeEdit = new QLineEdit();
     this->getLicenseInfo();
     this->initUI();
 
@@ -20,7 +21,14 @@ ActivatePage::ActivatePage(QWidget *parent) : QDialog(parent)
 
 ActivatePage::~ActivatePage()
 {
-
+    if (m_licenseCodeEdit){
+        delete m_licenseCodeEdit;
+        m_licenseCodeEdit = NULL;
+    }
+    if (m_dateCodeEdit){
+        delete m_dateCodeEdit;
+        m_dateCodeEdit = NULL;
+    }
 }
 
 bool ActivatePage::getActivation()
@@ -144,8 +152,8 @@ void ActivatePage::initUI()
     hlayout->addWidget(qrBtn);
 
     QLabel *dateCodeLabel = new QLabel("质保期");
-    QLineEdit *dateCodeEdit = new QLineEdit();
-    dateCodeEdit->setFixedSize(584,36);
+
+    m_dateCodeEdit->setFixedSize(584,36);
 
     QWidget *btnGroup = new QWidget();
     QHBoxLayout *btnHLayout = new QHBoxLayout(btnGroup);
@@ -206,7 +214,7 @@ void ActivatePage::initUI()
     mainVLayout->addStretch();
     mainVLayout->addWidget(dateCodeLabel);
     mainVLayout->addSpacing(4);
-    mainVLayout->addWidget(dateCodeEdit);
+    mainVLayout->addWidget(m_dateCodeEdit);
     mainVLayout->addSpacing(5);
     mainVLayout->addStretch();
     mainVLayout->addWidget(btnGroup);
@@ -221,8 +229,8 @@ void ActivatePage::initUI()
     machineCodeEdit->setText(machineCodeText);
 
     QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString("查询失败");
-    dateCodeEdit->setText(expiredText);
-    dateCodeEdit->setDisabled(true);
+    m_dateCodeEdit->setText(expiredText);
+    m_dateCodeEdit->setDisabled(true);
 
     connect(m_activateBtn, SIGNAL(clicked()), this, SLOT(acceptBtnClicked()));
     connect(cancelBtn, SIGNAL(clicked()), this, SLOT(close()));
@@ -231,6 +239,9 @@ void ActivatePage::initUI()
 void ActivatePage::getLicenseInfo()
 {
     LicenseEntry::instance().getLicenseInfo(m_isActivated, m_machineCode, m_activateCode, m_expiredDate);
+    // 更新质保期
+    QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString("查询失败");
+    m_dateCodeEdit->setText(expiredText);
 //    KLOG_INFO() << "a:" << m_isActivated << "mc:" << m_machineCode << "ac:" << m_activateCode << "ed:" << m_expiredDate;
 }
 

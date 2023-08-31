@@ -20,6 +20,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "PulseAudioInput.h"
 #include <pulse/operation.h>
 #include <pulse/stream.h>
+#include <pulse/volume.h>
 #include <string>
 
 #if SSR_USE_PULSEAUDIO
@@ -203,6 +204,14 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 	m_pa_stream = NULL;
 	m_pa_period_size = 1024; // number of samples per period
 
+	//设置音量默认数值
+	m_volume.channels = 2;
+	m_volume.values[0] = PA_VOLUME_MUTED;
+	m_volume.values[1] = PA_VOLUME_MUTED;
+	m_last_mic_volume = 0;
+	m_last_mic_volume = 0;
+
+
 	m_record_audio_type = record_audio_type;
 	Logger::LogInfo("[PulseAudioInput::PulseAudioInput] the record_audio_type is: " + m_record_audio_type);
 	//m_load_pulsemodule_idx = 0;
@@ -297,6 +306,26 @@ void PulseAudioInput::Free() {
 	PulseAudioDisconnect(&m_pa_mainloop, &m_pa_context);
 }
 
+/**
+ * @brief 音量设置
+ *
+ * @param volume
+ */
+void PulseAudioInput::UpdateSourceVolume(pa_volume_t volume){
+	// 修改音量
+	m_volume.values[0] = volume;
+	m_volume.values[1] = volume;
+
+	pa_operation * operation_volume = NULL;
+	try{
+		operation_volume = pa_context_set_source_volume_by_index(m_pa_context,pa_stream_get_device_index(m_pa_stream),&m_volume, SetSourceVolumeCallback, this);
+		PulseAudioCompleteOperation(m_pa_mainloop, &operation_volume);
+	}catch(...){
+		PulseAudioCancelOperation(m_pa_mainloop, &operation_volume);
+		throw;
+	}
+}
+
 void PulseAudioInput::DetectMonitor() {
 	pa_operation *operation = NULL;
 	try {
@@ -323,7 +352,16 @@ void PulseAudioInput::SourceInfoCallback(pa_context* context, const pa_source_in
 		PulseAudioInput *input = (PulseAudioInput*) userdata;
 		input->m_stream_is_monitor = (info->monitor_of_sink != PA_INVALID_INDEX);
 	}
-	//pa_source_info 可以在这里调音量  pa_context_set_sink_volume_by_name
+}
+
+/**
+ * @brief 声音设置成功的回调函数
+ *
+ * @param c
+ * @param success
+ * @param userdata
+ */
+void PulseAudioInput::SetSourceVolumeCallback(pa_context *c, int success, void *userdata){
 }
 
 void PulseAudioInput::SuspendedCallback(pa_stream* stream, void* userdata) {
@@ -352,6 +390,33 @@ void PulseAudioInput::InputThread() {
 		while(!m_should_stop) {
 
 			PulseAudioIterate(m_pa_mainloop);
+
+			//前台录屏 调整音量
+			if(CommandLineOptions::GetFrontRecord()){
+				if(m_record_audio_type == "mic"){ //麦克风
+					if(settings_ptr->value("input/audio_micvolume").toString().toInt() != m_last_mic_volume){//麦克风音量出现变化
+						m_last_mic_volume = settings_ptr->value("input/audio_micvolume").toString().toInt();
+						//pa_volume_t volume_tmp = PA_VOLUME_MUTED;
+						// PA_VOLUME_MUTED 0音量 PA_VOLUME_NORM 100音量
+						// 对应linear的 0到1
+						pa_volume_t volume_tmp = pa_sw_volume_from_linear((double) m_last_mic_volume/100);;
+						UpdateSourceVolume(volume_tmp);
+					}
+				}
+
+				if(m_record_audio_type == "speaker"){ //扬声器
+					if(settings_ptr->value("input/audio_speakervolume").toString().toInt() != m_last_speaker_volume){//扬声器音量
+						m_last_speaker_volume = settings_ptr->value("input/audio_speakervolume").toString().toInt();
+						//pa_volume_t volume_tmp = PA_VOLUME_MUTED;
+						// PA_VOLUME_MUTED 0音量 PA_VOLUME_NORM 100音量
+						// 对应linear的 0到1
+						pa_volume_t volume_tmp = pa_sw_volume_from_linear((double) m_last_speaker_volume/100);
+						UpdateSourceVolume(volume_tmp);
+					}
+				}
+
+
+			}
 
 			// try to read samples
 			const void *data;

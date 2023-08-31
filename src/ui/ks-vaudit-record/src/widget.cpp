@@ -307,7 +307,7 @@ void Widget::on_volumnBtn_clicked()
 void Widget::on_volumnSlider_valueChanged(int value)
 {
     if (value == 0){
-        ui->volumnBtn->setStyleSheet("image:url(:/images/v3.svg);border:none;");
+        ui->volumnBtn->setStyleSheet("image:url(:/images/v0.svg);border:none;");
     }else if (value < 50){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v2.svg);border:none;");
     }else if (value >=50){

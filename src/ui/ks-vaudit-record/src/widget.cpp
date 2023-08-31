@@ -49,12 +49,7 @@ Widget::Widget(QWidget *parent) :
 Widget::~Widget()
 {
     delete ui;
-    if(m_recordP){
-        sendSwitchControl(m_selfPID, m_recordPID, "exit");
-        m_recordP->close();
-        delete m_recordP;
-        m_recordP = NULL;
-    }
+    sendSwitchControl(m_selfPID, m_recordPID, "exit");
     if (m_dbusInterface){
         delete m_dbusInterface;
         m_dbusInterface = NULL;
@@ -107,16 +102,16 @@ void Widget::init_ui()
     connect(m_renameAction, SIGNAL(triggered()), this, SLOT(renameVideo()));
     connect(m_folderAction, SIGNAL(triggered()), this, SLOT(openDir()));
     connect(m_deleteAction, SIGNAL(triggered()), this, SLOT(deleteVideo()));
-
+    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int,QString)), this, SLOT(refreshTime(int, int, QString)));
     readConfig();
     // 构建模型表头
     m_model = new QStandardItemModel();
     createList();
     refreshList(m_regName);
     m_selfPID = QCoreApplication::applicationPid();
-    m_recordPID = startRecrodProcess();
-
-    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int,QString)), this, SLOT(refreshTime(int, int, QString)));
+    // 向monitor发送启后台录屏进程信息
+    QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
+    sendSwitchControl(m_selfPID, 0, args);
 }
 
 void Widget::comboboxStyle(){
@@ -844,6 +839,20 @@ void Widget::readConfig()
             if (k == "FilePath"){
                 QString filePath = jsonObj[k].toString();
                 QString homeDir = QDir::homePath();
+                // 以~开头的路径，在目录不存在时exists返回true
+                // 通过monitor启后台程序，创建路径的数组为root，因路径层数导致不好修改权限，直接在前台创建目录
+                if (filePath.contains('~')){
+                    QString path = filePath;
+                    path.replace('~', homeDir);
+                    KLOG_INFO() << "QFile::exists(path): " << QFile::exists(path) << path << filePath;
+                    if (!QFile::exists(path)){ //存放目录不存在时创建一个
+                        QDir dir;
+                        if (!dir.exists(path) && !dir.mkpath(path)){
+                            KLOG_WARNING() << "can't mkdir the file path " << path;
+                        }
+                    }
+                }
+
                 if (filePath.startsWith(homeDir)){
                     filePath.replace(0,homeDir.size(), "~");
                 }
@@ -926,22 +935,6 @@ void Widget::setConfig(QString key, QString value)
     KLOG_DEBUG() << __func__ << "key: " << key << "value: " << value;
 }
 
-int Widget::startRecrodProcess()
-{
-    QProcess *pp = new QProcess();
-    pp->setProcessChannelMode(QProcess::MergedChannels);
-    QString logfile = QDir::homePath() + "/.cache/ks-vaudit-record.out";
-    pp->setStandardOutputFile(logfile);
-//    pp->setStandardErrorFile("/var/log/ks-vaudit-record.err");
-    QStringList arg;
-    arg << "--record";
-    pp->start("/usr/bin/ks-vaudit",arg);
-    KLOG_DEBUG() << "pp-pid:" << pp->pid() << "self-pid:" << QCoreApplication::applicationPid() << "logfile:" << logfile;
-    m_recordP = pp;
-
-    return pp->pid();
-}
-
 void Widget::sendSwitchControl(int from_pid, int to_pid, QString op)
 {
     m_dbusInterface->SwitchControl(from_pid, to_pid, op);
@@ -998,7 +991,6 @@ void Widget::realClose()
     sendSwitchControl(m_selfPID, m_recordPID, "exit");
     this->hide();
     m_pConfirm->hide();
-    m_recordP->waitForFinished();
     m_pConfirm->close();
     this->close();
 }
@@ -1016,6 +1008,10 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
             on_stopBtn_clicked();
             prompt->exec();
         }
+    } else if (to_pid == m_selfPID && op == "process") {
+        m_recordPID = from_pid;
+        sendSwitchControl(m_selfPID, from_pid, "process");
+        KLOG_INFO() << "receive backend record pid:" << from_pid;
     }
 }
 

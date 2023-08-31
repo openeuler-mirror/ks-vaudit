@@ -45,7 +45,6 @@ protected:
     QLineEdit *createVideoNameEdit(QString fileName);
     void readConfig();
     void setConfig(QString key, QString value);
-    int startRecrodProcess();
     void sendSwitchControl(int from_pid, int to_pid, QString op);
     QLabel *createVideoDurationLabel(QString);
     bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
@@ -114,7 +113,6 @@ private:
     int m_recordPID = 0;
     int m_selfPID = 0;
     bool m_needRestart = false;
-    QProcess *m_recordP;
     ActivatePage *m_activatePage;
     bool m_isActivated = false;
     Dialog *m_pConfirm;

@@ -2,6 +2,7 @@
 #include <glib/gi18n.h>
 #include <locale.h>
 #include <libnotify/notify.h>
+#include <pwd.h>
 #include "kiran-log/qt5-log-i.h"
 
 #define GETTEXT_DOMAIN "kylin"
@@ -15,15 +16,9 @@ static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 		KyNotify::instance().closeWindowDeal((char *)userdata);
 }
 
-KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_bContinue(false), m_reserveSize(10), m_lastSecond(0), m_pDiskNotify(nullptr)
+KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_bContinue(false), m_reserveSize(10),
+					m_lastSecond(0), m_pDiskNotify(nullptr), m_uid(0), m_source_uid(0)
 {
-	initNotify();
-	if (!notify_init(_("kylin verify")))
-	{
-		g_printerr(_("Failed to initialize libnotify\n"));
-		KLOG_ERROR() << "Failed to initialize libnotify";
-		return;
-	}
 }
 
 KyNotify& KyNotify::instance()
@@ -83,7 +78,8 @@ void KyNotify::setRecordTime(uint64_t recordTime)
 		int minute = time / 60;
 		if (minute % m_timing == 0)
 			notify(KSVAUDIT_TIMING, minute);
-		KLOG_DEBUG() << "notify m_timing:" << m_timing << "recordTime:" << recordTime << "time:" << time << "minute:" << minute << "reminder:" << (minute % m_timing) << "second:" << second << "m_lastSecond" << m_lastSecond;
+		KLOG_DEBUG() << "notify m_timing:" << m_timing << "recordTime:" << recordTime << "time:" << time << "minute:" << minute
+					 << "reminder:" << (minute % m_timing) << "second:" << second << "m_lastSecond" << m_lastSecond;
 		m_lastSecond = 0;
 	}
 }
@@ -124,8 +120,33 @@ void KyNotify::closeWindowDeal(const char *data)
 	}
 }
 
+void KyNotify::setUser(QString userName)
+{
+	// 获取euid, 发送提示前需要设置对应的euid，否则会失败
+	m_source_uid = getuid();
+	if (userName.isEmpty())
+	{
+		m_uid = m_source_uid;
+	}
+	else
+	{
+		struct passwd * pw = getpwnam(userName.toStdString().c_str());
+		m_uid = pw->pw_uid;
+		KLOG_INFO() << "userName:" << userName << "uid:" << pw->pw_uid << "gid" << pw->pw_gid;
+	}
+
+	KLOG_INFO() << "m_source_uid:" << m_source_uid << "m_uid:" << m_uid;
+}
+
 void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
 {
+	if (!notify_init(_("kylin verify")))
+	{
+		KLOG_ERROR() << "Failed to initialize libnotify";
+		return;
+	}
+
+	setreuid(m_uid, m_uid);
 	setlocale(LC_ALL, "");
 	bindtextdomain(GETTEXT_DOMAIN, LICENSE_LOCALEDIR);
 	bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8");
@@ -172,23 +193,13 @@ void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
 		default:
 			break;
 	}
+
+	setreuid(m_source_uid, m_source_uid);
+	notify_uninit();
 }
 
 KyNotify::~KyNotify()
 {
-	notify_uninit();
-}
-
-void KyNotify::initNotify()
-{
-	uid_t user_id = getuid();
-	gid_t user_gid = getgid();
-	uid_t euid_save = geteuid();
-	gid_t egid_save = getegid();
-	seteuid(user_id);
-	setegid(user_gid);
-	setreuid(user_id, user_id);
-	setregid(user_gid, user_gid);
 }
 
 void KyNotify::notify_send(const char *msg, const char *icon, int timeout, const char *userdata)
@@ -204,7 +215,7 @@ void KyNotify::notify_send(const char *msg, const char *icon, int timeout, const
 	GError *error = NULL;
 	if (!notify_notification_show(pNotify, &error))
 	{
-		KLOG_DEBUG() << "Error while displaying notification:" << error->message;
+		KLOG_INFO() << "Error while displaying notification:" << error->message;
 		g_error_free(error);
 	}
 

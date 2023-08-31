@@ -8,7 +8,6 @@
 
 int main(int argc, char *argv[])
 {
-//    setuid(0);
     QApplication a(argc, argv);
 
     // 加载KLOG

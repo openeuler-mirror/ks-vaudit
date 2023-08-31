@@ -200,7 +200,7 @@ public:
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
 	void SaveSettings(QSettings* settings);
 	bool IsOutputStarted(){return m_output_started ;}
-	bool AuditParamDeal();
+	void AuditParamDeal();
 	void SetFileTypeSetting();
 
 private:

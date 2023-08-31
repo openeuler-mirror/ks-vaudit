@@ -29,10 +29,9 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "KyNotify.h"
 #include <qapplication.h>
 extern "C" {
+#include <sys/prctl.h>
 #include<signal.h>
 }
-
-
 
 static std::unique_ptr<Recording> recording_screen = NULL;
 QSettings* settings_ptr = NULL;
@@ -50,6 +49,7 @@ static void sig_handler(int sig){
 }
 
 int main(int argc, char* argv[]) {
+	prctl(PR_SET_PDEATHSIG, SIGINT);
 	int klog_ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit");
 	if (0 == klog_ret)
 		KLOG_DEBUG() << "init klog succeed";

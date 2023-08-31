@@ -278,6 +278,11 @@ void ActivatePage::showQR()
     qrDialog->exec();
 }
 
+void ActivatePage::returnPressed()
+{
+    m_activateBtn->click();
+}
+
 void ActivatePage::genQRcode(QLabel *l)
 {
     int height = 160;
@@ -315,8 +320,10 @@ void ActivatePage::keyPressEvent(QKeyEvent *event)
     switch (event->key())
     {
     case Qt::Key_Return:
+        returnPressed();
         break;
     case Qt::Key_Enter:
+        returnPressed();
         break;
     case Qt::Key_Escape:
         break;

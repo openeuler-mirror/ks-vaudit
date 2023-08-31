@@ -215,6 +215,7 @@ private:
 	void StartInput();
 	void StopInput();
 	void WatchFile();
+	bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
 
 signals:
 	void fileRemoved(bool bRemove);

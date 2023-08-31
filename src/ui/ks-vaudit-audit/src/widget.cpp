@@ -901,8 +901,36 @@ QLabel *Widget::createVideoDurationLabel(QString duration)
 void Widget::readConfig()
 {
     QString value = m_dbusInterface->GetAuditInfo();
-    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-    m_configure = doc.isObject() ? doc.object() : m_configure;
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(value.toUtf8(), &jError);
+    if (jsonDocument.isObject())
+    {
+        m_configure = jsonDocument.object();
+        return;
+    }
+
+    //判断是否因为中文utf8导致解析失败
+    KLOG_INFO() << "parse json" << jsonDocument << "err, err info:" << jError.error;
+    if (QJsonParseError::ParseError::IllegalUTF8String != jError.error)
+        return;
+
+    //QJsonDocument::fromJson解析中文utf8失败处理
+    if (!value.startsWith("{") || !value.endsWith("}"))
+        return;
+
+    QJsonObject jsonObj;
+    QStringList jsonList = value.split(",");
+    for (auto jsonString : jsonList)
+    {
+        QStringList dataList = jsonString.split("\"");
+        int index = dataList.indexOf(":");
+        if (index > 0 && index < dataList.size() - 1)
+        {
+            jsonObj[dataList[index-1]] = dataList[index+1];
+        }
+    }
+
+    m_configure = jsonObj;
 }
 
 void Widget::setConfigtoUi()

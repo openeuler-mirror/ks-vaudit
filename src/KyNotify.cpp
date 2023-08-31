@@ -15,7 +15,7 @@ static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 		KyNotify::instance().closeWindowDeal((char *)userdata);
 }
 
-KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_lastSecond(0), m_pDiskNotify(nullptr)
+KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_bContinue(false), m_reserveSize(10), m_lastSecond(0), m_pDiskNotify(nullptr)
 {
 	initNotify();
 	if (!notify_init(_("kylin verify")))

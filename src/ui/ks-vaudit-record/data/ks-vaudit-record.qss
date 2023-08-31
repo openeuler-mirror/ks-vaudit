@@ -16,6 +16,7 @@ padding:2px 5px 2px 2px;
 
 QTableView#videoList{
 background-color: transparent;
+border:none;
 }
 
 QTableView#videoList::item{

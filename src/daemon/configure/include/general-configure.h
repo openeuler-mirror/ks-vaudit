@@ -35,6 +35,7 @@ private:
     inline bool checkRecordAudio(QString value);
     inline bool checkWaterPrint(QString);
     void rewriteConfig();
+    bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
 
 private slots:
     void onDirectoryChanged(QString);
@@ -77,6 +78,7 @@ private:
         CONFIG_MAX
     };
 
+private:
     QString m_confFile;
     QSharedPointer<QSettings> m_confSettings;
     QFileSystemWatcher *m_fileWatcher;

@@ -90,16 +90,13 @@ bool MonitorDisk::checkFreeSpace(const QString &filePath, const quint64 &minFree
 
 void MonitorDisk::parseConfigureInfo(QString value)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-    if (!doc.isObject())
-    {
-        KLOG_INFO() << "Cann't get the DBus configure!";
+    QJsonObject jsonObj;
+    if (!parseJsonData(value, jsonObj))
         return;
-    }
 
-    QJsonObject jsonObj = doc.object();
     for (auto key : jsonObj.keys())
     {
+        // 只取需要的key，不需要考虑else
         if ("FilePath" == key)
         {
             m_filePath = jsonObj[key].toString();
@@ -141,16 +138,13 @@ void MonitorDisk::checkRecordFreeSpace(QString filePath, const quint64 &minFreeS
 
 void MonitorDisk::parseRecordConfigureInfo(QString value)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-    if (!doc.isObject())
-    {
-        KLOG_INFO() << "Cann't get the DBus configure!";
+    QJsonObject jsonObj;
+    if (!parseJsonData(value, jsonObj))
         return;
-    }
 
-    QJsonObject jsonObj = doc.object();
     for (auto key : jsonObj.keys())
     {
+        // 只取需要的key，不需要考虑else
         if ("FilePath" == key)
         {
             m_recordFilePath = jsonObj[key].toString();
@@ -173,6 +167,41 @@ bool MonitorDisk::filePathOk(QString &filePath)
     QDir dir(filePath);
     if (!dir.exists())
         return false;
+
+    return true;
+}
+
+bool MonitorDisk::parseJsonData(const QString &param,  QJsonObject &jsonObj)
+{
+    QString str = param;
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8(), &jError);
+
+    if (jsonDocument.isObject())
+    {
+        jsonObj = jsonDocument.object();
+        return true;
+    }
+
+    //判断是否因为中文utf8导致解析失败
+    KLOG_INFO() << "parse json" << jsonDocument << "err, err info:" << jError.error;
+    if (QJsonParseError::ParseError::IllegalUTF8String != jError.error)
+        return false;
+
+    //QJsonDocument::fromJson解析中文utf8失败处理
+    if (!param.startsWith("{") || !param.endsWith("}"))
+        return false;
+
+    QStringList jsonList = param.split(",");
+    for (auto jsonString : jsonList)
+    {
+        QStringList dataList = jsonString.split("\"");
+        int index = dataList.indexOf(":");
+        if (index > 0 && index < dataList.size() - 1)
+        {
+            jsonObj[dataList[index-1]] = dataList[index+1];
+        }
+    }
 
     return true;
 }

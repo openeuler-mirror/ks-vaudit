@@ -316,6 +316,12 @@ padding-left:10px;
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/usericon.svg</normaloff>:/images/usericon.svg</iconset>
       </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
+      </property>
      </widget>
      <widget class="QPushButton" name="ListBtn">
       <property name="geometry">
@@ -350,6 +356,12 @@ padding-left:10px;
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/listicon.svg</normaloff>:/images/listicon.svg</iconset>
       </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
+      </property>
      </widget>
      <widget class="QPushButton" name="ConfigBtn">
       <property name="geometry">
@@ -381,6 +393,12 @@ padding-left:10px;
       <property name="icon">
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/configicon.svg</normaloff>:/images/configicon.svg</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
       </property>
      </widget>
      <widget class="QLabel" name="userArrow">
@@ -460,7 +478,13 @@ padding-left:10px;
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
-        <normaloff>:/images/usericon.svg</normaloff>:/images/usericon.svg</iconset>
+        <normaloff>:/images/infoicon.svg</normaloff>:/images/infoicon.svg</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
       </property>
      </widget>
      <widget class="QLabel" name="aboutArrow">
@@ -1801,15 +1825,10 @@ border-radius:6px;
        <property name="geometry">
         <rect>
          <x>596</x>
-         <y>8</y>
-         <width>20</width>
-         <height>20</height>
+         <y>9</y>
+         <width>16</width>
+         <height>16</height>
         </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">border:none;</string>
@@ -1820,6 +1839,12 @@ border-radius:6px;
        <property name="icon">
         <iconset resource="../data/src.qrc">
          <normaloff>:/images/infoicon.svg</normaloff>:/images/infoicon.svg</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
        </property>
       </widget>
      </widget>
@@ -1938,6 +1963,12 @@ border-top-right-radius: 8px;
      <property name="icon">
       <iconset resource="../data/src.qrc">
        <normaloff>:/images/minus-tiny.svg</normaloff>:/images/minus-tiny.svg</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>13</width>
+       <height>13</height>
+      </size>
      </property>
     </widget>
    </widget>

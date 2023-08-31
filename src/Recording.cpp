@@ -663,14 +663,11 @@ void Recording::SaveSettings(QSettings* settings) {
 	}else{ //前台录屏
 		value = m_configure_interface->GetRecordInfo();
 	}
-	QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 
-	if(!doc.isObject()){
-		Logger::LogError("Cann't get the DBus configure!");
+	QJsonObject jsonObj;
+	if (!parseJsonData(value, jsonObj))
 		return;
-	}
 
-	QJsonObject jsonObj = doc.object();
 	for(auto key:jsonObj.keys()){
 		Logger::LogInfo("[Recording::SaveSettings] --------------keys and value is -------------- " + key + "  " + jsonObj[key].toString());
 	}
@@ -817,6 +814,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	{
 		key = "TimingPause";
 		m_timingPause = jsonObj[key].toString().toInt();
+		KLOG_INFO() << "m_timingPause:" << m_timingPause;
 		key = "MinFreeSpace";
 		KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
 	}
@@ -1173,9 +1171,17 @@ void Recording::OnRecordPause() {
 }
 
 void Recording::OnRecordStartPause() {
+	KLOG_INFO() << "m_page_started:" << m_page_started << "m_output_started:" << m_output_started;
 	if(m_page_started && m_output_started) {
 		OnRecordPause();
 	} else {
+		//后台审计磁盘空间不足为true,其他为false;
+		if (KyNotify::instance().getContinueNotify())
+		{
+			KLOG_INFO() << "disk space not enough";
+			return;
+		}
+
 		OnRecordStart();
 		m_pause_state = false;
 	}
@@ -1249,14 +1255,12 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 	//Logger::LogInfo("%%%%%%%%%%%%%  UpdateConfigureData 信号槽函数 %%%%%%%%%%%%%%");
 	//Logger::LogInfo("the first is " + key + "the second is " + value);
 	bool isRecord = CommandLineOptions::GetFrontRecord();
-	if(keyStr == "record" && isRecord){
-		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-		if(!doc.isObject()){
-			Logger::LogError("Cann't get the DBus configure!");
-			return;
-		}
 
-		QJsonObject jsonObj = doc.object();
+	QJsonObject jsonObj;
+	if (!parseJsonData(value, jsonObj))
+		return;
+
+	if(keyStr == "record" && isRecord){
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:record] --------------keys and value is -------------" + key + "==========" + jsonObj[key].toString());
 
@@ -1301,13 +1305,7 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 			}
 		}
 	}else if (keyStr == "audit" && !isRecord){ //后台审计
-		QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-		if(!doc.isObject()){
-			Logger::LogError("Cann't get the DBus configure!");
-			return;
-		}
 		bool needRestart = false;
-		QJsonObject jsonObj = doc.object();
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:audit] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
 
@@ -1441,14 +1439,10 @@ void Recording::SetFileTypeSetting()
 	}else{ //前台录屏
 		value = m_configure_interface->GetRecordInfo();
 	}
-	QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
 
-	if(!doc.isObject()){
-		Logger::LogError("[Recording:SetFileTypeSetting]: Cann't get the DBus configure!");
+	QJsonObject jsonObj;
+	if (!parseJsonData(value, jsonObj))
 		return;
-	}
-
-	QJsonObject jsonObj = doc.object();
 
 	QString file_type = jsonObj["FileType"].toString().toLower();
 	QString file_suffix;
@@ -1509,7 +1503,7 @@ void Recording::SetFileTypeSetting()
 
 void Recording::kidleResumeEvent()
 {
-	KLOG_DEBUG() << "move mouse or press key, m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName << KIdleTime::instance()->idleTime();
+	KLOG_INFO() << "move mouse or press key, m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << "pid:" << getpid() << KIdleTime::instance()->idleTime();
 
 	KIdleTime::instance()->removeAllIdleTimeouts();
 	KIdleTime::instance()->addIdleTimeout(m_timingPause*60000);
@@ -1523,14 +1517,18 @@ void Recording::kidleResumeEvent()
 
 	if (!KyNotify::instance().getContinueNotify())
 	{
-		KLOG_INFO() << "restart record";
-		OnRecordStartPause();
+		//当之前为停止录屏状态时，关闭无操作需要开启录屏
+		if (!m_page_started || !m_output_started)
+		{
+			KLOG_INFO() << getpid() << "call restart record";
+			OnRecordStartPause();
+		}
 	}
 }
 
 void Recording::kidleTimeoutReached(int id, int timeout)
 {
-	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName << KIdleTime::instance()->idleTime();
+	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << "pid:" << getpid() << KIdleTime::instance()->idleTime();
 	// 已经触发了无操作状态，一般这里不会进(根据实测第一次触发的是resumingFromIdle信号)
 	if (m_IdleTimer->isActive())
 	{
@@ -1591,7 +1589,7 @@ void thread_function(QString fileName, void *user)
 
 void Recording::WatchFile()
 {
-	KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file;
+	KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file << "pid:" << getpid();
 	m_bStopRecord = false;
 	std::thread t(&thread_function, m_output_settings.file, this);
 	t.detach();
@@ -1607,6 +1605,41 @@ void Recording::WatchFile()
 		m_IdleTimer->start(m_timingPause*60000);
 		KIdleTime::instance()->catchNextResumeEvent();
 	}
+}
+
+bool Recording::parseJsonData(const QString &param,  QJsonObject &jsonObj)
+{
+	QString str = param;
+	QJsonParseError jError;
+	QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8(), &jError);
+
+	if (jsonDocument.isObject())
+	{
+		jsonObj = jsonDocument.object();
+		return true;
+	}
+
+	//判断是否因为中文utf8导致解析失败
+	KLOG_INFO() << "parse json" << jsonDocument << "err, err info:" << jError.error;
+	if (QJsonParseError::ParseError::IllegalUTF8String != jError.error)
+		return false;
+
+	//QJsonDocument::fromJson解析中文utf8失败处理
+	if (!param.startsWith("{") || !param.endsWith("}"))
+		return false;
+
+	QStringList jsonList = param.split(",");
+	for (auto jsonString : jsonList)
+	{
+		QStringList dataList = jsonString.split("\"");
+		int index = dataList.indexOf(":");
+		if (index > 0 && index < dataList.size() - 1)
+		{
+			jsonObj[dataList[index-1]] = dataList[index+1];
+		}
+	}
+
+	return true;
 }
 
 void Recording::onFileRemove(bool bRemove)
@@ -1626,7 +1659,7 @@ void Recording::onFileRemove(bool bRemove)
 
 void Recording::OnIdleTimer()
 {
-	KLOG_INFO() << "no action screen after start record";
+	KLOG_INFO() << "no action screen after start record" << getpid();
 	if (m_IdleTimer->isActive())
 	{
 		m_IdleTimer->stop();

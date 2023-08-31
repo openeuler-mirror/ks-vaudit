@@ -27,6 +27,7 @@ private:
     void checkRecordFreeSpace(QString filePath, const quint64 &minFreeSpace);
     void parseRecordConfigureInfo(QString value);
     bool filePathOk(QString &filePath);
+    bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
 
 private slots:
     void UpdateConfigureData(QString, QString);

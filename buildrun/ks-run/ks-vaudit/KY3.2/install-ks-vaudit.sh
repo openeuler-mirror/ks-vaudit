@@ -60,7 +60,7 @@ install_package "qrencode-3.4.2"
 install_package "kiran-log-qt5"
 install_package "freeglut"
 install_package "unixODBC"
-sudo rpm -Uvh $RPM_PATH/ks-vaudit* --nodeps
+sudo rpm -Uvh $RPM_PATH/ks-vaudit* --nodeps --force
 
 sudo chmod u+s /usr/bin/ks-vaudit
 #sudo chmod u+s /usr/bin/ks-vaudit-record

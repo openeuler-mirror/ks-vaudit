@@ -287,26 +287,31 @@ QVector<sessionInfo> Monitor::getXorgInfo()
 QString Monitor::getRemotIP(const QString &pid)
 {
     QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
     process.setProgram("sh");
-    QString arg = "netstat -antp | grep " + pid + " | grep ESTABLISHED | awk '{print $5}'";
+    QString arg = "IPADDR=$(netstat -antp | grep "+pid+" | grep ESTABLISHED | awk '{print $5}' | awk -F: '{print $1}' | tr -d '\n');"
+                  "if [[ $IPADDR != '127.0.0.1' ]]; then"
+                  "    echo -n $IPADDR;"
+                  "    exit 0;"
+                  "fi;"
+                  "PORTNUM=$(netstat -antp | grep "+pid+" | grep ESTABLISHED | awk '{print $5}' | awk -F: '{print $2}' | tr -d '\n');"
+                  "PIDNUM=$(netstat -antp | grep ${PORTNUM} | grep xrdp | awk '{print $7}' | cut -d/ -f1 | tr -d '\n');"
+                  "IPADDR=$(netstat -antp | grep ${PIDNUM} | grep ESTABLISHED | grep -v '127.0.0.1' | awk '{print $5}' | cut -d: -f1 | tr -d '\n');"
+                  "echo -n $IPADDR;";
     process.setArguments(QStringList() << "-c" << arg);
     process.start();
     if (process.waitForFinished())
     {
-        QByteArray data = process.readAll();
-        QString str(data.toStdString().data());
-        QStringList strlist = str.split("\n");
-        strlist.removeAll("");
-
-        for (QString v : strlist)
+        QString resOut = process.readAllStandardOutput().toStdString().data();
+        if (!resOut.isEmpty())
         {
-            QStringList arr = v.split(":");
-            if (2 == arr.size())
-                return arr[0];
+            process.close();
+            return resOut;
+        } else {
+            QString resErr = process.readAllStandardError().toStdString().data();
+//        KLOG_INFO() << "Get remote ip ERROR: [" << resErr << "]";
         }
     }
-
+    process.close();
     return "";
 }
 

@@ -40,6 +40,8 @@ target_include_directories(${TARGET_NAME} PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(${TARGET_NAME}
+        -lavformat
+        -lavutil
         klog-qt5
         pthread
         Qt5::DBus

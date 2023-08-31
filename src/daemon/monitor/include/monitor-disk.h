@@ -17,6 +17,7 @@ public:
     int getMaxRecordPerUser();
     void fileSizeProcess(QMap<int, QString>&);
     void sendSwitchControl(int to_pid, const QString &operate);
+    void fixVidoes();
 
 private:
     ~MonitorDisk();
@@ -28,6 +29,8 @@ private:
     void parseRecordConfigureInfo(QString value);
     bool filePathOk(QString &filePath);
     bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
+    void fixVidoeSuffix(const QString &filePath);
+    bool checkMP4Broken(const QString &fileAbsPath);
 
 private slots:
     void UpdateConfigureData(QString, QString);

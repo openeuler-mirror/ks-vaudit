@@ -66,6 +66,7 @@ Requires:      libvorbis
 Requires:      libtheora
 Requires:      libvpx
 Requires:      libvdpau
+Requires:      cpufrequtils
 Requires:      freeglut
 
 %define debug_package %{nil}

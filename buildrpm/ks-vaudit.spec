@@ -43,7 +43,6 @@ BuildRequires: qrencode-devel
 BuildRequires: freeglut-devel
 BuildRequires: libvorbis-devel
 BuildRequires: libtheora-devel
-BuildRequires: libvpx-devel
 BuildRequires: libvdpau-devel
 BuildRequires: freeglut-devel
 

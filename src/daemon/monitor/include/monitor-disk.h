@@ -17,6 +17,7 @@ public:
     int getMaxRecordPerUser();
     void fileSizeProcess(QMap<int, QString>&);
     void sendSwitchControl(int to_pid, const QString &operate);
+    void sendProcessPid(int from_pid, int to_pid);
     void fixVidoes();
 
 private:
@@ -35,9 +36,11 @@ private:
 private slots:
     void UpdateConfigureData(QString, QString);
     void ReceiveNotification(int, QString);
+    void switchControlSlot(int, int, QString);
 
 signals:
     void SignalNotification(int pid, const QString &message);
+    void SignalFrontBackend(int, QString, QString, QString, QString);
 
 private:
     int m_maxSaveDays;

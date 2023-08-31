@@ -253,7 +253,7 @@ Recording::Recording(QSettings* qsettings){
 
 
 	m_selfPID = getpid();
-	m_recordUiPID = getppid();
+	m_recordUiPID = CommandLineOptions::GetFrontPid();
 	// 定时向前端发送录屏时间信息
 	m_tm = new QTimer();
 	m_tm->setInterval(1000);
@@ -269,6 +269,8 @@ Recording::Recording(QSettings* qsettings){
 	connect(m_IdleTimer, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
 
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
+
+	KyNotify::instance().setUser(CommandLineOptions::GetFrontUser());
 }
 
 
@@ -725,7 +727,7 @@ void Recording::SaveSettings(QSettings* settings) {
 
 	//file_path = "~/test/demo/yefeng/women/hello/world/XXXXX/"; //测试用
 	if(file_path.contains('~')){
-		QString home_dir = getenv("HOME");
+		QString home_dir = CommandLineOptions::GetFrontHome();
 		file_path.replace('~', home_dir);
 		//Logger::LogInfo("===============> " + file_path + "XXXXXXXXXXXXXX");
 
@@ -1308,7 +1310,12 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 		bool needRestart = false;
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:audit] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
-
+			// #61800 后台审计修改单个用户最大录屏数时，monitor会重启所有进程
+			// 因此这里其他配置不需要更新重启线程了
+			if (key == "MaxRecordPerUser"){
+				needRestart = false;
+				break;
+			}
 			//修改settings
 			if(key == "Fps"){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
@@ -1404,26 +1411,20 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		KyNotify::instance().sendNotify(op);
 }
 
-bool Recording::AuditParamDeal()
+void Recording::AuditParamDeal()
 {
-	QStringList args = QCoreApplication::arguments();
-	KLOG_DEBUG() << "arguments:" << args << "cur display:" << getenv("DISPLAY");
-	if (args.size() != 2)
-		return false;
+	if (!CommandLineOptions::GetMonitorRecord())
+		return;
 
 	//后台审计不需要发送录屏时间
 	if (m_tm && m_tm->isActive())
 		m_tm->stop();
 
-	QStringList strlist = args[1].split("-");
-	strlist.removeAll("");
-	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
-	m_settings->setValue("record/user", strlist[1]);
-
+	m_auditBaseFileName = CommandLineOptions::GetFrontUser() + "_" + CommandLineOptions::GetRemoteIP();
+	m_settings->setValue("record/user", CommandLineOptions::GetFrontUser());
+	KLOG_INFO() << "cur display:" << getenv("DISPLAY") << "audit info:" << m_auditBaseFileName;
 	connect(KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(KIdleTime::instance(), SIGNAL(timeoutReached(int,int)),this, SLOT(kidleTimeoutReached(int,int)));
-
-	return true;
 }
 
 void Recording::SetFileTypeSetting()
@@ -1480,7 +1481,7 @@ void Recording::SetFileTypeSetting()
 	QString file_path(jsonObj["FilePath"].toString());
 
 	if(file_path.contains('~')){
-		QString home_dir = getenv("HOME");
+		QString home_dir = CommandLineOptions::GetFrontHome();
 		file_path.replace('~', home_dir);
 	}
 
@@ -1585,9 +1586,20 @@ void thread_function(QString fileName, void *user)
 
 void Recording::WatchFile()
 {
-	KLOG_DEBUG() << "m_output_settings.file:" << m_output_settings.file << "pid:" << getpid();
+	const QString &fileName = m_output_settings.file;
+	const QString &userName = CommandLineOptions::GetFrontUser();
+	KLOG_INFO() << "fileName:" << fileName << "userName:" << userName << "pid:" << getpid();
+
+	// 修改前台录屏文件的属组
+	if (CommandLineOptions::GetFrontRecord())
+	{
+		struct passwd * pw = getpwnam(userName.toStdString().c_str());
+		int ret = chown(fileName.toStdString().c_str(), pw->pw_uid, pw->pw_gid);
+		KLOG_INFO() << "chown file ret:" << ret << "errno:" << errno;
+	}
+
 	m_bStopRecord = false;
-	std::thread t(&thread_function, m_output_settings.file, this);
+	std::thread t(&thread_function, fileName, this);
 	t.detach();
 
 	operateCatchResume(true);

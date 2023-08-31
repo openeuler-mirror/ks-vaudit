@@ -50,17 +50,11 @@ static void sig_handler(int sig){
 }
 
 int main(int argc, char* argv[]) {
-	//#59171 提权
-	setuid(0);
-
 	int klog_ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit");
 	if (0 == klog_ret)
 		KLOG_DEBUG() << "init klog succeed";
 
 	KLOG_INFO() << "compile time: " << __DATE__ << __TIME__ << "pid:" << getpid();
-	KLOG_INFO() << "DBUS_SESSION_BUS_ADDRESS:" << getenv("DBUS_SESSION_BUS_ADDRESS");
-	setenv("DBUS_SESSION_BUS_ADDRESS", "", 1);
-	KyNotify::instance();
 	signal(SIGINT, sig_handler);
 	XInitThreads();
 
@@ -154,8 +148,8 @@ int main(int argc, char* argv[]) {
 	recording_screen.reset(new Recording(&settings));
 	recording_screen->SaveSettings(&settings);
 	if(!CommandLineOptions::GetFrontRecord()){
-		if (!recording_screen->AuditParamDeal()) //监控程序启的进程默认不开始录屏，收到信号才录屏
-			recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
+		recording_screen->AuditParamDeal(); //监控程序启的进程默认不开始录屏，收到信号才录屏
+		recording_screen->OnRecordStart(); //后台审计录屏， 前台只有收到开始录制信号信号后才录屏
 	}
 	
 	// stop main program

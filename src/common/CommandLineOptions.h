@@ -42,6 +42,12 @@ private:
 	bool m_benchmark;
 	bool m_gui;
 	bool m_front_record; //前台录屏
+	bool m_monitor_record; // 通过监控启的后台录屏
+	// 通过监控进程启录屏，switchControl太早接收不到，通过参数传相关信息
+	int m_front_pid;
+	QString m_front_user;
+	QString m_front_home;
+	QString m_remote_ip;
 
 	static CommandLineOptions *s_instance;
 
@@ -65,7 +71,11 @@ public:
 	inline static bool GetBenchmark() { return GetInstance()->m_benchmark; }
 	inline static bool GetGui() { return GetInstance()->m_gui; }
 	inline static bool GetFrontRecord(){return GetInstance()->m_front_record;}
-
+	inline static bool GetMonitorRecord(){return GetInstance()->m_monitor_record;}
+	inline static int GetFrontPid(){return GetInstance()->m_front_pid;}
+	inline static const QString& GetFrontUser(){return GetInstance()->m_front_user;}
+	inline static const QString& GetFrontHome(){return GetInstance()->m_front_home;}
+	inline static const QString& GetRemoteIP(){return GetInstance()->m_remote_ip;}
 };
 
 QString GetVersionInfo();

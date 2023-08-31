@@ -850,7 +850,7 @@ void Widget::readConfig()
                 ui->pathLabel->setText(filePath);
             }else if(k == "FileType"){
                 int setValue = 0;
-                if (jsonObj[k].toString() == QString("OGV")){
+                if (jsonObj[k].toString() == QString("MP4")){
                     setValue = 1;
                 }
                 ui->typeBox->setCurrentIndex(setValue);

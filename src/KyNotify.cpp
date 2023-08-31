@@ -11,18 +11,8 @@ static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 {
 	KLOG_INFO() << "close notify window";
 	g_object_unref(pNotify);
-	if (KyNotify::instance().getContinueNotify())
-	{
-		if (userdata)
-		{
-			char *tmp = (char *)userdata;
-			KLOG_INFO() << "close notify window, userdata:"<< tmp;
-			if (tmp == "disk_notify")
-			{
-				KyNotify::instance().sendNotify(tmp);
-			}
-		}
-	}
+	if (userdata)
+		KyNotify::instance().closeWindowDeal((char *)userdata);
 }
 
 KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_lastSecond(0), m_pDiskNotify(nullptr)
@@ -38,7 +28,7 @@ KyNotify::KyNotify() : m_bStart(false), m_timing(0), m_reserveSize(10), m_lastSe
 
 KyNotify& KyNotify::instance()
 {
-    static KyNotify g_notify;
+	static KyNotify g_notify;
 	return g_notify;
 }
 
@@ -64,6 +54,9 @@ void KyNotify::sendNotify(QString op)
 	}
 	else if (op == "disk_notify")
 	{
+		if (m_bContinue)
+			return;
+
 		m_bContinue = true;
 		notify(KSVAUDIT_DISK);
 	}
@@ -117,6 +110,18 @@ void KyNotify::setReserveSize(quint64 value)
 {
 	m_reserveSize = value / 1073741824 + 10;
 	KLOG_INFO() << "m_reserveSize:" << m_reserveSize << "value:" << value;
+}
+
+void KyNotify::closeWindowDeal(const char *data)
+{
+	if (getContinueNotify())
+	{
+		KLOG_INFO() << "open notify window, userdata:"<< data;
+		if (data == "disk_notify")
+		{
+			notify(KSVAUDIT_DISK);
+		}
+	}
 }
 
 void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)

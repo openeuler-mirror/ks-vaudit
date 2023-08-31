@@ -16,6 +16,7 @@ public:
     void setContinueNotify(bool bContinue);
     bool getContinueNotify();
     void setReserveSize(quint64 value);
+    void closeWindowDeal(const char *data);
 
 private:
 
@@ -28,8 +29,8 @@ private:
         KSVAUDIT_DISK,
     }NOTYFY_MESSAGE;
 
-   ~KyNotify();
-   void notify(NOTYFY_MESSAGE msg, int timing = 0);
+    ~KyNotify();
+    void notify(NOTYFY_MESSAGE msg, int timing = 0);
     void initNotify();
     void notify_send(const char *msg, const char *icon, int timeout, const char *userdata);
     void notify_info(const char *msg, int timeout = NOTIFY_TIMEOUT, const char *userdata = nullptr);

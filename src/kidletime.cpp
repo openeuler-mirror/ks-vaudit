@@ -1,184 +1,249 @@
+/* This file is part of the KDE libraries
+   Copyright (C) 2009 Dario Freddi <drf at kde.org>
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Library General Public
+   License version 2 as published by the Free Software Foundation.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public License
+   along with this library; see the file COPYING.LIB.  If not, write to
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
+*/
+
 #include "kidletime.h"
+#include "xsyncbasedpoller.h"
+#include <QPointer>
 #include "kiran-log/qt5-log-i.h"
 
-KIdleTime &KIdleTime::instance()
+class KIdleTimeHelper
 {
-    static KIdleTime s_KIdleTime;
-    return s_KIdleTime;
-}
-
-KIdleTime::KIdleTime(): m_catchResume(false), m_currentId(0)
-{
-    m_poller = XSyncBasedPoller::instance();
-    if (!m_poller || !m_poller->isAvailable())
+public:
+    KIdleTimeHelper() : q(nullptr) {}
+    ~KIdleTimeHelper()
     {
-        KLOG_ERROR() << "call XSyncBasedPoller err" << "m_poller:" << m_poller;
-        if (m_poller)
-            delete m_poller;
-        exit(1);
+        delete q;
+    }
+    KIdleTimeHelper(const KIdleTimeHelper &) = delete;
+    KIdleTimeHelper &operator=(const KIdleTimeHelper &) = delete;
+    KIdleTime *q;
+};
+
+Q_GLOBAL_STATIC(KIdleTimeHelper, s_globalKIdleTime)
+
+KIdleTime *KIdleTime::instance()
+{
+    if (!s_globalKIdleTime()->q) {
+        new KIdleTime;
     }
 
-    KLOG_INFO() << "m_poller:" << m_poller << "isAvailable:" << m_poller->isAvailable();
-    m_poller->setUpPoller();
-
-    connect(m_poller, &XSyncBasedPoller::resumingFromIdle, this, &KIdleTime::onResumingFromIdle);
-    connect(m_poller, &XSyncBasedPoller::timeoutReached, this, &KIdleTime::onTimeoutReached);
-
+    return s_globalKIdleTime()->q;
 }
 
-int KIdleTime::idleTime() const
+class KIdleTimePrivate
 {
-    KLOG_DEBUG() << "forcePollRequest:" << m_poller->forcePollRequest();
-    return m_poller->forcePollRequest();
+    Q_DECLARE_PUBLIC(KIdleTime)
+    KIdleTime *q_ptr;
+public:
+    KIdleTimePrivate() : catchResume(false), currentId(0) {}
+
+    void loadSystem();
+    void unloadCurrentSystem();
+    void _k_resumingFromIdle();
+    void _k_timeoutReached(int msec);
+
+    QPointer<XSyncBasedPoller> poller;
+    bool catchResume;
+
+    int currentId;
+    QHash<int, int> associations;
+};
+
+KIdleTime::KIdleTime()
+    : QObject(nullptr)
+    , d_ptr(new KIdleTimePrivate())
+{
+    Q_ASSERT(!s_globalKIdleTime()->q);
+    s_globalKIdleTime()->q = this;
+
+    d_ptr->q_ptr = this;
+
+    Q_D(KIdleTime);
+    d->loadSystem();
+
+    connect(d->poller.data(), SIGNAL(resumingFromIdle()), this, SLOT(_k_resumingFromIdle()));
+    connect(d->poller.data(), SIGNAL(timeoutReached(int)), this, SLOT(_k_timeoutReached(int)));
 }
 
-int KIdleTime::addIdleTimeout(int msec)
+KIdleTime::~KIdleTime()
 {
-    m_poller->addTimeout(msec);
-    ++m_currentId;
-    m_associations[m_currentId] = msec;
-    KLOG_DEBUG() << "m_currentId:" << m_currentId << "msec:" << msec;
-    return m_currentId;
-}
-
-int KIdleTime::addIdleTimeout(std::chrono::milliseconds msec)
-{
-    return addIdleTimeout(int(msec.count()));
-}
-
-void KIdleTime::removeIdleTimeout(int identifier)
-{
-#if 1
-    if (!m_associations.contains(identifier))
-    {
-        KLOG_DEBUG() << "not find:" << identifier;
-        return;
-    }
-
-    int msec = m_associations[identifier];
-    m_associations.remove(identifier);
-
-    if (!m_associations.values().contains(msec))
-    {
-        m_poller->removeTimeout(msec);
-        KLOG_DEBUG() << "removeTimeout" << msec;
-    }
-#else
-    const auto it = m_associations.constFind(identifier);
-    if (it == m_associations.cend())
-    {
-        KLOG_DEBUG() << "not find:" << identifier;
-        return;
-    }
-
-    const int msec = it.value();
-    m_associations.erase(it);
-
-    bool isFound = std::any_of(m_associations.cbegin(), m_associations.cend(), [msec](int i) {
-        KLOG_DEBUG() << "i:" << i << "msec:" << msec;
-        return i == msec;
-    });
-
-    KLOG_DEBUG() << "found" << msec << ":" << isFound;
-    if (!isFound)
-        m_poller->removeTimeout(msec);
-#endif
-}
-
-void KIdleTime::removeAllIdleTimeouts()
-{
-#if 1
-    QHash< int, int >::iterator it = m_associations.begin();
-    QSet<int> removed;
-    removed.reserve(m_associations.size());
-    while (it != m_associations.end())
-    {
-        int msec = m_associations[it.key()];
-        it = m_associations.erase(it);
-        if (!removed.contains(msec))
-        {
-            m_poller->removeTimeout(msec);
-            removed.insert(msec);
-        }
-    }
-#else
-    std::vector<int> removed;
-
-    for (auto it = m_associations.cbegin(); it != m_associations.cend(); ++it)
-    {
-        const int msec = it.value();
-        const bool alreadyIns = std::find(removed.cbegin(), removed.cend(), msec) != removed.cend();
-        KLOG_DEBUG() << "msec:" << msec << "alreadyIns:" << alreadyIns;
-        if (!alreadyIns)
-        {
-            removed.push_back(msec);
-            m_poller->removeTimeout(msec);
-        }
-    }
-
-    m_associations.clear();
-#endif
+    Q_D(KIdleTime);
+    d->unloadCurrentSystem();
+    delete d_ptr;
 }
 
 void KIdleTime::catchNextResumeEvent()
 {
-    if (!m_catchResume)
-    {
-       m_catchResume = true;
-       m_poller->catchIdleEvent();
+    Q_D(KIdleTime);
+
+    if (!d->catchResume && d->poller) {
+        d->catchResume = true;
+        d->poller.data()->catchIdleEvent();
+    }
+}
+
+void KIdleTime::stopCatchingResumeEvent()
+{
+    Q_D(KIdleTime);
+
+    if (d->catchResume && d->poller) {
+        d->catchResume = false;
+        d->poller.data()->stopCatchingIdleEvents();
+    }
+}
+
+int KIdleTime::addIdleTimeout(int msec)
+{
+    Q_D(KIdleTime);
+    if (Q_UNLIKELY(!d->poller)) {
+        return 0;
+    }
+
+    d->poller.data()->addTimeout(msec);
+
+    ++d->currentId;
+    d->associations[d->currentId] = msec;
+
+    return d->currentId;
+}
+
+void KIdleTime::removeIdleTimeout(int identifier)
+{
+    Q_D(KIdleTime);
+
+    if (!d->associations.contains(identifier) || !d->poller) {
+        return;
+    }
+
+    int msec = d->associations[identifier];
+
+    d->associations.remove(identifier);
+
+    if (!d->associations.values().contains(msec)) {
+        d->poller.data()->removeTimeout(msec);
+    }
+}
+
+void KIdleTime::removeAllIdleTimeouts()
+{
+    Q_D(KIdleTime);
+
+    QHash< int, int >::iterator i = d->associations.begin();
+    QSet< int > removed;
+    removed.reserve(d->associations.size());
+
+    while (i != d->associations.end()) {
+        int msec = d->associations[i.key()];
+
+        i = d->associations.erase(i);
+
+        if (!removed.contains(msec) && d->poller) {
+            d->poller.data()->removeTimeout(msec);
+            removed.insert(msec);
+        }
+    }
+}
+
+static XSyncBasedPoller *loadPoller()
+{
+    XSyncBasedPoller *poller = XSyncBasedPoller::instance();
+    if (poller) {
+        if (poller->isAvailable()) {
+            return poller;
+        }
+
+        qWarning() << "poller unavailable !!!";
+        delete poller;
+    }
+    qWarning() << "return nullptr !!!";
+    return nullptr;
+}
+
+void KIdleTimePrivate::loadSystem()
+{
+    if (!poller.isNull()) {
+        unloadCurrentSystem();
+    }
+
+    // load plugin
+    poller = loadPoller();
+
+    if (poller && !poller->isAvailable()) {
+        poller = nullptr;
+    }
+    if (!poller.isNull()) {
+        poller.data()->setUpPoller();
+    }
+}
+
+void KIdleTimePrivate::unloadCurrentSystem()
+{
+    if (!poller.isNull()) {
+        poller.data()->unloadPoller();
+        poller.data()->deleteLater();
+    }
+}
+
+void KIdleTimePrivate::_k_resumingFromIdle()
+{
+    Q_Q(KIdleTime);
+
+    if (catchResume) {
+        emit q->resumingFromIdle();
+        q->stopCatchingResumeEvent();
+    }
+}
+
+void KIdleTimePrivate::_k_timeoutReached(int msec)
+{
+    Q_Q(KIdleTime);
+
+    if (associations.values().contains(msec)) {
+        Q_FOREACH (int key, associations.keys(msec)) {
+            emit q->timeoutReached(key);
+            emit q->timeoutReached(key, msec);
+        }
     }
 }
 
 void KIdleTime::simulateUserActivity()
 {
-    m_poller->simulateUserActivity();
-}
+    Q_D(KIdleTime);
 
-KIdleTime::~KIdleTime()
-{
-    if (m_poller)
-    {
-        m_poller->unloadPoller();
-        m_poller->deleteLater();
-        m_poller = nullptr;
+    if (Q_LIKELY(d->poller)) {
+        d->poller.data()->simulateUserActivity();
     }
 }
 
-void KIdleTime::onResumingFromIdle()
+int KIdleTime::idleTime() const
 {
-    KLOG_DEBUG() << "catchResume:" << m_catchResume;
-    if (m_catchResume)
-    {
-        emit resumingFromIdle();
-        m_catchResume = false;
-        m_poller->stopCatchingIdleEvents();
+    Q_D(const KIdleTime);
+    if (Q_LIKELY(d->poller)) {
+        return d->poller.data()->forcePollRequest();
     }
+    return 0;
 }
 
-void KIdleTime::onTimeoutReached(int msec)
-{
-    KLOG_DEBUG() << "msec:" << msec;
-    const auto listKeys = m_associations.keys(msec);
-    for (const auto key : listKeys)
-    {
-        KLOG_DEBUG() << "onTimeoutReached:" << key << msec;
-        emit timeoutReached(key, msec);
-    }
-}
-
-void KIdleTime::printTimeouts()
-{
-    KLOG_DEBUG() << "m_associations:";
-    QHash<int,int>::const_iterator it = m_associations.constBegin();
-    while (it != m_associations.constEnd()) {
-        KLOG_DEBUG() << "key:" << it.key() << "value:" << it.value();
-        ++it;
-    }
-}
-
-#if 0
 QHash<int, int> KIdleTime::idleTimeouts() const
 {
-    return associations;
+    Q_D(const KIdleTime);
+
+    return d->associations;
 }
-#endif
+
+#include "moc_kidletime.cpp"

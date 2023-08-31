@@ -354,9 +354,9 @@ void MonitorDisk::fileSizeProcess(QMap<int, QString>& map)
         QFileInfo fileinfo(it.value());
         if (fileinfo.size() >= m_maxFileSize)
         {
-            KLOG_DEBUG() << "file reaches maximum limit" << it.value();
-            sendSwitchControl(it.key(), "stop");
-            sendSwitchControl(it.key(), "start");
+            KLOG_INFO() << "file reaches maximum limit" << it.value();
+            // 达到最大文件大小后发送退出并保存信号，monitor收到程序退出会再拉起
+            sendSwitchControl(it.key(), "exit");
             map.erase(it++);
             continue;
         }

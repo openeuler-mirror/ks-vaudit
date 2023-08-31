@@ -171,8 +171,8 @@ private:
 
 	// 用于审计录屏
 	int m_timingPause;
-	bool m_auditFirstStart;
 	QString m_auditBaseFileName;
+	QTimer *m_IdleTimr;
 
 	//音频格式
 	QString m_lastAlsaInput;
@@ -233,4 +233,5 @@ private slots:
 	void kidleResumeEvent();
 	void kidleTimeoutReached(int id, int timeout);
 	void onFileRemove(bool bRemove);
+	void OnIdleTimer();
 };

@@ -1,3 +1,22 @@
+/* This file is part of the KDE libraries
+   Copyright (C) 2009 Dario Freddi <drf at kde.org>
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Library General Public
+   License version 2 as published by the Free Software Foundation.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public License
+   along with this library; see the file COPYING.LIB.  If not, write to
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
+*/
+
+// Exceptionnally, include QCoreApplication before our own header, because that one includes X11 headers (#define None...)
 #include <QCoreApplication>
 #include "xsyncbasedpoller.h"
 #include "kiran-log/qt5-log-i.h"
@@ -11,16 +30,11 @@
 class XSyncBasedPollerHelper : public QAbstractNativeEventFilter
 {
 public:
-    XSyncBasedPollerHelper()
-        : q(nullptr)
-        , isActive(false)
-    {
-    }
-    ~XSyncBasedPollerHelper() override
+    XSyncBasedPollerHelper() : q(nullptr), isActive(false) {}
+    ~XSyncBasedPollerHelper()
     {
         delete q;
     }
-
     bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override
     {
         Q_UNUSED(result);
@@ -57,7 +71,6 @@ XSyncBasedPoller::XSyncBasedPoller() :
     if (Q_UNLIKELY(!m_display)) {
         m_available = false;
         KLOG_WARNING() << "xcb sync could not find display";
-        //qCWarning(KIDLETIME_XSYNC_PLUGIN) << "xcb sync could not find display";
         return;
     }
     m_xcb_connection = XGetXCBConnection(m_display);
@@ -66,7 +79,7 @@ XSyncBasedPoller::XSyncBasedPoller() :
 
     const xcb_query_extension_reply_t *sync_reply = xcb_get_extension_data(m_xcb_connection, &xcb_sync_id);
     if (!sync_reply || !sync_reply->present) {
-        //qCWarning(KIDLETIME_XSYNC_PLUGIN) << "xcb sync extension not found";
+        qWarning() << "xcb sync extension not found";
         m_available = false;
         return;
     }
@@ -91,9 +104,9 @@ XSyncBasedPoller::XSyncBasedPoller() :
 
     bool idleFound = false;
 
-    //qCDebug(KIDLETIME_XSYNC_PLUGIN) << ncounters << "counters";
+    qDebug() << ncounters << "counters";
     for (int i = 0; i < ncounters; ++i) {
-        //qCDebug(KIDLETIME_XSYNC_PLUGIN) << counters[i].name << counters[i].counter;
+        // qDebug() << counters[i].name << counters[i].counter;
         if (!strcmp(counters[i].name, "IDLETIME")) {
             m_idleCounter = counters[i].counter;
             idleFound = true;
@@ -108,9 +121,9 @@ XSyncBasedPoller::XSyncBasedPoller() :
     }
 
     if (m_available) {
-        //qCDebug(KIDLETIME_XSYNC_PLUGIN) << "XSync seems available and ready";
+        qDebug() << "XSync seems available and ready";
     } else {
-        //qCDebug(KIDLETIME_XSYNC_PLUGIN) << "XSync seems not available";
+        qDebug() << "XSync seems not available";
     }
 }
 
@@ -129,8 +142,12 @@ bool XSyncBasedPoller::setUpPoller()
         return false;
     }
 
+    qDebug() << "XSync Inited";
 
     s_globalXSyncBasedPoller()->isActive = true;
+
+    qDebug() << "Supported, init completed";
+
     return true;
 }
 
@@ -141,7 +158,11 @@ void XSyncBasedPoller::unloadPoller()
 
 void XSyncBasedPoller::addTimeout(int nextTimeout)
 {
+    /* We need to set the counter to the idle time + the value
+     * requested for next timeout
+     */
 
+    // If there's already an alarm for the requested timeout, skip
     if (m_timeoutAlarm.contains(nextTimeout)) {
         return;
     }
@@ -238,7 +259,7 @@ bool XSyncBasedPoller::xcbEvent(xcb_generic_event_t *event)
     for (QHash<int, XSyncAlarm>::const_iterator i = m_timeoutAlarm.constBegin(); i != m_timeoutAlarm.constEnd(); ++i) {
         if (alarmEvent->alarm == i.value()) {
             /* Bling! Caught! */
-            Q_EMIT timeoutReached(i.key());
+            emit timeoutReached(i.key());
             // Update the alarm to fire back if the system gets inactive for the same time
             catchIdleEvent();
             return false;
@@ -249,7 +270,7 @@ bool XSyncBasedPoller::xcbEvent(xcb_generic_event_t *event)
         /* Resuming from idle here! */
         stopCatchingIdleEvents();
         reloadAlarms();
-        Q_EMIT resumingFromIdle();
+        emit resumingFromIdle();
     }
 
     return false;
@@ -257,17 +278,17 @@ bool XSyncBasedPoller::xcbEvent(xcb_generic_event_t *event)
 
 void XSyncBasedPoller::setAlarm(Display *dpy, XSyncAlarm *alarm, XSyncCounter counter, XSyncTestType test, XSyncValue value)
 {
-    XSyncAlarmAttributes attr;
-    XSyncValue delta;
-    unsigned int flags;
+    XSyncAlarmAttributes  attr;
+    XSyncValue            delta;
+    unsigned int          flags;
 
     XSyncIntToValue(&delta, 0);
 
-    attr.trigger.counter = counter;
-    attr.trigger.value_type = XSyncAbsolute;
-    attr.trigger.test_type = test;
-    attr.trigger.wait_value = value;
-    attr.delta = delta;
+    attr.trigger.counter     = counter;
+    attr.trigger.value_type  = XSyncAbsolute;
+    attr.trigger.test_type   = test;
+    attr.trigger.wait_value  = value;
+    attr.delta               = delta;
 
     flags = XSyncCACounter | XSyncCAValueType | XSyncCATestType | XSyncCAValue | XSyncCADelta;
 
@@ -276,7 +297,7 @@ void XSyncBasedPoller::setAlarm(Display *dpy, XSyncAlarm *alarm, XSyncCounter co
         XSyncChangeAlarm(dpy, *alarm, flags, &attr);
     } else {
         *alarm = XSyncCreateAlarm(dpy, flags, &attr);
-        //qCDebug(KIDLETIME_XSYNC_PLUGIN) << "Created alarm" << *alarm;
+        //qDebug() << "Created alarm" << *alarm;
     }
 
     XFlush(m_display);
@@ -287,3 +308,4 @@ void XSyncBasedPoller::simulateUserActivity()
     XResetScreenSaver(m_display);
     XFlush(m_display);
 }
+

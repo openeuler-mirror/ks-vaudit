@@ -649,7 +649,7 @@ QList<QFileInfo> Widget::getVideos(QString path, QString regName = QString(""))
     }
     QDir dir(path);
     QStringList filters;
-    filters << "*.mp4" << "*.ogv";
+    filters << "*.mp4" << "*.mkv" << "*.ogv";
     dir.setNameFilters(filters);
     // 默认时间排序
     dir.setSorting(QDir::Time);

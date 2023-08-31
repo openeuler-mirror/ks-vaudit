@@ -279,6 +279,8 @@ Recording::Recording(QSettings* qsettings){
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 
 	KyNotify::instance().setUser(CommandLineOptions::GetFrontUser());
+
+	m_configure_interface->MonitorNotification(getpid(), "is_active");
 }
 
 

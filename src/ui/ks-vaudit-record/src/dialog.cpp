@@ -75,6 +75,7 @@ void Dialog::initAboutUI()
     exitButton->setStyleSheet("background-color:transparent;"
                               "border:none;");
     exitButton->setIcon(QIcon(":/images/clear_icon.svg"));
+    exitButton->setIconSize(QSize(13,13));
     connect(exitButton, SIGNAL(clicked()), this, SLOT(exitDialog()));
     ui->bodyWidget->hide();
     QWidget *aboutBody = new QWidget(ui->dialogWidget);

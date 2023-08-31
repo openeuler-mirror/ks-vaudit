@@ -71,12 +71,10 @@ GeneralConfigure &GeneralConfigure::Instance()
 
 bool GeneralConfigure::setRecordConfigure(const QString &param)
 {
-    QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8());
-    if (!jsonDocument.isObject())
+    QJsonObject jsonObj;
+    if (!parseJsonData(param, jsonObj))
         return false;
 
-    QJsonObject jsonObj = jsonDocument.object();
     for (auto k : jsonObj.keys())
     {
         if (!checkRecordParam(fullKey(m_itemMap[CONFIG_RECORD], k), jsonObj[k].toString()))
@@ -89,7 +87,6 @@ bool GeneralConfigure::setRecordConfigure(const QString &param)
         m_confSettings->setValue(k, jsonObj[k].toString());
         QString key = fullKey(m_itemMap[CONFIG_RECORD], k);
         m_lastMap[key] = jsonObj[k].toString();
-
         KLOG_DEBUG() << "write " << k << jsonObj[k].toString() << key << m_lastMap[key];
     }
 
@@ -100,12 +97,10 @@ bool GeneralConfigure::setRecordConfigure(const QString &param)
 
 bool GeneralConfigure::setAuditConfigure(const QString &param)
 {
-    QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8());
-    if (!jsonDocument.isObject())
+    QJsonObject jsonObj;
+    if (!parseJsonData(param, jsonObj))
         return false;
 
-    QJsonObject jsonObj = jsonDocument.object();
     for (auto k : jsonObj.keys())
     {
         if (!checkAuditParam(fullKey(m_itemMap[CONFIG_AUDIT], k), jsonObj[k].toString()))
@@ -476,4 +471,39 @@ void GeneralConfigure::onDirectoryChanged(QString)
         QJsonDocument maxDoc(auditObj);
         this->ConfigureChanged(m_itemMap[CONFIG_AUDIT], QString::fromUtf8(maxDoc.toJson(QJsonDocument::Compact).constData()));
     }
+}
+
+bool GeneralConfigure::parseJsonData(const QString &param,  QJsonObject &jsonObj)
+{
+    QString str = param;
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8(), &jError);
+
+    if (jsonDocument.isObject())
+    {
+        jsonObj = jsonDocument.object();
+        return true;
+    }
+
+    //判断是否因为中文utf8导致解析失败
+    KLOG_INFO() << "parse json" << jsonDocument << "err, err info:" << jError.error;
+    if (QJsonParseError::ParseError::IllegalUTF8String != jError.error)
+        return false;
+
+    //QJsonDocument::fromJson解析中文utf8失败处理
+    if (!param.startsWith("{") || !param.endsWith("}"))
+        return false;
+
+    QStringList jsonList = param.split(",");
+    for (auto jsonString : jsonList)
+    {
+        QStringList dataList = jsonString.split("\"");
+        int index = dataList.indexOf(":");
+        if (index > 0 && index < dataList.size() - 1)
+        {
+            jsonObj[dataList[index-1]] = dataList[index+1];
+        }
+    }
+
+    return true;
 }

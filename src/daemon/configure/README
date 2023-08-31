@@ -1,5 +1,4 @@
 ##依赖
-Qt5.7.1
 libsqlitecipher.so
 scl
 

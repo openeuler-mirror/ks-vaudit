@@ -17,6 +17,11 @@ BuildRequires: devtoolset-8-runtime
 BuildRequires: devtoolset-8-gcc
 BuildRequires: devtoolset-8-gcc-c++
 BuildRequires: devtoolset-8-libstdc++-devel
+BuildRequires: qt5-qtbase-devel
+BuildRequires: qt5-qtsvg-devel
+BuildRequires: qt5-qtx11extras-devel
+BuildRequires: qt5-qtmultimedia-devel
+BuildRequires: QtCipherSqlitePlugin
 BuildRequires: mesa-libGL-devel
 BuildRequires: libX11-devel
 BuildRequires: libXext-devel
@@ -39,7 +44,13 @@ BuildRequires: freeglut-devel
 BuildRequires: libvorbis-devel
 BuildRequires: libtheora-devel
 BuildRequires: libvpx-devel
+BuildRequires: libvdpau-devel
+BuildRequires: freeglut-devel
 
+Requires:      qt5-qtsvg
+Requires:      qt5-qtx11extras
+Requires:      qt5-qtmultimedia
+Requires:      QtCipherSqlitePlugin
 Requires:      libX11
 Requires:      ffmpeg >= 4.3.4
 Requires:      libnotify
@@ -55,6 +66,8 @@ Requires:      freeglut
 Requires:      libvorbis
 Requires:      libtheora
 Requires:      libvpx
+Requires:      libvdpau
+Requires:      freeglut
 
 %define debug_package %{nil}
 %define __spec_install_post\
@@ -71,13 +84,8 @@ Requires:      libvpx
 %build
 set +e
 source scl_source enable devtoolset-8
-qtpath=`pwd`/buildrpm
-tar -xf ${qtpath}/Qt5.7.1.tar.gz -C ${qtpath}
-qtpath=${qtpath}/ks-vaudit/Qt5.7.1/5.7/gcc_64
-libpath=${qtpath}/lib
-export PATH="${qtpath}/bin:/usr/local/bin:$PATH"
-export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:$libpath/pkgconfig/:$PKG_CONFIG_PATH
-export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:/lib:/lib64:/usr/lib64:/usr/lib:$libpath:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:/lib:/lib64:/usr/lib64:/usr/lib:$LD_LIBRARY_PATH
 export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri
 export LIBVA_DRIVER_NAME=iHD
 
@@ -90,7 +98,6 @@ OPTIONS=()
 OPTIONS+=("-DENABLE_32BIT_GLINJECT=$ENABLE_32BIT_GLINJECT")
 OPTIONS+=("-DENABLE_X86_ASM=$ENABLE_X86_ASM")
 OPTIONS+=("-DENABLE_FFMPEG_VERSIONS=TRUE")
-OPTIONS+=("-DWITH_QT5=TRUE")
 OPTIONS+=("-DWITH_GLINJECT=$WITH_GLINJECT")
 OPTIONS+=("-DHIGH_VERSION=$HIGH_VERSION")
 
@@ -114,10 +121,8 @@ make check
 %endif
 
 %install
-qtpath=%_topdir/BUILD/%{name}-%{version}/buildrpm/ks-vaudit
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/local/
-cp ${qtpath} %{buildroot}/usr/local/ -rf
 cd ./build-release
 %make_install
 mkdir -p %{buildroot}/usr/bin/
@@ -125,7 +130,6 @@ mkdir -p %{buildroot}/usr/bin/
 chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 
 %files
-/usr/local/ks-vaudit/Qt5.7.1
 /etc/init.d/*
 /etc/dbus-1/system.d/*
 /usr/bin/*
@@ -134,10 +138,9 @@ chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 
 %post
 ldconfig
-qtlib=/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib
 cat /etc/bashrc | grep "export LIBVA_DRIVERS_PATH=" > /dev/null 2>&1 || echo "export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri" >> /etc/bashrc
-cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:${qtlib}/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
-cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:${qtlib}:\$LD_LIBRARY_PATH" >> /etc/bashrc 
+cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
+cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:\$LD_LIBRARY_PATH" >> /etc/bashrc
 
 # 配置文件存放目录
 if [ ! -d "/tmp/.ks-vaudit" ];then
@@ -160,8 +163,7 @@ ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -
 sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
 
 %clean
-qtpath=%_topdir/BUILD/Qt5.7.1
-rm -rf $RPM_BUILD_ROOT ${qtpath}
+rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Sun Oct 10 2022 tangjie <tangjie@kylinsec.com.cn> - 1.0.0-4

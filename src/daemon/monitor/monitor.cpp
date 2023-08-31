@@ -456,7 +456,7 @@ bool Monitor::isLicenseActive()
             QJsonDocument doc = QJsonDocument::fromJson(firstArg.toString().toLatin1(), &jsonerror);
             if (doc.isNull() || jsonerror.error != QJsonParseError::NoError || !doc.isObject())
             {
-                KLOG_INFO() << "parse json err";
+                KLOG_INFO() << "parse json err" << jsonerror.error;
                 return false;
             }
 

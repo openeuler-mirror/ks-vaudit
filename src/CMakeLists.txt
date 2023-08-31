@@ -25,11 +25,7 @@ if(WITH_JACK)
 	find_package(Jack REQUIRED)
 endif()
 
-if(WITH_QT5)
-	find_package(Qt5 5.7 COMPONENTS Core Gui Widgets X11Extras Multimedia REQUIRED)
-else()
-	find_package(Qt4 4.8 COMPONENTS QtGui REQUIRED)
-endif()
+find_package(Qt5 COMPONENTS Core Gui Widgets X11Extras Multimedia REQUIRED)
 
 pkg_search_module(X11_XCB REQUIRED x11-xcb)
 pkg_search_module(XET REQUIRED xext)
@@ -151,21 +147,14 @@ set(res_input
 	../data/resources/resources.qrc
 )
 
-if(WITH_QT5)
-	qt5_add_resources(res_output ${res_input})
-	set(QT_LIBS
-		Qt5::Core
-		Qt5::Gui
-		Qt5::Widgets
-		Qt5::X11Extras
-		Qt5::Multimedia
-	)
-else()
-	qt4_add_resources(res_output ${res_input})
-	set(QT_LIBS
-		Qt4::QtGui
-	)
-endif()
+qt5_add_resources(res_output ${res_input})
+set(QT_LIBS
+	Qt5::Core
+	Qt5::Gui
+	Qt5::Widgets
+	Qt5::X11Extras
+	Qt5::Multimedia
+)
 
 set_property(SOURCE ${res_output} PROPERTY SKIP_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Widgets DBus Core Sql Xml REQUIRED)

@@ -613,18 +613,19 @@ QString OutputManager::ChooseEncodeName(QString container_name) {
 			return QString("h264_nvenc");
 		}
 
+		// task 61427, use vaapi first on i5-6500, avoid mem leak of qsv
+		// check vaapi
+		ret = CheckEncodeName(container_name, "h264_vaapi");
+		if (ret >= 0) {
+			return QString("h264_vaapi");
+		}
+
 		// check qsv
 		ret = CheckEncodeName(container_name, "h264_qsv");
 		if (ret >= 0) {
 			return QString("h264_qsv");
 		}
 
-		// check vaapi
-		ret = CheckEncodeName(container_name, "h264_vaapi");
-		if (ret >= 0) {
-			return QString("h264_vaapi");
-		}
-		
 		return QString("libx264");
 	}
 

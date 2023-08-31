@@ -17,16 +17,19 @@ struct sessionInfo {
     bool bNotify;   // 磁盘空间不足是否在提示
     bool bStart;    // 是否开始录屏
     time_t stTime;  // 启动进程的时间，仅用于录屏程序被杀掉后判断查找到的是否为同一进程
+    bool bLocal;    // 用于判断是否本地会话，本地会话只有激活用户才启进程
+    bool bActive;   // 用于判断录屏进程是否被QApplication卡住
 
+    // 只判断固定不会变的参数
     friend bool operator==(const sessionInfo &ob1, const sessionInfo &ob2)
     {
         return (ob1.userName == ob2.userName && ob1.ip == ob2.ip
-                && ob1.displayName == ob2.displayName && ob1.authFile == ob2.authFile);
+                && ob1.displayName == ob2.displayName && ob1.authFile == ob2.authFile && ob1.bLocal == ob2.bLocal);
     }
     bool operator==(const sessionInfo &rhs)
     {
         return (userName == rhs.userName && ip == rhs.ip
-                && displayName == rhs.displayName && authFile == rhs.authFile);
+                && displayName == rhs.displayName && authFile == rhs.authFile && bLocal == rhs.bLocal);
     }
 };
 
@@ -49,6 +52,7 @@ private:
     void clearSessionInfos();
     void clearProcess(QProcess *process);
     void clearFrontRecordInfos();
+    QString getLocalActiveUser();
 
 private slots:
     void monitorProcess();

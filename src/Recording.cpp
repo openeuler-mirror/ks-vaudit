@@ -265,6 +265,9 @@ Recording::Recording(QSettings* qsettings){
 	connect(m_audioTimer, SIGNAL(timeout()), this, SLOT(OnAudioTimer()));
 	m_audioTimer->start();
 
+	m_IdleTimr = new QTimer();
+	connect(m_IdleTimr, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
+
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 }
 
@@ -441,6 +444,11 @@ Recording::~Recording() {
 	if (m_audioTimer){
 		delete m_audioTimer;
 		m_audioTimer = nullptr;
+	}
+
+	if (m_IdleTimr) {
+		delete m_IdleTimr;
+		m_IdleTimr = nullptr;
 	}
 
 }
@@ -1370,13 +1378,22 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		// 应该用qApp->quit()来退出 清理qt控件
 //		exit(0);
 	} else if(op == "disk_notify"){
+		KLOG_INFO() << "disk space deal";
+		if (m_IdleTimr->isActive())
+		{
+			m_IdleTimr->stop();
+		}
+
+		KIdleTime::instance()->stopCatchingResumeEvent();
+		KIdleTime::instance()->removeAllIdleTimeouts();
 		m_configure_interface->MonitorNotification(getpid(), op);
 		KyNotify::instance().sendNotify(op);
 	} else if(op == "disk_notify_stop") {
+		KIdleTime::instance()->catchNextResumeEvent();
 		KyNotify::instance().setContinueNotify(false);
 	}
 
-	//后台审计不需要提示
+	//后台审计不需要启停提示
 	if (m_auditBaseFileName.isEmpty())
 		KyNotify::instance().sendNotify(op);
 }
@@ -1392,14 +1409,15 @@ bool Recording::AuditParamDeal()
 	if (m_tm && m_tm->isActive())
 		m_tm->stop();
 
-	m_auditFirstStart = true;
 	QStringList strlist = args[1].split("-");
 	strlist.removeAll("");
 	m_auditBaseFileName = strlist[1] + "_" + strlist[2];
-	connect(&KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
-	connect(&KIdleTime::instance(), &KIdleTime::timeoutReached, this, &Recording::kidleTimeoutReached);
-	KIdleTime::instance().catchNextResumeEvent();
-	KLOG_DEBUG() << m_auditBaseFileName << "idleTime:" << KIdleTime::instance().idleTime();
+	m_settings->setValue("record/user", strlist[1]);
+
+	connect(KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
+	connect(KIdleTime::instance(), SIGNAL(timeoutReached(int,int)),this, SLOT(kidleTimeoutReached(int,int)));
+	KIdleTime::instance()->catchNextResumeEvent();
+
 	return true;
 }
 
@@ -1471,19 +1489,34 @@ void Recording::SetFileTypeSetting()
 
 void Recording::kidleResumeEvent()
 {
-	KLOG_DEBUG() << "m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
-	KIdleTime::instance().removeAllIdleTimeouts();
-	KIdleTime::instance().addIdleTimeout(m_timingPause*60000);
-	if (!m_auditFirstStart && !KyNotify::instance().getContinueNotify())
-		OnRecordStartPause();
+	KLOG_DEBUG() << "move mouse or press key, m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName << KIdleTime::instance()->idleTime();
 
-	m_auditFirstStart = false;
+	KIdleTime::instance()->removeAllIdleTimeouts();
+	KIdleTime::instance()->addIdleTimeout(m_timingPause*60000);
+
+	// 如果定时器还在，并触发了resumingFromIdle信号，说明是第一次触发，也就是从录屏状态到录屏状态，不需要重启录屏
+	if (m_IdleTimr->isActive())
+	{
+		m_IdleTimr->stop();
+		return;
+	}
+
+	if (!KyNotify::instance().getContinueNotify())
+	{
+		KLOG_INFO() << "restart record";
+		OnRecordStartPause();
+	}
 }
 
 void Recording::kidleTimeoutReached(int id, int timeout)
 {
-	KLOG_DEBUG() << "id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName;
-	KIdleTime::instance().catchNextResumeEvent();
+	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName << KIdleTime::instance()->idleTime();
+	// 已经触发了无操作状态，一般这里不会进(根据实测第一次触发的是resumingFromIdle信号)
+	if (m_IdleTimr->isActive())
+	{
+		m_IdleTimr->stop();
+	}
+	KIdleTime::instance()->catchNextResumeEvent();
 	OnRecordPause();
 }
 
@@ -1519,7 +1552,7 @@ void thread_function(QString fileName, void *user)
 		event = (struct inotify_event *)&buf[nread];
 		if (pThis->m_bStopRecord)
 		{
-			KLOG_DEBUG("stop record, event->mask:%#x", event->mask);
+			KLOG_INFO("stop record, event->mask:%#x, curpid:%d", event->mask, getpid());
 			inotify_rm_watch(fd, wd);
 			close(fd);
 			return;
@@ -1542,6 +1575,17 @@ void Recording::WatchFile()
 	m_bStopRecord = false;
 	std::thread t(&thread_function, m_output_settings.file, this);
 	t.detach();
+
+	if (!m_auditBaseFileName.isEmpty())
+	{
+		// 新的录屏开始，关掉旧的定时
+		if (m_IdleTimr->isActive())
+		{
+			m_IdleTimr->stop();
+		}
+
+		m_IdleTimr->start(m_timingPause*60000);
+	}
 }
 
 void Recording::onFileRemove(bool bRemove)
@@ -1557,4 +1601,14 @@ void Recording::onFileRemove(bool bRemove)
 		KLOG_INFO() << "re-watch file" << m_output_settings.file;
 		WatchFile();
 	}
+}
+
+void Recording::OnIdleTimer()
+{
+	KLOG_INFO() << "no action screen after start record";
+	if (m_IdleTimr->isActive())
+	{
+		m_IdleTimr->stop();
+	}
+	OnRecordPause();
 }

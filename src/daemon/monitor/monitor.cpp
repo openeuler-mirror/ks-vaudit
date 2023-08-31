@@ -430,6 +430,7 @@ void Monitor::DealSession(bool isDiskOk)
                 KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
                 MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
                 MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
+                val.bStart = false;
             }
         }
     }

@@ -130,12 +130,16 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 	return newfile+".tmp";
 }
 
-//审计录屏文件以用户名_IP_YYYYMMDD_hhmmss命名，示例：张三_192.168.1.1_20220621_153620.mp4
+//审计录屏文件以用户名_IP_YYYYMMDD_hhmmss_displayname命名，示例：张三_192.168.1.1_20220621_153620_1.mp4
 static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix, bool add_timestamp) {
 	QFileInfo fi(file);
 	QDateTime now = QDateTime::currentDateTime();
 	QString newfile;
 	unsigned int counter = 0;
+	QString display = getenv("DISPLAY");
+	int index = display.indexOf(".") ;
+	QString displayName = index == -1 ? display.mid(1, display.size()) : display.mid(1, index-1);
+
 	do {
 		++counter;
 		newfile = prefix;
@@ -143,6 +147,9 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 			newfile += "_";
 			newfile += now.toString("yyyyMMdd_hhmmss");
 		}
+
+		newfile += "_";
+		newfile += displayName;
 
 		if (counter != 1) {
 			//处理重复视频文件
@@ -1539,7 +1546,10 @@ void Recording::kidleTimeoutReached(int id, int timeout)
 		m_IdleTimer->stop();
 	}
 	KIdleTime::instance()->catchNextResumeEvent();
-	OnRecordPause();
+	if (m_page_started && m_output_started)
+	{
+		OnRecordPause();
+	}
 }
 
 //不使用 while 循环原因：非删除文件事件下read不阻塞了
@@ -1705,5 +1715,8 @@ void Recording::OnIdleTimer()
 	{
 		m_IdleTimer->stop();
 	}
-	OnRecordPause();
+	if (m_page_started && m_output_started)
+	{
+		OnRecordPause();
+	}
 }

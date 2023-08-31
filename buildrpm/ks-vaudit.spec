@@ -1,6 +1,6 @@
 Name:           ks-vaudit
 Version:        1.0.0
-Release:        4
+Release:        5
 Summary:        kylinsec vaudit
 
 License:        GPL
@@ -45,6 +45,7 @@ BuildRequires: libvorbis-devel
 BuildRequires: libtheora-devel
 BuildRequires: libvdpau-devel
 BuildRequires: freeglut-devel
+BuildRequires: kylin-rpm-config
 
 Requires:      qt5-qtsvg
 Requires:      qt5-qtx11extras
@@ -69,7 +70,6 @@ Requires:      libvdpau
 Requires:      cpufrequtils
 Requires:      freeglut
 
-%define debug_package %{nil}
 %define __spec_install_post\
     %{?__debug_package:%{__debug_install_post}}\
     %{__os_install_post}\

@@ -10,26 +10,11 @@
 
 static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 {
-	KLOG_INFO() << "close notify window";
+	KLOG_INFO() << "close notify window and re-open";
 	g_object_unref(pNotify);
 	if (userdata)
 	{
-		KLOG_INFO() << "open notify window, userdata:"<< (char *)userdata;
 		AuditNotify::instance().sendNotify();
-	}
-}
-
-void thread_check_ppid(void *user)
-{
-	AuditNotify *pThis = (AuditNotify *)user;
-	while (1)
-	{
-		sleep(1);
-		if (getppid() == 1)
-		{
-			KLOG_INFO() << "parent process exit";
-			pThis->clearData();
-		}
 	}
 }
 
@@ -46,9 +31,6 @@ AuditNotify::AuditNotify() : m_reserveSize(10), m_pNotify(nullptr), m_uid(0)
 		KLOG_ERROR() << "Failed to initialize libnotify";
 		return;
 	}
-
-	std::thread t(&thread_check_ppid, this);
-	t.detach();
 }
 
 AuditNotify& AuditNotify::instance()
@@ -66,11 +48,6 @@ void AuditNotify::setParam(uid_t uid, quint64 reserveSize)
 
 void AuditNotify::sendNotify()
 {
-	uid_t real_uid;
-	uid_t effective_uid;
-	uid_t save_uid;
-	getresuid(&real_uid, &effective_uid, &save_uid);
-	KLOG_INFO("start source id: %d -%d -%d \n", real_uid, effective_uid, save_uid);
 	int ret = setreuid(m_uid, m_uid);
 	if (ret != 0)
 	{
@@ -80,7 +57,8 @@ void AuditNotify::sendNotify()
 	char *notify_message = NULL;
 	QString tmp = QString("%1").arg(m_reserveSize);
 	QString str = _("<b>\t请先清理磁盘空间至少预留") + tmp + _("G，否则将无法进行录屏!</b>\n");
-	notify_send(str.toStdString().c_str(), "gtk-dialog-warning", 0, "disk_notify");
+	// 超时时间改为10s，解决切换用户发送提示成功，但不显示的问题（重新发送）
+	notify_send(str.toStdString().c_str(), "gtk-dialog-warning", 10*1000, "disk_notify");
 }
 
 AuditNotify::~AuditNotify()
@@ -127,6 +105,5 @@ void AuditNotify::notify_send(const char *msg, const char *icon, int timeout, co
 	}
 
 	m_pNotify = (void *)pNotify;
-	KLOG_INFO() << m_pNotify << pNotify;
 	g_signal_connect(pNotify, "closed", G_CALLBACK(notification_closed), (void *)userdata);
 }

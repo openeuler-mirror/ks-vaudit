@@ -29,31 +29,48 @@ KyNotify& KyNotify::instance()
 
 void KyNotify::sendNotify(QString op)
 {
-	if (op == "start")
-	{
-		notify(KSVAUDIT_START);
-		m_bStart = true;
-	}
-	else if (op == "pause")
-	{
-		notify(KSVAUDIT_PAUSE);
-	}
-	else if (op == "restart")
-	{
-		notify(KSVAUDIT_START);
-	}
-	else if (op == "stop")
-	{
-		notify(KSVAUDIT_STOP);
-		m_bStart = false;
-	}
-	else if (op == "disk_notify")
+	if (op == "disk_notify")
 	{
 		if (m_bContinue)
 			return;
 
+		KLOG_INFO() << "disk space notify init";
+		if (!notify_init(_("kylin verify")))
+		{
+			KLOG_ERROR() << "Failed to initialize libnotify";
+			return;
+		}
 		m_bContinue = true;
 		notify(KSVAUDIT_DISK);
+	}
+	else
+	{
+		if (!notify_init(_("kylin verify")))
+		{
+			KLOG_ERROR() << "Failed to initialize libnotify";
+			return;
+		}
+
+		if (op == "start")
+		{
+			notify(KSVAUDIT_START);
+			m_bStart = true;
+		}
+		else if (op == "pause")
+		{
+			notify(KSVAUDIT_PAUSE);
+		}
+		else if (op == "restart")
+		{
+			notify(KSVAUDIT_START);
+		}
+		else if (op == "stop")
+		{
+			notify(KSVAUDIT_STOP);
+			m_bStart = false;
+		}
+
+		notify_uninit();
 	}
 }
 
@@ -90,10 +107,11 @@ void KyNotify::setContinueNotify(bool bContinue)
 	m_bContinue = bContinue;
 	if (!m_bContinue && m_pDiskNotify)
 	{
-		KLOG_DEBUG() << "call notify_notification_close";
+		KLOG_INFO() << "call notify_notification_close and unint";
 		notify_notification_close((NotifyNotification *)m_pDiskNotify, NULL);
 		g_object_unref(m_pDiskNotify);
 		m_pDiskNotify = nullptr;
+		notify_uninit();
 	}
 }
 
@@ -106,6 +124,14 @@ void KyNotify::setReserveSize(quint64 value)
 {
 	m_reserveSize = value / 1073741824 + 10;
 	KLOG_INFO() << "m_reserveSize:" << m_reserveSize << "value:" << value;
+	if (m_bContinue)
+	{
+		KLOG_DEBUG() << "modify min diskspace, call notify_notification_close";
+		notify_notification_close((NotifyNotification *)m_pDiskNotify, NULL);
+		g_object_unref(m_pDiskNotify);
+		m_pDiskNotify = nullptr;
+		notify(KSVAUDIT_DISK);
+	}
 }
 
 void KyNotify::closeWindowDeal(const char *data)
@@ -140,12 +166,6 @@ void KyNotify::setUser(QString userName)
 
 void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
 {
-	if (!notify_init(_("kylin verify")))
-	{
-		KLOG_ERROR() << "Failed to initialize libnotify";
-		return;
-	}
-
 	setreuid(m_uid, m_uid);
 	setlocale(LC_ALL, "");
 	bindtextdomain(GETTEXT_DOMAIN, LICENSE_LOCALEDIR);
@@ -195,11 +215,23 @@ void KyNotify::notify(NOTYFY_MESSAGE msg, int timing)
 	}
 
 	setreuid(m_source_uid, m_source_uid);
-	notify_uninit();
 }
 
 KyNotify::~KyNotify()
 {
+	if (m_bContinue)
+	{
+		KLOG_INFO() << "clear audit notify data";
+		if (m_pDiskNotify)
+		{
+			KLOG_INFO() << "close notify window";
+			notify_notification_close((NotifyNotification *)m_pDiskNotify, NULL);
+			g_object_unref(m_pDiskNotify);
+			m_pDiskNotify = nullptr;
+		}
+
+		notify_uninit();
+	}
 }
 
 void KyNotify::notify_send(const char *msg, const char *icon, int timeout, const char *userdata)

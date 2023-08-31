@@ -767,7 +767,7 @@ void Recording::SaveSettings(QSettings* settings) {
 		settings->setValue("output/video_codec_av", "libx264"); //硬件加速用h264_vaapi
 		settings->setValue("output/video_kbit_rate", 128);
 		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-        }else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
+	}else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
 		file_suffix = ".ogv";
 
 		settings->setValue("output/container_av", QString("ogv")); //mp4 ogv 格式等
@@ -1272,9 +1272,15 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				QString fileType = jsonObj["FileType"].toString();
 				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
 					file_suffix = ".mp4";
+					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
 					m_settings->setValue("output/container_av", "mp4");
+				}else if(QString::compare(fileType, "mkv", Qt::CaseInsensitive) == 0){
+						file_suffix = ".mkv";
+						m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
+						m_settings->setValue("output/container_av", "mkv");
 				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
 					file_suffix = ".ogv";
+					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
 					m_settings->setValue("output/container_av", "ogv");
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
@@ -1324,9 +1330,15 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				needRestart = true;
 				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
 					file_suffix = ".mp4";
+					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
 					m_settings->setValue("output/container_av", "mp4");
+				}else if(QString::compare(fileType, "mkv", Qt::CaseInsensitive) == 0){
+						file_suffix = ".mkv";
+						m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
+						m_settings->setValue("output/container_av", "mkv");
 				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
 					file_suffix = ".ogv";
+					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
 					m_settings->setValue("output/container_av", "ogv");
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
@@ -1451,6 +1463,15 @@ void Recording::SetFileTypeSetting()
 		m_settings->setValue("output/video_codec_av", "libx264");
 		m_settings->setValue("output/video_kbit_rate", 128);
 		m_settings->setValue("output/video_h264_crf", 23);
+		m_settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
+	}else if(QString::compare(file_type, "mkv", Qt::CaseInsensitive) == 0){
+		file_suffix = ".mkv";
+
+		m_settings->setValue("output/container_av", QString("mkv")); //mp4 ogv 格式等
+		m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
+		m_settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
+		m_settings->setValue("output/video_codec_av", "libx264"); //硬件加速用h264_vaapi
+		m_settings->setValue("output/video_kbit_rate", 128);
 		m_settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
 	}else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
 		file_suffix = ".ogv";

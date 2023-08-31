@@ -82,10 +82,10 @@ void Widget::init_ui()
         m_fpsList << "5" << "10" << "20" << "25" << "30" << "45" << "60";
     }
     ui->waterprintText->setMaxLength(20);
-    QMenu* moreMenu = new QMenu();
+    QMenu* moreMenu = new QMenu(this);
     moreMenu->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
     moreMenu->setAttribute(Qt::WA_TranslucentBackground);
-    moreMenu->setObjectName("moreMenu");
+//    moreMenu->setObjectName("moreMenu");
     QAction* activateAction = moreMenu->addAction(tr("软件激活"));
     QAction* aboutAction = moreMenu->addAction(tr("关于软件"));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(openAbout()));

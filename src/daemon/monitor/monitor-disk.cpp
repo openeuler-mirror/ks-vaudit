@@ -10,6 +10,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+extern "C" {
+#include "libavformat/avformat.h"
+#include "libavutil/dict.h"
+}
+
 #define TIMEOUT_MS 5000
 
 MonitorDisk::MonitorDisk(QWidget *parent) : m_maxSaveDays(30), m_maxRecordPerUser(0), m_minFreeSpace(10737418240),
@@ -206,6 +211,79 @@ bool MonitorDisk::parseJsonData(const QString &param,  QJsonObject &jsonObj)
     return true;
 }
 
+void MonitorDisk::fixVidoeSuffix(const QString &filePath)
+{
+    QDir dir(filePath);
+    QStringList nameFlters;
+    nameFlters << "*.mkv.tmp" << "*.mp4.tmp";
+    dir.setNameFilters(nameFlters);
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+    QFileInfoList videoFiles = dir.entryInfoList();
+    QProcess p;
+    for (auto afile : videoFiles)
+    {
+        // 暂时mkv没有损坏的情况，没有时长也能播放
+        QString fileName(afile.absoluteFilePath());
+        QString cmd = QString("lsof %1").arg(fileName);
+        p.start(cmd);
+        p.waitForFinished();
+        if (p.readAllStandardOutput().isEmpty())
+        {
+            // lsof 没有标准输出则没有被占用
+            // 因为monitor需要sudo权限，这里命令不需要加sudo
+            KLOG_DEBUG() << "[fixVideo:fileName and baseName]: [" << fileName << "] [" << afile.completeBaseName() << "]";
+            QFile tmpFile(fileName);
+            QString newName = QString("%1/%2").arg(dir.absolutePath()).arg(afile.completeBaseName());
+            if (fileName.endsWith(".mp4.tmp"))
+            {
+                if (!checkMP4Broken(fileName))
+                {
+                    // mp4 可能存在破损的情况，重命名成.crash结尾
+                    newName = QString("%1/%2.crash").arg(dir.absolutePath()).arg(afile.completeBaseName());
+                }
+            }
+            bool ret = tmpFile.rename(newName);
+            KLOG_WARNING() << "[fixVideo:ret and newName]: [" << ret << "]" << "[" << newName << "]";
+        }
+    }
+    p.close();
+}
+
+bool MonitorDisk::checkMP4Broken(const QString &fileAbsPath)
+{
+    // 检查mp4文件是否有时长，目前是没有时长的播放不了
+    AVFormatContext* pCtx = NULL;
+    bool finalret = true;
+    int ret = avformat_open_input(&pCtx, fileAbsPath.toStdString().c_str(), NULL, NULL);
+    if (ret < 0)
+    {
+        KLOG_DEBUG() << "avformat_open_input() failed:" << ret;
+        return !finalret;
+    }
+    int ret1 = avformat_find_stream_info(pCtx,NULL);
+    if(ret1 < 0)
+    {
+        KLOG_DEBUG() << "avformat_find_stream_info() failed:" << ret1;
+        if (pCtx != NULL)
+        {
+            avformat_close_input(&pCtx);
+            pCtx=NULL;
+        }
+        return !finalret;
+    }
+
+    if (pCtx->duration == AV_NOPTS_VALUE)
+    {
+        finalret = false;
+    }
+    if (pCtx != NULL)
+    {
+        avformat_close_input(&pCtx);
+        pCtx=NULL;
+    }
+    return finalret;
+}
+
 void MonitorDisk::UpdateConfigureData(QString key, QString value)
 {
     if ("audit" == key)
@@ -253,6 +331,13 @@ void MonitorDisk::sendSwitchControl(int to_pid, const QString &operate)
 {
     KLOG_DEBUG() << "to_pid:" << to_pid << "operate:" << operate;
     m_dbusInterface->SwitchControl(getpid(), to_pid, operate);
+}
+
+void MonitorDisk::fixVidoes()
+{
+    // fixVideoSuffix() wrapper
+    fixVidoeSuffix(m_recordFilePath);
+    fixVidoeSuffix(m_filePath);
 }
 
 bool MonitorDisk::fileDiskLimitProcess()

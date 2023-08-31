@@ -1401,7 +1401,8 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		OnRecordPause();
 	}else if(op == "restart"){
 		Logger::LogInfo("[Recording::SwitchControl] restart record");
-		OnRecordStartPause();
+		if (!m_page_started || !m_output_started) // 防止之前为录像状态，再次调用时关闭录像
+			OnRecordStartPause();
 	}else if(op == "stop"){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSave(); //结束视频录制但不退出

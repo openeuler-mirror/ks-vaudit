@@ -64,8 +64,6 @@ install_package "libvdpau"
 install_package "unixODBC"
 sudo rpm -Uvh $RPM_PATH/ks-vaudit* --nodeps --force
 
-sudo chmod u+s /usr/bin/ks-vaudit
-
 sudo cat > /tmp/ks-vaudit-uninstall <<EOF
 sudo rpm -e ks-vaudit --nodeps
 sudo rm -rf /usr/local/ks-vaudit

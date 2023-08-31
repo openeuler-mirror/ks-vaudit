@@ -58,6 +58,7 @@ void Monitor::monitorProcess()
             bool bRet = MonitorDisk::instance().fileDiskLimitProcess();
             DealSession(bRet); //启停进程
             MonitorDisk::instance().fileSizeProcess(m_videoFileName); //文件达到指定大小，切换文件
+            MonitorDisk::instance().fixVidoes(); // 修改视频后缀
         }
     }
     else

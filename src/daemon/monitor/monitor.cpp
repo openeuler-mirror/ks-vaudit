@@ -410,15 +410,15 @@ void Monitor::DealSession(bool isDiskOk)
             // 进程存在，但是没有录屏(以收到录屏文件为准)，发送开始录屏信息
             if (!val.bStart)
             {
-                KLOG_INFO() << "record not start and start";
-                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "start");
+                KLOG_INFO() << "record not start and start, pid:" << val.process->processId() << "display:" << val.displayName << "ip:" << val.ip;
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "start");
             }
 
             // 关闭提示磁盘空间不足
             if (val.bNotify)
             {
-                KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << it.value().process->processId();
-                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify_stop");
+                KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << val.process->processId();
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "disk_notify_stop");
                 val.bNotify = false;
             }
         }
@@ -427,9 +427,9 @@ void Monitor::DealSession(bool isDiskOk)
             //磁盘空间不足处理，如果停止过录像并正在提示不处理
             if (!val.bNotify)
             {
-                KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << it.value().process->processId();
-                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "stop");
-                MonitorDisk::instance().sendSwitchControl(it.value().process->processId(), "disk_notify");
+                KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << val.process->processId();
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "stop");
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "disk_notify");
                 val.bStart = false;
             }
         }

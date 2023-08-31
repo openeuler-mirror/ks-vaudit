@@ -243,14 +243,15 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
  
 	m_is_use_watermarking = is_use_watermarking;
 	m_is_only_audio = is_only_audio;
-	if (m_is_only_audio)
+
+	// 只录音频或者视频文件数据重复用黑色图片填充
 	{
 		int image_size = m_height * m_width * 4;
-		m_audio_image_data.resize(image_size, 0);
+		m_black_image_data.resize(image_size, 0);
 		for (int i = 0; i < image_size; i++)
 		{
 			if ((i + 1) % 4 == 0)
-				m_audio_image_data[i] = 0xff;
+				m_black_image_data[i] = 0xff;
 		}
 	}
 
@@ -658,7 +659,7 @@ void X11Input::InputThread() {
 			if (m_is_only_audio)
 			{
 				int image_stride = grab_width * 4;
-				PushVideoFrame(grab_width, grab_height, m_audio_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
+				PushVideoFrame(grab_width, grab_height, m_black_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
 				++m_frame_counter;
 				last_timestamp = timestamp;
 				continue;
@@ -721,6 +722,21 @@ void X11Input::InputThread() {
 			}
 
 			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
+
+			// 如果存在隐藏水印说明数据重复，推送黑图
+			if (!(strncmp((char *)(&image_data[100]), "\x12\x34\x56\x78", 4) || strncmp((char *)(&image_data[200]), "\x12\x34\x56\x78", 4)
+				|| strncmp((char *)(&image_data[300]), "\x12\x34\x56\x78", 4) || strncmp((char *)(&image_data[400]), "\x12\x34\x56\x78", 4)))
+			{
+				PushVideoFrame(grab_width, grab_height, m_black_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
+				last_timestamp = timestamp;
+				continue;
+			}
+			// 打隐藏水印，在100 200 300 400 四个位置打上特定值
+			for (int i = 100; i < 500; i=i+100)
+			{
+				strncpy((char *)(&image_data[i]), "\x12\x34\x56\x78", 4);
+			}
+
 			// 需要先打水印再判断是否变化
 			if (m_is_use_watermarking) {
 				watermark_content = settings_ptr ->value("record/water_print_text").toString();

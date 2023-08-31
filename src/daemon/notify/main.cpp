@@ -1,7 +1,7 @@
 #include "audit-notify.h"
 #include "record-notify.h"
 #include "kiran-log/qt5-log-i.h"
-#include <QApplication>
+#include <QCoreApplication>
 #include <QStringList>
 #include <sys/prctl.h>
 #include <signal.h>
@@ -25,10 +25,11 @@ int main(int argc, char **argv)
         qWarning() << "init klog failed";
 
     signal(SIGINT, sig_handler);
-    KLOG_INFO() << "compile time: " << __DATE__ << __TIME__ << "ppid:" << getppid() << "display:" << getenv("DISPLAY") << getenv("XAUTHORITY");
-    QApplication a(argc, argv);
+    KLOG_INFO() << "compile time: " << __DATE__ << __TIME__ << "pid:" << getpid() << "ppid:" << getppid();
+    KLOG_INFO() << "display:" << getenv("DISPLAY") << getenv("XAUTHORITY") << getenv("DBUS_SESSION_BUS_ADDRESS");
+    QCoreApplication a(argc, argv);
 
-    QStringList args = QApplication::arguments();
+    QStringList args = QCoreApplication::arguments();
     KLOG_INFO() << "arguments:" << args << args.count();
     if (args.count() != 2 || (!args[1].startsWith("--record") && !args[1].startsWith("--audit")))
     {

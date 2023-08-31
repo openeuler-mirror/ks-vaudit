@@ -207,8 +207,9 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 	m_volume.channels = 2;
 	m_volume.values[0] = PA_VOLUME_MUTED;
 	m_volume.values[1] = PA_VOLUME_MUTED;
-	m_last_mic_volume = 0;
-	m_last_mic_volume = 0;
+	// 初始化不能为0-100，因为对比的值为0-100区间内
+	m_last_mic_volume = -1;
+	m_last_speaker_volume = -1;
 
 
 	m_record_audio_type = record_audio_type;
@@ -412,7 +413,6 @@ void PulseAudioInput::InputThread() {
 						UpdateSourceVolume(volume_tmp);
 					}
 				}
-
 
 			}
 

@@ -24,12 +24,14 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "SourceSink.h"
 #include "MutexDataPair.h"
+#include "CommandLineOptions.h"
 
 #include <pulse/mainloop.h>
 #include <pulse/context.h>
 #include <pulse/introspect.h>
 #include <pulse/stream.h>
 #include <pulse/error.h>
+#include<pulse/volume.h>
 
 class PulseAudioInput : public AudioSourceInput, public AudioSource {
 
@@ -49,6 +51,9 @@ private:
 	pa_mainloop *m_pa_mainloop;
 	pa_context *m_pa_context;
 	pa_stream *m_pa_stream;
+	pa_cvolume m_volume; //调整音量
+	int m_last_mic_volume; //记录上一次的麦克风音量
+	int m_last_speaker_volume; //记录上一次的麦克风音量
 	unsigned int m_pa_period_size;
 
 	bool m_stream_is_monitor;
@@ -68,15 +73,16 @@ public:
 	inline bool HasErrorOccurred() { return m_error_occurred; }
 public:
 	static std::vector<Source> GetSourceList();
-	static uint32_t  m_load_pulsemodule_idx; //加载module的idx
 
 private:
 	void Init();
 	void Free();
 
 	void DetectMonitor();
+	void UpdateSourceVolume(pa_volume_t volume); //音量设置
 
 	static void SourceInfoCallback(pa_context* context, const pa_source_info* info, int eol, void* userdata);
+	static void SetSourceVolumeCallback(pa_context *c, int success, void *userdata);
 	static void SuspendedCallback(pa_stream* stream, void* userdata);
 	static void MovedCallback(pa_stream* stream, void* userdata);
 

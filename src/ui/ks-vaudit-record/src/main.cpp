@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     QFile file(":/ks-vaudit-record.qss");
     if (file.open(QFile::ReadOnly)){
         QString stylesheet = QLatin1Literal(file.readAll());
-        a.setStyleSheet(stylesheet);
+        w.setStyleSheet(stylesheet);
 
         file.close();
     }else{

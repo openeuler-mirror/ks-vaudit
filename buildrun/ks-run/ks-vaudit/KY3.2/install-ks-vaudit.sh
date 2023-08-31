@@ -31,11 +31,6 @@ else
     exit 1
 fi
 
-sudo cat > /etc/ld.so.conf.d/ks-vaudit-x86_64.conf <<EOF
-/usr/local/lib64
-/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib
-EOF
-
 function install_package()
 {
     RPM_NAME=$1
@@ -70,17 +65,10 @@ install_package "unixODBC"
 sudo rpm -Uvh $RPM_PATH/ks-vaudit* --nodeps --force
 
 sudo chmod u+s /usr/bin/ks-vaudit
-#sudo chmod u+s /usr/bin/ks-vaudit-record
-#sudo chmod u+s /usr/bin/ks-vaudit-audit
 
 sudo cat > /tmp/ks-vaudit-uninstall <<EOF
 sudo rpm -e ks-vaudit --nodeps
 sudo rm -rf /usr/local/ks-vaudit
-sudo rm -rf /etc/ld.so.conf.d/ks-vaudit-x86_64.conf
 sudo rm -rf /usr/bin/ks-vaudit-uninstall
 EOF
 sudo mv /tmp/ks-vaudit-uninstall /usr/bin/ks-vaudit-uninstall && sudo chmod 0755 /usr/bin/ks-vaudit-uninstall
-
-# source /etc/bashrc
-# sudo service ks-vaudit-configure restart
-# sudo service ks-vaudit-monitor restart

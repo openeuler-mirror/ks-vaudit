@@ -9,7 +9,6 @@ sudo make install
 sudo chkconfig ks-vaudit-configure on
 
 #需要先安装
-#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/Qt5.7.1/5.7/gcc_64/lib
 #sudo /usr/bin/ks-vaudit-configure
 
 ##关于数据库加密

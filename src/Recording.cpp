@@ -1763,7 +1763,7 @@ void Recording::callNotifyProcess()
 	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 	env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
 	env.insert("XAUTHORITY", getenv("XAUTHORITY"));
-	KLOG_INFO() << getenv("DISPLAY") << getenv("XAUTHORITY");
+	env.insert("DBUS_SESSION_BUS_ADDRESS", getDbusSession());
 	m_pNotifyProcess->setProcessEnvironment(env);
 	QStringList arg;
 	struct passwd *pw = getpwnam(CommandLineOptions::GetFrontUser().toStdString().c_str());
@@ -1789,4 +1789,46 @@ void Recording::clearNotify()
 		delete m_pNotifyProcess;
 		m_pNotifyProcess = nullptr;
 	}
+}
+
+QString Recording::getDbusSession()
+{
+	QProcess process;
+	process.setProgram("sh");
+	QString arg = "pid=`pgrep \"gnome-session\" -u " + CommandLineOptions::GetFrontUser() + "` && cat /proc/$pid/environ";
+	KLOG_INFO() << "arg:" << arg;
+	process.setArguments(QStringList() << "-c" << arg);
+	process.start();
+
+	QString resOut;
+	if (process.waitForFinished())
+	{
+		QByteArray data = process.readAll();
+		QString str;
+		QStringList strlist;
+		for (int i = 0; i < data.size(); i++)
+		{
+			if (data[i] == '\x00' || data[i] == ' ')
+			{
+				strlist.append(str);
+				str.clear();
+				continue;
+			}
+			str = str + data[i];
+		}
+
+		int index = strlist.indexOf(QRegularExpression("^DBUS_SESSION_BUS_ADDRESS=.*"));
+		if (index != -1)
+		{
+			QStringList list = strlist[index].split("DBUS_SESSION_BUS_ADDRESS=");
+			KLOG_INFO() << "DBUS_SESSION_BUS_ADDRESS" << strlist[index] << list << list.size();
+			if (list.size() == 2)
+			{
+				resOut = list[1];
+			}
+		}
+	}
+
+	process.close();
+	return resOut;
 }

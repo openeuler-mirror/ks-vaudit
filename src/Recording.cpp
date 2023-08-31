@@ -728,6 +728,14 @@ void Recording::SaveSettings(QSettings* settings) {
 
 	settings->setValue("output/audio_codec_av", audio_codec_name);
 	settings->setValue("input/audio_enabled",jsonObj[key].toString()); //音频录制
+
+
+	//音量设置
+	key = "MicVolume";
+	settings->setValue("input/audio_micvolume",jsonObj[key].toString().toInt()); //麦克风音量
+	key = "SpeakerVolume";
+	settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
+
 	settings->setValue("input/audio_backend", EnumToString(Recording::AUDIO_BACKEND_PULSEAUDIO));
 	//settings->setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
 	Logger::LogInfo("[SaveSettings] the audio source name is" + GetPulseAudioSourceName());
@@ -1334,6 +1342,10 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				m_settings->setValue("record/water_print_text", jsonObj[key].toString());
 			}else if(key == "RecordVideo"){ //更新是否开启视频配置
 				m_settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
+			}else if(key == "MicVolume"){ //麦克风音量设置
+				m_settings->setValue("input/audio_micvolume",jsonObj[key].toString().toInt()); //麦克风音量
+			}else if(key == "SpeakerVolume"){ //扬声器音量设置
+				m_settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
 			}
 		}
 	}else if (keyStr == "audit" && !isRecord){ //后台审计

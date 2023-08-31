@@ -321,6 +321,7 @@ void Widget::on_audioBtn_clicked()
 {
     if(ui->audioSlider->value() > 0){
         ui->audioSlider->setValue(0);
+        ui->audioBtn->setStyleSheet("image:url(:/images/m0.svg);border:none;");
     }else if (ui->audioSlider->value() == 0){
         ui->audioSlider->setValue(100);
     }

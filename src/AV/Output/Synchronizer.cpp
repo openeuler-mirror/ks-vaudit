@@ -884,6 +884,9 @@ int64_t Synchronizer::GetTotalTime(Synchronizer::SharedData* lock) {
 }
 
 void Synchronizer::GetSegmentStartStop(SharedData* lock, int64_t* segment_start_time, int64_t* segment_stop_time) {
+	*segment_start_time = 0;
+	*segment_stop_time = 0;
+
 	if(!m_output_format->m_audio_enabled) {
 		*segment_start_time = lock->m_segment_video_start_time;
 		*segment_stop_time = lock->m_segment_video_stop_time;
@@ -898,9 +901,20 @@ void Synchronizer::GetSegmentStartStop(SharedData* lock, int64_t* segment_start_
 		} else {
 			Logger::LogError("[Synchronizer::GetSegmentStartStop] m_segment_audio_start_time_input and m_segment_audio_start_time_output are both invalid");
 		}
+
+		if (lock->m_segment_audio_stop_time_input != AV_NOPTS_VALUE && 
+			lock->m_segment_audio_stop_time_output != AV_NOPTS_VALUE) {
+			*segment_stop_time = std::min(lock->m_segment_audio_stop_time_input, lock->m_segment_audio_stop_time_output);
+		} else if (lock->m_segment_audio_stop_time_input != AV_NOPTS_VALUE) {
+			*segment_stop_time = lock->m_segment_audio_stop_time_input;
+		} else if (lock->m_segment_audio_stop_time_output != AV_NOPTS_VALUE) {
+			*segment_stop_time = lock->m_segment_audio_stop_time_output;
+		} else {
+			Logger::LogError("[Synchronizer::GetSegmentStartStop] m_segment_audio_stop_time_input and m_segment_audio_stop_time_output are both invalid");
+		}
+
 	} else {
 
-		*segment_start_time = 0;
 		if (lock->m_segment_video_start_time != AV_NOPTS_VALUE && lock->m_segment_video_start_time > *segment_start_time) {
 			*segment_start_time = lock->m_segment_video_start_time;
 		}
@@ -911,7 +925,6 @@ void Synchronizer::GetSegmentStartStop(SharedData* lock, int64_t* segment_start_
 			*segment_start_time = lock->m_segment_audio_start_time_output;
 		}
 		
-		*segment_stop_time = 0;
 		if (lock->m_segment_video_stop_time != AV_NOPTS_VALUE && lock->m_segment_video_stop_time > *segment_stop_time) {
 			*segment_stop_time = lock->m_segment_video_stop_time;
 		}

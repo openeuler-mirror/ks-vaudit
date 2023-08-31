@@ -24,7 +24,7 @@ start(){
                 exit 0
         fi
 
-        export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/ks-vaudit/Qt5.7.1/5.7/gcc_64/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
         /usr/bin/${procname} &
         RETVAL=$?
         if [ $RETVAL -eq 0 ];then

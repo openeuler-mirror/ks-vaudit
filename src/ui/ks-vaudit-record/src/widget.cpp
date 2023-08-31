@@ -24,6 +24,7 @@ extern "C" {
 #include "libavutil/pixdesc.h"
 #include "libavutil/pixfmt.h"
 #include "libavutil/dict.h"
+#include <pwd.h>
 }
 
 Widget::Widget(QWidget *parent) :
@@ -911,6 +912,7 @@ void Widget::readConfig()
                     setIndex = 3;
                 }
                 ui->remainderBox->setCurrentIndex(setIndex);
+                m_timing = jsonObj[k].toString().toInt();
             }else if(k == "WaterPrint"){
                 ui->waterprintCheck->setChecked((bool)jsonObj[k].toString().toInt());
             }else if(k == "WaterPrintText"){
@@ -986,6 +988,23 @@ bool Widget::parseJsonData(const QString &param,  QJsonObject &jsonObj)
     return true;
 }
 
+void Widget::callNotifyProcess(QString op, int minutes)
+{
+    QProcess process;
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
+    env.insert("XAUTHORITY", getenv("XAUTHORITY"));
+    process.setProcessEnvironment(env);
+    QStringList arg;
+    struct passwd *pw = getpwnam(getenv("USER"));
+    uid_t uid = pw != nullptr ? pw->pw_uid : 0;
+    arg << (QString("--record ") + op + QString(" ") + QString::number(uid) + QString(" ") + QString::number(minutes));
+    process.start("/usr/bin/ks-vaudit-notify", arg);
+    KLOG_INFO() << "notify info:" << op << "process"<< process.pid() << process.arguments();
+    process.waitForFinished();
+    process.close();
+}
+
 void Widget::realClose()
 {
     // 给后端发送exit信号
@@ -1001,6 +1020,17 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
     if (from_pid == m_recordPID && to_pid == m_selfPID && op.startsWith("totaltime")){
         QString timeText = op.split(" ")[1];
         ui->timeStamp->setText(timeText);
+        // 屏幕定时提示处理
+        if (m_timing != 0)
+        {
+            QStringList list = op.split(":");
+            int minute = list[0].toInt() * 60 + list[1].toInt();
+            if ((m_lastMinutes != minute) && (minute % m_timing == 0))
+            {
+                callNotifyProcess("timing", minute);
+                m_lastMinutes = minute;
+            }
+        }
     } else if (to_pid == m_selfPID && op == "DiskSpace"){ //磁盘空间不足
         if (m_isRecording)
         {
@@ -1010,10 +1040,17 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
             on_stopBtn_clicked();
             prompt->exec();
         }
-    } else if (to_pid == m_selfPID && op == "process") {
+    } else if (to_pid == m_selfPID && op == "process") { //接收后台进程pid
         m_recordPID = from_pid;
         sendSwitchControl(m_selfPID, from_pid, "process");
         KLOG_INFO() << "receive backend record pid:" << from_pid;
+    } else if (to_pid == m_selfPID && op.endsWith("-done")) { //接收录屏进程操作结果
+        KLOG_INFO() << "receive op done:" << op;
+        QStringList list = op.split("-");
+        if (list.size() == 2)
+        {
+            callNotifyProcess(list[0]);
+        }
     }
 }
 

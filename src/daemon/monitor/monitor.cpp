@@ -377,7 +377,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
 
     connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
-	    QSharedPointer<sessionInfo> ptrTmp(new sessionInfo(info));
+        QSharedPointer<sessionInfo> ptrTmp(new sessionInfo(info));
 
         sleep(1);
         sessionInfo &tmp = *ptrTmp.data();
@@ -388,19 +388,20 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
             // 找到的不是同一个进程
             if (value.stTime != tmp.stTime)
             {
-                KLOG_INFO() << "not find, killed process start time" << tmp.stTime << "find time" << tmp.stTime;
+                KLOG_INFO() << "not find, killed process start time" << value.stTime << "find time" << tmp.stTime;
                 return;
             }
 
             KLOG_INFO() << "restart bin, find" << it.key() << value.ip << value.displayName << value.authFile << value.stTime;
-            auto &process = value.process;
-            if (process)
+            auto &pp = value.process;
+            if (pp)
             {
-                process->close();
-                delete process;
-                process = nullptr;
+                pp->close();
+                delete pp;
+                pp = nullptr;
             }
 
+        #if 0
             QString loginUser = getLocalActiveUser();
             // 本地未激活用户不启进程
             if (info.userName != loginUser && info.bLocal)
@@ -409,12 +410,14 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 m_sessionInfos.erase(it);
                 return;
             }
+        #endif
 
-            value.process = startRecordWithDisplay(tmp);
-            value.bStart = false;
             value.stTime = time(NULL);
+            value.bStart = false;
             value.bActive = false;
-            KLOG_INFO() << "deal CrashExit end";
+            value.bNotify = false;
+            value.process = startRecordWithDisplay(value);
+            KLOG_INFO() << "deal CrashExit end" << value.stTime;
         }
     });
 
@@ -480,6 +483,7 @@ void Monitor::DealSession(bool isDiskOk)
                 continue;
             }
 
+        #if 0
             // 获取激活的会话，对于本对只会有一个会话正在使用，一次循环内仅需获取一次
             if (loginUser.isEmpty())
             {
@@ -489,6 +493,7 @@ void Monitor::DealSession(bool isDiskOk)
             // 本地未激活用户不启进程
             if (info.userName != loginUser && info.bLocal)
                 continue;
+        #endif
 
             mapCnt.insert(info.userName, ++mapCnt[info.userName]);
             info.process = startRecordWithDisplay(info);

@@ -173,6 +173,9 @@ private:
 	int m_timingPause;
 	QString m_auditBaseFileName;
 	QTimer *m_IdleTimer;
+	bool m_auditDiskEnough;
+	quint64 m_lastMinFreeSpace;
+	QProcess *m_pNotifyProcess;
 
 	//音频格式
 	QString m_lastAlsaInput;
@@ -214,6 +217,8 @@ private:
 	void WatchFile();
 	bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
 	void operateCatchResume(bool bStartCatch = false, bool bRestartRecord = false);
+	void callNotifyProcess();
+	void clearNotify();
 
 signals:
 	void fileRemoved(bool bRemove);

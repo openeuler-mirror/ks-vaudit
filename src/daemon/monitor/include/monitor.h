@@ -10,7 +10,7 @@
 // 后台审计录屏专用
 struct sessionInfo {
     QString userName;
-    QString ip;
+    QString ip;     // 本地为127.0.0.1, 远程根据netstat获取
     QString displayName;
     QString authFile;
     QProcess *process;

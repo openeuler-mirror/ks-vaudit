@@ -48,6 +48,7 @@ protected:
     void sendSwitchControl(int from_pid, int to_pid, QString op);
     QLabel *createVideoDurationLabel(QString);
     bool parseJsonData(const QString &param,  QJsonObject &jsonObj);
+    void callNotifyProcess(QString op, int minutes = 0);
 
 private slots:
     void on_exit_clicked();
@@ -116,7 +117,8 @@ private:
     ActivatePage *m_activatePage;
     bool m_isActivated = false;
     Dialog *m_pConfirm;
-
+    int m_timing{};
+    int m_lastMinutes{};
 };
 
 #endif // WIDGET_H

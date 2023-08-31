@@ -48,7 +48,7 @@ private:
     bool isLicenseActive();
     void clearSessionInfos();
     void clearProcess(QProcess *process);
-    void removeSession(sessionInfo *pInfo = nullptr, QProcess::ExitStatus = QProcess::ExitStatus::NormalExit);
+    void clearFrontRecordInfos();
 
 private slots:
     void monitorProcess();
@@ -72,6 +72,7 @@ private:
     //前台pid对应的后台进程，前台非法关闭
     QMap<int, QProcess *> m_frontRecordInfo;
     QTimer *m_pFontTimer;
+    QMap<QString, QVector<int>> m_frontHomeInfo;
 };
 
 #endif // MONITOR_H

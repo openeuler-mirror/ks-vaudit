@@ -260,6 +260,10 @@ void KyNotify::notify_send(const char *msg, const char *icon, int timeout, const
 		}
 		g_signal_connect(pNotify, "closed", G_CALLBACK(notification_closed), (void *)userdata);
 	}
+	else
+	{
+		g_object_unref(pNotify);
+	}
 }
 
 void KyNotify::notify_info(const char *msg, int timeout, const char  *userdata)

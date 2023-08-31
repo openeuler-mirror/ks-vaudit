@@ -1,6 +1,6 @@
 Name:           ks-vaudit
 Version:        1.0.0
-Release:        3
+Release:        4
 Summary:        kylinsec vaudit
 
 License:        GPL
@@ -38,6 +38,7 @@ BuildRequires: qrencode-devel
 BuildRequires: freeglut-devel
 BuildRequires: libvorbis-devel
 BuildRequires: libtheora-devel
+BuildRequires: libvpx-devel
 
 Requires:      libX11
 Requires:      ffmpeg >= 4.3.4
@@ -53,6 +54,7 @@ Requires:      qrencode
 Requires:      freeglut
 Requires:      libvorbis
 Requires:      libtheora
+Requires:      libvpx
 
 %define debug_package %{nil}
 %define __spec_install_post\
@@ -80,7 +82,31 @@ export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri
 export LIBVA_DRIVER_NAME=iHD
 
 ls -l /usr/bin/cmake > /dev/null 2>&1 || ln -s /usr/bin/cmake3 /usr/bin/cmake
-bash simple-build-and-install
+
+# bash simple-build-and-install
+PREFIX="/usr"
+
+OPTIONS=()
+OPTIONS+=("-DENABLE_32BIT_GLINJECT=$ENABLE_32BIT_GLINJECT")
+OPTIONS+=("-DENABLE_X86_ASM=$ENABLE_X86_ASM")
+OPTIONS+=("-DENABLE_FFMPEG_VERSIONS=TRUE")
+OPTIONS+=("-DWITH_QT5=TRUE")
+OPTIONS+=("-DWITH_GLINJECT=$WITH_GLINJECT")
+OPTIONS+=("-DHIGH_VERSION=$HIGH_VERSION")
+
+export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig"
+export QT_SELECT="qt5"
+
+rm -rf build-release
+mkdir build-release
+cd build-release
+
+echo "Cmake ..."
+# cmake -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_BUILD_TYPE=Release "${OPTIONS[@]}" "$@" ..
+cmake -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_BUILD_TYPE=Debug "${OPTIONS[@]}" "$@" ..
+
+echo "Compiling ..."
+make -j "$( nproc )" VERBOSE=1
 
 %if %{with tests}
 %check
@@ -138,6 +164,9 @@ qtpath=%_topdir/BUILD/Qt5.7.1
 rm -rf $RPM_BUILD_ROOT ${qtpath}
 
 %changelog
+* Sun Oct 10 2022 tangjie <tangjie@kylinsec.com.cn> - 1.0.0-4
+- KYOS-F: fix bugs of tests. (Related #61683)
+
 * Tue Aug 30 2022 zhenggongping <zhenggongping@kylinsec.com.cn> - 1.0.0-3
 - KYOS-F: fix bugs of tests. (Related #60501)
 

@@ -3,5 +3,6 @@ build-release/
 buildrpm/buildtmp/
 buildrpm/buildres/
 buildrun/*.run
+buildrun/*.run.md5
 buildrun/ks-run/license
 buildrun/ks-run/ks-vaudit/KY3.2/x86_64/

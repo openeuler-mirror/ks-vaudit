@@ -227,6 +227,7 @@ Recording::Recording(QSettings* qsettings){
 	m_pause_state = false;
 	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 	m_last_send_time = 0;
+	m_separate_files = false;
 
 	//list all devices
 	for(int i=0;i< m_pulseaudio_sources.size();i++){
@@ -400,6 +401,7 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 	}
 
 	if(m_pause_state == true){
+		Logger::LogInfo("[Recording::record] in pause state, the resolution  changed");
 		m_separate_files = true;
 		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 		QRect rect = CombineScreenGeometries(screen_geometries); 
@@ -408,7 +410,6 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 
 		m_output_settings.video_height = m_video_in_height/2*2;
 		m_output_settings.video_width = m_video_in_width/2*2;
-		ReNameFile();
 		return;
 	}
    //判断两块屏宽、高是否一致
@@ -1167,6 +1168,9 @@ void Recording::UpdateInput() {
 	}
 }
 
+/**
+ * @brief 开始录制
+ */
 void Recording::OnRecordStart() {
 	if(!TryStartPage())
 		return;
@@ -1174,18 +1178,28 @@ void Recording::OnRecordStart() {
 		return;
 	if(!m_output_started)
 		StartOutput();
+
+	m_separate_files = false; //重置m_separate_files
 }
 
+/**
+ * @brief 暂停录制
+ */
 void Recording::OnRecordPause() {
 	if(!m_page_started)
 		return;
 	if(m_wait_saving)
 		return;
-	if(m_output_started)
+	if(m_output_started){
+		Logger::LogInfo("[Recording::record] pause the recording");
 		StopOutput(false);
-	m_pause_state = true;
+		m_pause_state = true;
+	}
 }
 
+/**
+ * @brief 重新开始录制
+ */
 void Recording::OnRecordStartPause() {
 	KLOG_INFO() << "m_page_started:" << m_page_started << "m_output_started:" << m_output_started;
 	if(m_page_started && m_output_started) {
@@ -1197,13 +1211,24 @@ void Recording::OnRecordStartPause() {
 			KLOG_INFO() << "disk space not enough";
 			return;
 		}
-
-		OnRecordStart();
-		m_pause_state = false;
+		
+		Logger::LogInfo("[Recording::record] restart eht recording ");
+		if(m_separate_files){ //暂停状态下分辨率发生变动,需要截断视频
+			OnRecordSave();
+			OnRecordStart();
+		}else{
+			OnRecordStart();
+			m_pause_state = false;
+		}
 	}
 }
 
 
+/**
+ * @brief 结束录制
+ *
+ * @param confirm
+ */
 void Recording::OnRecordSave(bool confirm) {
 	if(!m_page_started)
 		return;
@@ -1220,6 +1245,11 @@ void Recording::OnRecordSave(bool confirm) {
 	SaveSettings(settings_ptr); //结束视频录制并保存但不退出程序, 这种情况下得刷新一下Qsettings
 }
 
+/**
+ * @brief 结束录制并推出
+ *
+ * @param confirm
+ */
 void Recording::OnRecordSaveAndExit(bool confirm) {
 	if(!m_page_started) {
 		qApp->quit();
@@ -1247,22 +1277,6 @@ void Recording::ReNameFile()
 		QFile(fileName).rename(fileName, fileBaseName);
 	}
 }
-
-void Recording::UpdateResolutionParameter(){
-	std::vector<QRect> screen_geometries = GetScreenGeometries();
-	QRect rect = CombineScreenGeometries(screen_geometries); //录制屏幕的矩形区域
-	//m_video_in_width = 2560;
-	//m_video_in_height = 1440;
-	m_output_settings.video_width = m_video_in_width;
-	m_output_settings.video_height = m_video_in_height;
-}
-
-void Recording::OnRecordRestart()	{
-	OnRecordPause(); //暂停录屏
-	UpdateResolutionParameter(); //更新分辨率相关参数参数
-	OnRecordStart(); //重新开始录制
-}
-
 
 /**
  * 配置发生改变
@@ -1400,9 +1414,14 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		Logger::LogInfo("[Recording::SwitchControl] pause record");
 		OnRecordPause();
 	}else if(op == "restart"){
-		Logger::LogInfo("[Recording::SwitchControl] restart record");
 		if (!m_page_started || !m_output_started) // 防止之前为录像状态，再次调用时关闭录像
+		{
+			Logger::LogInfo("[Recording::SwitchControl] restart record");
+			if(m_separate_files){
+				Logger::LogInfo("[Recording::SwitchControl] separate the audio file");
+			}
 			OnRecordStartPause();
+		}
 	}else if(op == "stop"){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSave(); //结束视频录制但不退出

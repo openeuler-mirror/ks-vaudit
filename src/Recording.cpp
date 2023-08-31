@@ -1349,10 +1349,12 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				m_settings->setValue("record/water_print_text", jsonObj[key].toString());
 			} else if (key == "TimingPause") {
 				m_timingPause = jsonObj[key].toString().toInt();
+				KLOG_INFO() << "m_timingPause:" << m_timingPause;
+				//m_timingPause为0：关闭
+				operateCatchResume(0 == m_timingPause ? false : true, true);
 			} else if (key == "MinFreeSpace") {
 				KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
 			}
-
 		}
 		if (needRestart){
 			OnRecordSave();
@@ -1389,17 +1391,11 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 //		exit(0);
 	} else if(op == "disk_notify"){
 		KLOG_INFO() << "disk space deal";
-		if (m_IdleTimer->isActive())
-		{
-			m_IdleTimer->stop();
-		}
-
-		KIdleTime::instance()->stopCatchingResumeEvent();
-		KIdleTime::instance()->removeAllIdleTimeouts();
+		operateCatchResume(false);
 		m_configure_interface->MonitorNotification(getpid(), op);
 		KyNotify::instance().sendNotify(op);
 	} else if(op == "disk_notify_stop") {
-		KIdleTime::instance()->catchNextResumeEvent();
+		operateCatchResume(true);
 		KyNotify::instance().setContinueNotify(false);
 	}
 
@@ -1594,17 +1590,7 @@ void Recording::WatchFile()
 	std::thread t(&thread_function, m_output_settings.file, this);
 	t.detach();
 
-	if (!m_auditBaseFileName.isEmpty())
-	{
-		// 新的录屏开始，关掉旧的定时
-		if (m_IdleTimer->isActive())
-		{
-			m_IdleTimer->stop();
-		}
-
-		m_IdleTimer->start(m_timingPause*60000);
-		KIdleTime::instance()->catchNextResumeEvent();
-	}
+	operateCatchResume(true);
 }
 
 bool Recording::parseJsonData(const QString &param,  QJsonObject &jsonObj)
@@ -1640,6 +1626,42 @@ bool Recording::parseJsonData(const QString &param,  QJsonObject &jsonObj)
 	}
 
 	return true;
+}
+
+void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
+{
+	//仅支持审计录屏
+	if (m_auditBaseFileName.isEmpty())
+		return;
+
+	KLOG_INFO() << "bStartCatch:" << bStartCatch << "bRestartRecord:" << bRestartRecord << "timer isActive" << m_IdleTimer->isActive();
+	// 关掉旧的定时
+	if (m_IdleTimer->isActive())
+		m_IdleTimer->stop();
+	// 关闭无操作录屏事件
+	KIdleTime::instance()->stopCatchingResumeEvent();
+	KIdleTime::instance()->removeAllIdleTimeouts();
+
+	if (bStartCatch)
+	{
+		KLOG_INFO() << "start, m_timingPause:" << m_timingPause;
+		if (m_timingPause != 0)
+		{
+			m_IdleTimer->start(m_timingPause*60000);
+			KIdleTime::instance()->catchNextResumeEvent();
+		}
+	}
+
+	// 修改m_timingPause
+	if (bRestartRecord)
+	{
+		//当之前为停止录屏状态时，关闭无操作需要开启录屏
+		if (!m_page_started || !m_output_started)
+		{
+			KLOG_INFO() << getpid() << "call restart record";
+			OnRecordStartPause();
+		}
+	}
 }
 
 void Recording::onFileRemove(bool bRemove)

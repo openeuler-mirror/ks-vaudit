@@ -32,7 +32,6 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 // (I've seen one situation where PulseAudio instantly 'captures' 2 seconds of silence when the recording is started).
 // It also eliminates the clicking sound when the microphone is started for the first time.
 const int64_t PulseAudioInput::START_DELAY = 100000;
-uint32_t  PulseAudioInput::m_load_pulsemodule_idx = 0;
 
 static void PulseAudioIterate(pa_mainloop* mainloop) {
 	if(pa_mainloop_prepare(mainloop, 1000) < 0) {
@@ -214,7 +213,6 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 
 	m_record_audio_type = record_audio_type;
 	Logger::LogInfo("[PulseAudioInput::PulseAudioInput] the record_audio_type is: " + m_record_audio_type);
-	//m_load_pulsemodule_idx = 0;
 
 	try {
 		Init();

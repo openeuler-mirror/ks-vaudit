@@ -172,7 +172,7 @@ private:
 	// 用于审计录屏
 	int m_timingPause;
 	QString m_auditBaseFileName;
-	QTimer *m_IdleTimr;
+	QTimer *m_IdleTimer;
 
 	//音频格式
 	QString m_lastAlsaInput;

@@ -301,7 +301,7 @@ void MonitorDisk::UpdateConfigureData(QString key, QString value)
 
 void MonitorDisk::ReceiveNotification(int pid, QString message)
 {
-    KLOG_DEBUG() << pid << message;
+    KLOG_INFO() << pid << message;
     this->SignalNotification(pid, message);
 }
 

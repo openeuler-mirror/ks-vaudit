@@ -1310,7 +1310,12 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 		bool needRestart = false;
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:audit] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
-
+			// #61800 后台审计修改单个用户最大录屏数时，monitor会重启所有进程
+			// 因此这里其他配置不需要更新重启线程了
+			if (key == "MaxRecordPerUser"){
+				needRestart = false;
+				break;
+			}
 			//修改settings
 			if(key == "Fps"){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());

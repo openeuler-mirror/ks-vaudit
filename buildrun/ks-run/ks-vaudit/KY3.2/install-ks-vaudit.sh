@@ -31,6 +31,10 @@ else
     exit 1
 fi
 
+sudo cat > /etc/ld.so.conf.d/ks-vaudit-x86_64.conf <<EOF
+/usr/local/lib64
+EOF
+
 function install_package()
 {
     RPM_NAME=$1
@@ -53,7 +57,11 @@ install_package "qt5-qtbase-common"
 install_package "qt5-qtbase-gui"
 install_package "QtCipherSqlitePlugin"
 install_package "qt5-qtx11extras"
+install_package "qt5-qtxmlpatterns"
+install_package "qt5-qtdeclarative"
+install_package "openal-soft"
 install_package "qt5-qtmultimedia"
+install_package "qt5-qtsvg"
 install_package "qrencode-libs"
 install_package "postgresql-libs"
 install_package "postgresql-8.4.20"
@@ -65,8 +73,10 @@ install_package "unixODBC"
 sudo rpm -Uvh $RPM_PATH/ks-vaudit* --nodeps --force
 
 sudo cat > /tmp/ks-vaudit-uninstall <<EOF
+ps aux | grep /usr/bin/ks-vaudit | grep -E '/usr/bin/ks-vaudit --audit| /usr/bin/ks-vaudit --record' | grep -v grep | awk '{print $2}' | xargs kill -2 > /dev/null 2>&1
 sudo rpm -e ks-vaudit --nodeps
 sudo rm -rf /usr/local/ks-vaudit
+sudo rm -rf /etc/ld.so.conf.d/ks-vaudit-x86_64.conf
 sudo rm -rf /usr/bin/ks-vaudit-uninstall
 EOF
 sudo mv /tmp/ks-vaudit-uninstall /usr/bin/ks-vaudit-uninstall && sudo chmod 0755 /usr/bin/ks-vaudit-uninstall

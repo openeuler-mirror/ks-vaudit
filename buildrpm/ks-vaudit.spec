@@ -138,8 +138,6 @@ chmod +x %{buildroot}/etc/init.d/ks-vaudit-configure
 %post
 ldconfig
 cat /etc/bashrc | grep "export LIBVA_DRIVERS_PATH=" > /dev/null 2>&1 || echo "export LIBVA_DRIVERS_PATH=/usr/local/lib64/dri" >> /etc/bashrc
-cat /etc/bashrc | grep "export PKG_CONFIG_PATH=" > /dev/null 2>&1 || echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:\$PKG_CONFIG_PATH" >> /etc/bashrc
-cat /etc/bashrc | grep "export LD_LIBRARY_PATH=" > /dev/null 2>&1 || echo "export LD_LIBRARY_PATH=/usr/local/lib64:/lib64:\$LD_LIBRARY_PATH" >> /etc/bashrc
 
 # 配置文件存放目录
 if [ ! -d "/tmp/.ks-vaudit" ];then
@@ -159,7 +157,7 @@ chkconfig ks-vaudit-monitor on
 service ks-vaudit-configure stop
 service ks-vaudit-monitor stop
 ps aux | grep -E "/usr/bin/ks-vaudit|ks-vaudit-audit|ks-vaudit-record$" | grep -v grep | xargs kill -2 > /dev/null 2>&1
-sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+2d' /etc/bashrc
+sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+d' /etc/bashrc
 
 %clean
 rm -rf $RPM_BUILD_ROOT

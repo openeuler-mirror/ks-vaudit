@@ -136,6 +136,10 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 	QDateTime now = QDateTime::currentDateTime();
 	QString newfile;
 	unsigned int counter = 0;
+	QString display = getenv("DISPLAY");
+	int index = display.indexOf(".") ;
+	QString displayName = index == -1 ? display.mid(1, display.size()) : display.mid(1, index-1);
+
 	do {
 		++counter;
 		newfile = prefix;
@@ -143,6 +147,9 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 			newfile += "_";
 			newfile += now.toString("yyyyMMdd_hhmmss");
 		}
+
+		newfile += "_";
+		newfile += displayName;
 
 		if (counter != 1) {
 			//处理重复视频文件

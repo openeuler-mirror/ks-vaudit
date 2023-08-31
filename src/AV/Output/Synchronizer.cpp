@@ -851,7 +851,7 @@ void Synchronizer::NewSegment(SharedData* lock) {
 	}
 	lock->m_video_buffer.clear();
 	lock->m_audio_buffer_input.Clear();
-	lock->m_audio_buffer_input.Clear();
+	lock->m_audio_buffer_output.Clear();
 	InitSegment(lock);
 }
 

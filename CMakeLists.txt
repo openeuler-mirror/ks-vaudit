@@ -28,7 +28,7 @@ option(WITH_ALSA "Build with ALSA support." FALSE)
 option(WITH_PULSEAUDIO "Build with PulseAudio support." TRUE)
 option(WITH_JACK "Build with JACK support." FALSE)
 option(WITH_SIMPLESCREENRECORDER "Build the 'ks-vaudit' executable." TRUE)
-option(WITH_GLINJECT "Build the 'libssr-glinject' library. Required for OpenGL recording." TRUE)
+option(WITH_GLINJECT "Build the 'libssr-glinject' library. Required for OpenGL recording." FALSE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 

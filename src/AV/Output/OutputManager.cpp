@@ -791,7 +791,7 @@ void OutputManager::StartFragment() {
 			frame->GetFrame()->pts -= fragment_begin;
 			video_encoder->AddFrame(std::move(frame));
 		}
-		while(!lock->m_audio_frame_queue.empty()) {
+		while(!lock->m_audio_frame_queue.empty() && audio_encoder != NULL) {
 			int64_t fragment_begin = m_fragment_length * m_output_format.m_audio_sample_rate * (lock->m_fragment_number - 1);
 			int64_t fragment_end = m_fragment_length * m_output_format.m_audio_sample_rate * lock->m_fragment_number;
 			if(lock->m_audio_frame_queue.front()->GetFrame()->pts >= fragment_end)

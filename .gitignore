@@ -4,4 +4,4 @@ buildrpm/buildtmp/
 buildrpm/buildres/
 buildrun/*.run
 buildrun/ks-run/license
-buildrun/ks-run/ks-vaudit
+buildrun/ks-run/ks-vaudit/KY3.2/x86_64/

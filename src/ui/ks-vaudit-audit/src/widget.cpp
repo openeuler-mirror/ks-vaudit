@@ -974,7 +974,7 @@ void Widget::setConfigtoUi()
                 setIndex = 1;
             }else if (m_configure[k].toString().toInt() == 10){
                 setIndex = 2;
-            }else if (m_configure[k].toString().toInt() == 30){
+            }else if (m_configure[k].toString().toInt() == 15){
                 setIndex = 3;
             }
             ui->pauseBox->setCurrentIndex(setIndex);

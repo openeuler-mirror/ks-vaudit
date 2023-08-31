@@ -14,7 +14,7 @@ set(TARGET_NAME ks-vaudit-notify)
 file(GLOB_RECURSE NOTIFY_H_FILES ./*.h)
 file(GLOB NOTIFY_SRC "./*cpp" "./include/*.h")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Core REQUIRED)
 
 add_executable(${TARGET_NAME}
     ${NOTIFY_SRC})
@@ -26,20 +26,18 @@ set(GTK_INCLUDE_DIRS "/usr/include/gtk-2.0" "/usr/include/cairo" "/usr/include/p
 target_include_directories(${TARGET_NAME} PRIVATE
         ${INCLUDE_DIRS}
         ${GLIB_INCLUDE_DIRS}
-	${GTK_INCLUDE_DIRS}
+        ${GTK_INCLUDE_DIRS}
         ${CMAKE_BINARY_DIR}
         ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(${TARGET_NAME}
         klog-qt5
         Qt5::Core
-        Qt5::Gui
-	Qt5::Widgets
         glib-2.0
-	gobject-2.0
-	notify
+        gobject-2.0
+        notify
         pthread
-	klog-qt5)
+        klog-qt5)
 
 set(NOTIFY_BIN_DIR ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
 install(TARGETS ${TARGET_NAME} DESTINATION ${NOTIFY_BIN_DIR})

@@ -219,6 +219,7 @@ private:
 	void operateCatchResume(bool bStartCatch = false, bool bRestartRecord = false);
 	void callNotifyProcess();
 	void clearNotify();
+	QString getDbusSession();
 
 signals:
 	void fileRemoved(bool bRemove);

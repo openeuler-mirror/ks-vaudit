@@ -29,6 +29,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 FastScaler::FastScaler() {
 
+	m_warn_checkasm = true;
 #if SSR_USE_X86_ASM
 	m_warn_alignment = true;
 #endif
@@ -225,6 +226,12 @@ void FastScaler::Convert_BGRA_NV12(unsigned int width, unsigned int height, cons
 
 #if SSR_USE_X86_ASM
 	if(CPUFeatures::HasMMX() && CPUFeatures::HasSSE() && CPUFeatures::HasSSE2() && CPUFeatures::HasSSE3() && CPUFeatures::HasSSSE3()) {
+
+		if (m_warn_checkasm) {
+			m_warn_checkasm = false;
+			Logger::LogInfo("[FastScaler::Convert_BGRA_NV12] cpu support mmx,sse,sse2,sse3,ssse3");
+		}
+
 		if((uintptr_t) out_data[0] % 16 == 0 && out_stride[0] % 16 == 0 &&
 		   (uintptr_t) out_data[1] % 16 == 0 && out_stride[1] % 16 == 0) {
 			Convert_BGRA_NV12_SSSE3(width, height, in_data, in_stride, out_data, out_stride);
@@ -238,8 +245,13 @@ void FastScaler::Convert_BGRA_NV12(unsigned int width, unsigned int height, cons
 		}
 		return;
 	}
+		
 #endif
 
+	if (m_warn_checkasm) {
+		m_warn_checkasm = false;
+		Logger::LogWarning("[FastScaler::Convert_BGRA_NV12] cpu donot support mmx,sse,sse2,sse3,ssse3");
+	}
 	Convert_BGRA_NV12_Fallback(width, height, in_data, in_stride, out_data, out_stride);
 
 }

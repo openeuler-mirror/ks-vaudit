@@ -25,6 +25,7 @@ protected:
 private slots:
     void acceptBtnClicked();
     void showQR();
+    void returnPressed();
 
 private:
     bool m_isActivated = false;

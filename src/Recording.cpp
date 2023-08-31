@@ -27,7 +27,6 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Synchronizer.h"
 #include "X11Input.h"
 #include "SimpleSynth.h"
-#include "KyNotify.h"
 #include "kiran-log/qt5-log-i.h"
 #include "kidletime.h"
 #include <QAudioDeviceInfo>
@@ -228,6 +227,8 @@ Recording::Recording(QSettings* qsettings){
 	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 	m_last_send_time = 0;
 	m_separate_files = false;
+	m_auditDiskEnough = true;
+	m_pNotifyProcess = nullptr;
 
 	//list all devices
 	for(int i=0;i< m_pulseaudio_sources.size();i++){
@@ -278,8 +279,6 @@ Recording::Recording(QSettings* qsettings){
 
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 
-	KyNotify::instance().setUser(CommandLineOptions::GetFrontUser());
-
 	m_configure_interface->MonitorNotification(getpid(), "is_active");
 }
 
@@ -296,7 +295,6 @@ void Recording::OnRecordTimer() {
 	m_last_send_time = total_time;
 	QString msg = QString("totaltime ") + ReadableTime(total_time);
 	m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, msg);
-	KyNotify::instance().setRecordTime(total_time);
 	// Logger::LogInfo("[Recording::OnRecordTimer] send msg:" + msg + " from:" + QString::number(m_selfPID) + " to:" + QString::number(m_recordUiPID));	
 }
 
@@ -468,6 +466,7 @@ Recording::~Recording() {
 		m_IdleTimer = nullptr;
 	}
 
+	clearNotify();
 }
 
 bool Recording::TryStartPage() {
@@ -833,16 +832,13 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("encode/quality", jsonObj["Quality"].toString());
 	m_output_settings.encode_quality = jsonObj["Quality"].toString();
 
-	key = "TimingReminder";
-	KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
-
 	if (!CommandLineOptions::GetFrontRecord())
 	{
 		key = "TimingPause";
 		m_timingPause = jsonObj[key].toString().toInt();
 		KLOG_INFO() << "m_timingPause:" << m_timingPause;
 		key = "MinFreeSpace";
-		KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
+		m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
 	}
 }
 
@@ -1216,7 +1212,7 @@ void Recording::OnRecordStartPause() {
 		OnRecordPause();
 	} else {
 		//后台审计磁盘空间不足为true,其他为false;
-		if (KyNotify::instance().getContinueNotify())
+		if (!m_auditDiskEnough)
 		{
 			KLOG_INFO() << "disk space not enough";
 			return;
@@ -1334,8 +1330,6 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 			}else if(key == "Quality"){
 				m_settings->setValue("encode/quality", jsonObj[key].toString());
 				m_output_settings.encode_quality = jsonObj["Quality"].toString();
-			} else if (key == "TimingReminder") {
-				KyNotify::instance().setTiming(jsonObj[key].toString().toInt());
 			}else if(key == "WaterPrint"){
 				m_settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
 			}else if(key == "WaterPrintText"){
@@ -1402,7 +1396,12 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				//m_timingPause为0：关闭
 				operateCatchResume(0 == m_timingPause ? false : true, true);
 			} else if (key == "MinFreeSpace") {
-				KyNotify::instance().setReserveSize(jsonObj[key].toString().toULongLong());
+				if (m_lastMinFreeSpace != jsonObj[key].toString().toULongLong())
+				{
+					m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
+					clearNotify();
+					callNotifyProcess();
+				}
 			}
 		}
 		if (needRestart){
@@ -1446,17 +1445,20 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 //		exit(0);
 	} else if(op == "disk_notify"){
 		KLOG_INFO() << "disk space deal";
+		m_auditDiskEnough = false;
 		operateCatchResume(false);
 		m_configure_interface->MonitorNotification(getpid(), op);
-		KyNotify::instance().sendNotify(op);
+		callNotifyProcess();
 	} else if(op == "disk_notify_stop") {
 		operateCatchResume(true);
-		KyNotify::instance().setContinueNotify(false);
+		m_auditDiskEnough = true;
+		clearNotify();
 	}
 
-	//后台审计不需要启停提示
-	if (m_auditBaseFileName.isEmpty())
-		KyNotify::instance().sendNotify(op);
+	if (CommandLineOptions::GetFrontRecord())
+	{
+		m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, op + "-done");
+	}
 }
 
 void Recording::AuditParamDeal()
@@ -1560,7 +1562,7 @@ void Recording::kidleResumeEvent()
 		return;
 	}
 
-	if (!KyNotify::instance().getContinueNotify())
+	if (m_auditDiskEnough)
 	{
 		//当之前为停止录屏状态时，关闭无操作需要开启录屏
 		if (!m_page_started || !m_output_started)
@@ -1752,5 +1754,39 @@ void Recording::OnIdleTimer()
 	if (m_page_started && m_output_started)
 	{
 		OnRecordPause();
+	}
+}
+
+void Recording::callNotifyProcess()
+{
+	m_pNotifyProcess = new QProcess();
+	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+	env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
+	env.insert("XAUTHORITY", getenv("XAUTHORITY"));
+	KLOG_INFO() << getenv("DISPLAY") << getenv("XAUTHORITY");
+	m_pNotifyProcess->setProcessEnvironment(env);
+	QStringList arg;
+	struct passwd *pw = getpwnam(CommandLineOptions::GetFrontUser().toStdString().c_str());
+	uid_t uid = pw != nullptr ? pw->pw_uid : 0;
+	arg << (QString("--audit disk_notify ") + QString::number(uid) + QString(" ") + QString::number(m_lastMinFreeSpace));
+	connect(m_pNotifyProcess, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
+	KLOG_WARNING() << "receive finshed signal: pid:" << m_pNotifyProcess->pid() << "arg:" << m_pNotifyProcess->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
+		if (exitCode == 1)
+		{
+			callNotifyProcess();
+		}
+	});
+	m_pNotifyProcess->start("/usr/bin/ks-vaudit-notify", arg);
+	KLOG_INFO() << "notify process"<< m_pNotifyProcess->pid() << m_pNotifyProcess->arguments();
+}
+
+void Recording::clearNotify()
+{
+	if (m_pNotifyProcess)
+	{
+		m_pNotifyProcess->execute("kill", QStringList() << "-2" << QString("%1").arg(m_pNotifyProcess->processId()));
+		m_pNotifyProcess->close();
+		delete m_pNotifyProcess;
+		m_pNotifyProcess = nullptr;
 	}
 }

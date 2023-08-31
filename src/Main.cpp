@@ -26,7 +26,6 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "EnumStrings.h"
 #include "ScreenScaling.h"
 #include "kiran-log/qt5-log-i.h"
-#include "KyNotify.h"
 #include <qapplication.h>
 extern "C" {
 #include <sys/prctl.h>

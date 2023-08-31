@@ -187,14 +187,12 @@ public:
 	Recording(QSettings* qsettings);
 	~Recording();
 
-	void OnRecordStartPause(); //暂停后再次开始录制
 	void OnRecordStart();  //开始录制
 	void OnRecordPause(); //暂停录制
-	void OnRecordCancel(bool confirm = true); //取消录制
+	void OnRecordStartPause(); //暂停后再次开始录制
 	void OnRecordSave(bool confirm = true); //结束录制并刷新mp4容器
 	void OnRecordSaveAndExit(bool confirm);  //保存并退出
 	void ReNameFile();
-	void OnRecordRestart(); //屏幕分辨率出现变化， 更新分辨率参数后重新开始录频
 	QString GetPulseAudioSourceName() {     return QString::fromStdString(m_pulseaudio_sources[0].m_name);}
 	std::vector<QRect> GetScreenGeometries();
 	QRect CombineScreenGeometries(const std::vector<QRect>& screen_geometries);
@@ -206,7 +204,6 @@ public:
 private:
 	void FinishOutput();
 	void UpdateInput();
-	void UpdateResolutionParameter(); //更新分辨率相关参数
 	bool TryStartPage();
 	void StartPage();
 	void StopPage(bool save);

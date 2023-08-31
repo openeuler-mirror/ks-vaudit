@@ -707,6 +707,12 @@ padding-left:10px;
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/normalicon.svg</normaloff>:/images/normalicon.svg</iconset>
       </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
+      </property>
      </widget>
      <widget class="QPushButton" name="ListBtn">
       <property name="geometry">
@@ -741,6 +747,12 @@ padding-left:10px;
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/listicon.svg</normaloff>:/images/listicon.svg</iconset>
       </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
+      </property>
      </widget>
      <widget class="QPushButton" name="ConfigBtn">
       <property name="geometry">
@@ -772,6 +784,12 @@ padding-left:10px;
       <property name="icon">
        <iconset resource="../data/src.qrc">
         <normaloff>:/images/configicon.svg</normaloff>:/images/configicon.svg</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>16</width>
+        <height>16</height>
+       </size>
       </property>
      </widget>
      <widget class="QLabel" name="normalArrow">

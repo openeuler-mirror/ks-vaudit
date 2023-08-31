@@ -29,10 +29,11 @@ SQLConfigure &SQLConfigure::Instance()
 bool SQLConfigure::createUser(const QString param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1(), &jError);
     if (!jsonDocument.isObject())
     {
-        KLOG_DEBUG() << "not object:" << jsonDocument;
+        KLOG_DEBUG() << "not object:" << jsonDocument << jError.error;
         return false;
     }
 
@@ -49,10 +50,11 @@ bool SQLConfigure::createUser(const QString param)
 bool SQLConfigure::deleteUser(const QString param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1(), &jError);
     if (!jsonDocument.isObject())
     {
-        KLOG_DEBUG() << "not object:" << jsonDocument;
+        KLOG_DEBUG() << "not object:" << jsonDocument << jError.error;
         return false;
     }
 
@@ -69,10 +71,11 @@ bool SQLConfigure::deleteUser(const QString param)
 bool SQLConfigure::updateUser(const QString param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1(), &jError);
     if (!jsonDocument.isObject())
     {
-        KLOG_DEBUG() << "not object:" << jsonDocument;
+        KLOG_DEBUG() << "not object:" << jsonDocument << jError.error;
         return false;
     }
 
@@ -95,10 +98,11 @@ bool SQLConfigure::updateUser(const QString param)
 QString SQLConfigure::queryUser(const QString param)
 {
     QString str = param;
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1());
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toLatin1(), &jError);
     if (!jsonDocument.isObject())
     {
-        KLOG_DEBUG() << "not object:" << jsonDocument;
+        KLOG_DEBUG() << "not object:" << jsonDocument << jError.error;
         return "";
     }
 

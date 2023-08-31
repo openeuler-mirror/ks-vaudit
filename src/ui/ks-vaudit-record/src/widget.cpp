@@ -835,10 +835,9 @@ QLineEdit *Widget::createVideoNameEdit(QString fileName)
 void Widget::readConfig()
 {
     QString value = m_dbusInterface->GetRecordInfo();
-    QJsonDocument doc = QJsonDocument::fromJson(value.toUtf8());
-    if (doc.isObject())
+    QJsonObject jsonObj;
+    if (parseJsonData(value, jsonObj))
     {
-        QJsonObject jsonObj = doc.object();
         for (auto k : jsonObj.keys())
         {
 //            qWarning() << __func__ << "GetRecordInfo" << k << jsonObj[k].toString();
@@ -956,6 +955,41 @@ QLabel *Widget::createVideoDurationLabel(QString duration)
     durationLabel->setFont(QFont("Sans Serif", 10));
     durationLabel->setStyleSheet("color:#fff;");
     return durationLabel;
+}
+
+bool Widget::parseJsonData(const QString &param,  QJsonObject &jsonObj)
+{
+    QString str = param;
+    QJsonParseError jError;
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(str.toUtf8(), &jError);
+
+    if (jsonDocument.isObject())
+    {
+        jsonObj = jsonDocument.object();
+        return true;
+    }
+
+    //判断是否因为中文utf8导致解析失败
+    KLOG_INFO() << "parse json" << jsonDocument << "err, err info:" << jError.error;
+    if (QJsonParseError::ParseError::IllegalUTF8String != jError.error)
+        return false;
+
+    //QJsonDocument::fromJson解析中文utf8失败处理
+    if (!param.startsWith("{") || !param.endsWith("}"))
+        return false;
+
+    QStringList jsonList = param.split(",");
+    for (auto jsonString : jsonList)
+    {
+        QStringList dataList = jsonString.split("\"");
+        int index = dataList.indexOf(":");
+        if (index > 0 && index < dataList.size() - 1)
+        {
+            jsonObj[dataList[index-1]] = dataList[index+1];
+        }
+    }
+
+    return true;
 }
 
 void Widget::realClose()

@@ -113,6 +113,13 @@ void Monitor::receiveNotification(int pid, QString message)
                     KLOG_INFO() << "audit receive disk space notify";
                     return;
                 }
+                else if (message == "is_active")
+                {
+                    KLOG_INFO() << "audit send is_active";
+                    it.value().bActive = true;
+                    return;
+                }
+
                 QString suffix = message.mid(message.size() - 8, message.size());
                 if (suffix == ".mp4.tmp" || suffix == ".ogv.tmp" || suffix == ".MP4.tmp" || suffix == ".OGV.tmp"
                     || suffix == ".mkv.tmp" || suffix == ".MKV.tmp")
@@ -120,6 +127,8 @@ void Monitor::receiveNotification(int pid, QString message)
                     bInsert = true;
                     it.value().bStart = true;
                 }
+
+                break;
             }
         }
     }
@@ -203,6 +212,7 @@ QMap<QString, QString> Monitor::getXorgLoginName()
         }
     }
 
+    process.close();
     return map;
 }
 
@@ -222,6 +232,7 @@ QStringList Monitor::getVncProcessId()
         strlist.removeAll("");
     }
 
+    process.close();
     return strlist;
 }
 
@@ -259,11 +270,12 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL)};
+            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL), true, false};
             vecInfo.push_back(info);
         }
     }
 
+    process.close();
     return vecInfo;
 }
 
@@ -340,9 +352,10 @@ QVector<sessionInfo> Monitor::getXvncInfo()
             if (index == -1 || index1 == -1)
                 continue;
 
-            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL)};
+            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL), false, false};
             vecInfo.push_back(info);
         }
+        process.close();
     }
 
     return vecInfo;
@@ -387,8 +400,20 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 delete process;
                 process = nullptr;
             }
+
+            QString loginUser = getLocalActiveUser();
+            // 本地未激活用户不启进程
+            if (info.userName != loginUser && info.bLocal)
+            {
+                KLOG_INFO() << value.userName << value.displayName << "is not active user";
+                m_sessionInfos.erase(it);
+                return;
+            }
+
             value.process = startRecordWithDisplay(tmp);
             value.bStart = false;
+            value.stTime = time(NULL);
+            value.bActive = false;
             KLOG_INFO() << "deal CrashExit end";
         }
     });
@@ -443,6 +468,7 @@ void Monitor::DealSession(bool isDiskOk)
     }
 
     // 拉起新启的会话的录屏进程
+    QString loginUser;
     for (sessionInfo info : infos)
     {
         if (!m_sessionInfos.contains(info.userName, info))
@@ -454,18 +480,41 @@ void Monitor::DealSession(bool isDiskOk)
                 continue;
             }
 
+            // 获取激活的会话，对于本对只会有一个会话正在使用，一次循环内仅需获取一次
+            if (loginUser.isEmpty())
+            {
+                loginUser = getLocalActiveUser();
+            }
+
+            // 本地未激活用户不启进程
+            if (info.userName != loginUser && info.bLocal)
+                continue;
+
             mapCnt.insert(info.userName, ++mapCnt[info.userName]);
             info.process = startRecordWithDisplay(info);
             m_sessionInfos.insert(info.userName, info);
         }
     }
 
-    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end(); ++it)
+    for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
     {
         auto &val = it.value();
         // 磁盘空间正常
         if (isDiskOk)
         {
+            if (!val.bActive)
+            {
+                if (time(NULL) - val.stTime > 10)
+                {
+                    // 约10s没收到子进程的已激活信息，认为子进程卡住，杀掉子进程并清除信息
+                    auto &process = it.value().process;
+                    KLOG_INFO() << "about 10s to start time:" << val.stTime << ", kill process" << process->pid() << ", displayName:" << val.displayName;
+                    m_sessionInfos.erase(it++);
+                    clearProcess(process);
+                    continue;
+                }
+            }
+
             // 进程存在，但是没有录屏(以收到录屏文件为准)，发送开始录屏信息
             if (!val.bStart)
             {
@@ -492,6 +541,8 @@ void Monitor::DealSession(bool isDiskOk)
                 val.bStart = false;
             }
         }
+
+        ++it;
     }
 }
 
@@ -616,5 +667,23 @@ void Monitor::clearFrontRecordInfos()
             }
         }
         ++it;
+        process.close();
     }
+}
+
+QString Monitor::getLocalActiveUser()
+{
+    QProcess process;
+    process.setProgram("sh");
+    QString arg = "cat /var/log/secure | grep 'pam: gdm-password:' | grep 'session opened for user' | tail -n 1 | awk '{t=$0; gsub(/.*for user | by.*/,\"\",t);print t}' | tr -d '\n'";
+    process.setArguments(QStringList() << "-c" << arg);
+    process.start();
+    QString resOut;
+    if (process.waitForFinished())
+    {
+        resOut = process.readAllStandardOutput().toStdString().data();
+    }
+
+    process.close();
+    return resOut;
 }

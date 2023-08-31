@@ -56,9 +56,10 @@ int main(int argc, char* argv[]) {
 	int klog_ret = klog_qt5_init("", "kylinsec-system", "ks-vaudit", "ks-vaudit");
 	if (0 == klog_ret)
 		KLOG_DEBUG() << "init klog succeed";
+
+	KLOG_INFO() << "compile time: " << __DATE__ << __TIME__ << "pid:" << getpid();
 	KLOG_INFO() << "DBUS_SESSION_BUS_ADDRESS:" << getenv("DBUS_SESSION_BUS_ADDRESS");
 	setenv("DBUS_SESSION_BUS_ADDRESS", "", 1);
-	KLOG_INFO() << "after modifying DBUS_SESSION_BUS_ADDRESS:" << getenv("DBUS_SESSION_BUS_ADDRESS");
 	KyNotify::instance();
 	signal(SIGINT, sig_handler);
 	XInitThreads();
@@ -66,7 +67,8 @@ int main(int argc, char* argv[]) {
 	// Workarounds for broken screen scaling.
 	ScreenScalingFix();
 
-	QApplication application(argc, argv);	
+	QApplication application(argc, argv);
+	KLOG_INFO() << "pid:" << getpid();
 
 	// SSR uses two separate character encodings:
 	// - UTF-8: Used for all internal strings.

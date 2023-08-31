@@ -265,8 +265,8 @@ Recording::Recording(QSettings* qsettings){
 	connect(m_audioTimer, SIGNAL(timeout()), this, SLOT(OnAudioTimer()));
 	m_audioTimer->start();
 
-	m_IdleTimr = new QTimer();
-	connect(m_IdleTimr, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
+	m_IdleTimer = new QTimer();
+	connect(m_IdleTimer, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
 
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 }
@@ -446,9 +446,9 @@ Recording::~Recording() {
 		m_audioTimer = nullptr;
 	}
 
-	if (m_IdleTimr) {
-		delete m_IdleTimr;
-		m_IdleTimr = nullptr;
+	if (m_IdleTimer) {
+		delete m_IdleTimer;
+		m_IdleTimer = nullptr;
 	}
 
 }
@@ -1379,9 +1379,9 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 //		exit(0);
 	} else if(op == "disk_notify"){
 		KLOG_INFO() << "disk space deal";
-		if (m_IdleTimr->isActive())
+		if (m_IdleTimer->isActive())
 		{
-			m_IdleTimr->stop();
+			m_IdleTimer->stop();
 		}
 
 		KIdleTime::instance()->stopCatchingResumeEvent();
@@ -1416,7 +1416,6 @@ bool Recording::AuditParamDeal()
 
 	connect(KIdleTime::instance(), &KIdleTime::resumingFromIdle, this, &Recording::kidleResumeEvent);
 	connect(KIdleTime::instance(), SIGNAL(timeoutReached(int,int)),this, SLOT(kidleTimeoutReached(int,int)));
-	KIdleTime::instance()->catchNextResumeEvent();
 
 	return true;
 }
@@ -1495,9 +1494,9 @@ void Recording::kidleResumeEvent()
 	KIdleTime::instance()->addIdleTimeout(m_timingPause*60000);
 
 	// 如果定时器还在，并触发了resumingFromIdle信号，说明是第一次触发，也就是从录屏状态到录屏状态，不需要重启录屏
-	if (m_IdleTimr->isActive())
+	if (m_IdleTimer->isActive())
 	{
-		m_IdleTimr->stop();
+		m_IdleTimer->stop();
 		return;
 	}
 
@@ -1512,9 +1511,9 @@ void Recording::kidleTimeoutReached(int id, int timeout)
 {
 	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << m_auditBaseFileName << KIdleTime::instance()->idleTime();
 	// 已经触发了无操作状态，一般这里不会进(根据实测第一次触发的是resumingFromIdle信号)
-	if (m_IdleTimr->isActive())
+	if (m_IdleTimer->isActive())
 	{
-		m_IdleTimr->stop();
+		m_IdleTimer->stop();
 	}
 	KIdleTime::instance()->catchNextResumeEvent();
 	OnRecordPause();
@@ -1579,12 +1578,13 @@ void Recording::WatchFile()
 	if (!m_auditBaseFileName.isEmpty())
 	{
 		// 新的录屏开始，关掉旧的定时
-		if (m_IdleTimr->isActive())
+		if (m_IdleTimer->isActive())
 		{
-			m_IdleTimr->stop();
+			m_IdleTimer->stop();
 		}
 
-		m_IdleTimr->start(m_timingPause*60000);
+		m_IdleTimer->start(m_timingPause*60000);
+		KIdleTime::instance()->catchNextResumeEvent();
 	}
 }
 
@@ -1606,9 +1606,9 @@ void Recording::onFileRemove(bool bRemove)
 void Recording::OnIdleTimer()
 {
 	KLOG_INFO() << "no action screen after start record";
-	if (m_IdleTimr->isActive())
+	if (m_IdleTimer->isActive())
 	{
-		m_IdleTimr->stop();
+		m_IdleTimer->stop();
 	}
 	OnRecordPause();
 }

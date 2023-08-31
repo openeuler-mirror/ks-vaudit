@@ -7,7 +7,8 @@
 #include <QTimer>
 #include <QMutex>
 
-struct sessionInfo{
+// 后台审计录屏专用
+struct sessionInfo {
     QString userName;
     QString ip;
     QString displayName;
@@ -51,14 +52,12 @@ private:
 
 private slots:
     void monitorProcess();
+    void recordProcess(); //前台监控
     void receiveNotification(int, QString);
+    void receiveFrontBackend(int, QString, QString, QString, QString);
 
 signals:
     void exitProgram();
-
-public:
-    QMultiMap<QString, sessionInfo> m_sessionInfos;
-    QMap<int, QString> m_videoFileName;
 
 private:
     bool m_isActive;
@@ -68,6 +67,11 @@ private:
     QTimer *m_pTimer;
     QMutex m_mutex;
     QProcess *m_process;
+    QMultiMap<QString, sessionInfo> m_sessionInfos;
+    QMap<int, QString> m_videoFileName;
+    //前台pid对应的后台进程，前台非法关闭
+    QMap<int, QProcess *> m_frontRecordInfo;
+    QTimer *m_pFontTimer;
 };
 
 #endif // MONITOR_H

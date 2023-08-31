@@ -40,7 +40,7 @@ start(){
 stop(){
         echo -n $"Shutting down ${procname}: "
         killproc ${procname}
-        ps aux | grep /usr/bin/ks-vaudit | grep "ks-vaudit \-\-audit\-" | awk '{print $2}' | xargs kill -2 > /dev/null 2>&1
+        ps aux | grep /usr/bin/ks-vaudit | grep -E '/usr/bin/ks-vaudit --audit| /usr/bin/ks-vaudit --record' | grep -v grep | awk '{print $2}' | xargs kill -2 > /dev/null 2>&1
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && rm -f $lockfile

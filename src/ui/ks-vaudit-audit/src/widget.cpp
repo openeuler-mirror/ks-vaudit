@@ -947,7 +947,7 @@ void Widget::setConfigtoUi()
             ui->pathLabel->setText(filePath);
         }else if(k == "FileType"){
             int setValue = 0;
-            if (m_configure[k].toString() == QString("OGV")){
+            if (m_configure[k].toString() == QString("MP4")){
                 setValue = 1;
             }
             ui->typeBox->setCurrentIndex(setValue);

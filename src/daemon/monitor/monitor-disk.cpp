@@ -29,6 +29,7 @@ MonitorDisk::MonitorDisk(QWidget *parent) : m_maxSaveDays(30), m_maxRecordPerUse
     }
     connect(m_dbusInterface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(UpdateConfigureData(QString, QString)));
     connect(m_dbusInterface, SIGNAL(SignalNotification(int, QString)), this, SLOT(ReceiveNotification(int, QString)));
+    connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int, QString)), this, SLOT(switchControlSlot(int, int, QString)));
     getAuditInfo();
 }
 
@@ -304,6 +305,43 @@ void MonitorDisk::ReceiveNotification(int pid, QString message)
     this->SignalNotification(pid, message);
 }
 
+void MonitorDisk::switchControlSlot(int from_pid, int to_pid, QString op)
+{
+    // 接收来自前台ui启进程的信号，并处理
+    if (from_pid > 0 && to_pid == 0 && op.startsWith("process="))
+    {
+        KLOG_INFO() << "from_pid:" << from_pid << "to_pid:" << to_pid << "op:" << op;
+        QStringList dataList = op.split(";");
+        if (dataList.size() != 5 || !dataList[1].startsWith("DISPLAY=") || !dataList[2].startsWith("XAUTHORITY=")
+            || !dataList[3].startsWith("USER=") || !dataList[4].startsWith("HOME="))
+        {
+            KLOG_INFO() << "param err";
+            return;
+        }
+
+        int pidIndex = dataList[0].indexOf("=") + 1;
+        QString pid = dataList[0].mid(pidIndex, dataList[0].size());
+        if (pid.toInt() != from_pid)
+            return;
+
+        int nameIndex = dataList[1].indexOf("=") + 1;
+        int authIndex = dataList[2].indexOf("=") + 1;
+        int userIndex = dataList[3].indexOf("=") + 1;
+        int homeIndex = dataList[4].indexOf("=") + 1;
+        QString displayName = dataList[1].mid(nameIndex, dataList[1].size());
+        QString authFile = dataList[2].mid(authIndex, dataList[2].size());
+        QString userName = dataList[3].mid(userIndex, dataList[3].size());
+        QString homeDir = dataList[4].mid(homeIndex, dataList[4].size());
+        if (displayName.isEmpty() || authFile.isEmpty() || userName.isEmpty() || homeDir.isEmpty())
+        {
+            KLOG_INFO() << "parse data err";
+            return;
+        }
+
+        this->SignalFrontBackend(from_pid, displayName, authFile, userName, homeDir);
+    }
+}
+
 int MonitorDisk::getMaxRecordPerUser()
 {
     return m_maxRecordPerUser;
@@ -331,6 +369,12 @@ void MonitorDisk::sendSwitchControl(int to_pid, const QString &operate)
 {
     KLOG_DEBUG() << "to_pid:" << to_pid << "operate:" << operate;
     m_dbusInterface->SwitchControl(getpid(), to_pid, operate);
+}
+
+void MonitorDisk::sendProcessPid(int from_pid, int to_pid)
+{
+    KLOG_INFO() << "from_pid:" << from_pid << "to_pid:" << to_pid;
+    m_dbusInterface->SwitchControl(from_pid, to_pid, "process");
 }
 
 void MonitorDisk::fixVidoes()

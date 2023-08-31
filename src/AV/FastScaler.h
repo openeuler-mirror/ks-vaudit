@@ -25,6 +25,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 class FastScaler {
 
 private:
+	bool m_warn_checkasm;
 #if SSR_USE_X86_ASM
 	bool m_warn_alignment;
 #endif

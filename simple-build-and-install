@@ -66,6 +66,8 @@ if [ -z "$ENABLE_FFMPEG_VERSIONS" ]; then
 	fi
 fi
 
+ENABLE_X86_ASM=TRUE
+
 echo "Auto-detected options:"
 echo "  ENABLE_32BIT_GLINJECT = $ENABLE_32BIT_GLINJECT"
 echo "  ENABLE_X86_ASM = $ENABLE_X86_ASM"

@@ -341,8 +341,8 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 		settings_ptr->setValue("input/video_h", rect.height()); //height
 		m_video_in_width = rect.width();
 		m_video_in_height = rect.height();
-		m_output_settings.video_height = m_video_in_height;
-		m_output_settings.video_width = m_video_in_width;
+		m_output_settings.video_height = m_video_in_height/2*2;
+		m_output_settings.video_width = m_video_in_width/2*2;
 		return ;
 	}
 	QList<QScreen *> screen_list = QApplication::screens();
@@ -359,8 +359,10 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 	QRect rect = CombineScreenGeometries(screen_geometries); 
 	m_video_in_width = rect.width();
 	m_video_in_height = rect.height();
-	m_output_settings.video_height = m_video_in_height;
-	m_output_settings.video_width = m_video_in_width;
+	
+	m_output_settings.video_height = m_video_in_height/2*2;
+	m_output_settings.video_width = m_video_in_width/2*2;
+
 	ReNameFile();
 	OnRecordStartPause();
 //	OnRecordStart();
@@ -385,8 +387,8 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		settings_ptr->setValue("input/video_h", rect.height()); //height
 		m_video_in_width = rect.width();
 		m_video_in_height = rect.height();
-		m_output_settings.video_height = m_video_in_height;
-		m_output_settings.video_width = m_video_in_width;
+		m_output_settings.video_height = m_video_in_height/2*2;
+		m_output_settings.video_width = m_video_in_width/2*2;
 		return ;
 	}
 
@@ -396,8 +398,9 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		QRect rect = CombineScreenGeometries(screen_geometries); 
 		m_video_in_width = rect.width();
 		m_video_in_height = rect.height();
-		m_output_settings.video_height = m_video_in_height;
-		m_output_settings.video_width = m_video_in_width;
+
+		m_output_settings.video_height = m_video_in_height/2*2;
+		m_output_settings.video_width = m_video_in_width/2*2;
 		ReNameFile();
 		return;
 	}
@@ -430,8 +433,10 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 	QRect rect = CombineScreenGeometries(screen_geometries); 
 	m_video_in_width = rect.width();
 	m_video_in_height = rect.height();
-	m_output_settings.video_height = m_video_in_height;
-	m_output_settings.video_width = m_video_in_width;
+
+	m_output_settings.video_height = m_video_in_height/2*2;
+	m_output_settings.video_width = m_video_in_width/2*2;
+
 	ReNameFile();
 	OnRecordStartPause();
 //	OnRecordStart();
@@ -561,8 +566,9 @@ void Recording::StartPage() {
 	// Logger::LogInfo("[Recording::StartPage] the m_output_settings.video_codec_avname is " + m_output_settings.video_codec_avname);
 
 	m_output_settings.video_kbit_rate = 128;
-	m_output_settings.video_width = m_video_in_width;
-	m_output_settings.video_height = m_video_in_height;
+	m_output_settings.video_width = m_video_in_width/2*2;
+	m_output_settings.video_height = m_video_in_height/2*2;
+
 	m_output_settings.video_frame_rate = m_video_frame_rate;
 	m_output_settings.video_allow_frame_skipping = true;
 	m_output_settings.audio_codec_avname = (m_audio_enabled)? m_settings->value("output/audio_codec_av", QString()).toString():QString();
@@ -910,8 +916,9 @@ void Recording::StartOutput() {
 				// One missing row/column of pixels is probably better than a blurry video (and scaling is SLOW).
 			//m_video_in_width = m_video_in_width / 2 * 2;
 			//m_video_in_height = m_video_in_height / 2 * 2;
-			m_output_settings.video_width = m_video_in_width;
-			m_output_settings.video_height = m_video_in_height;
+			//
+			m_output_settings.video_width = m_video_in_width/2*2;
+			m_output_settings.video_height = m_video_in_height/2*2;
 
 			// start the output
 			//m_output_settings.container_avname

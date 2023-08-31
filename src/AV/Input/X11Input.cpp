@@ -586,7 +586,7 @@ void X11Input::InputThread() {
 		pid_t tid = gettid();
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
 
-		unsigned int grab_x = m_x, grab_y = m_y, grab_width = m_width, grab_height = m_height;
+		unsigned int grab_x = m_x, grab_y = m_y, grab_width = m_width/2*2, grab_height = m_height/2*2;
 		bool has_initial_cursor = false;
 		int64_t last_timestamp = hrt_time_micro();
 

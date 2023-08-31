@@ -19,14 +19,13 @@ public:
     void sendSwitchControl(int to_pid, const QString &operate);
     void sendProcessPid(int from_pid, int to_pid);
     void fixVidoes();
+    void checkFrontRecordFreeSpace(QString, QVector<int>);
 
 private:
     ~MonitorDisk();
-    void getAuditInfo();
     void checkSaveDays(const QString &filePath, const int &maxSaveDays);
     bool checkFreeSpace(const QString &filePath, const quint64 &minFreeSpace);
     void parseConfigureInfo(QString);
-    void checkRecordFreeSpace(QString filePath, const quint64 &minFreeSpace);
     void parseRecordConfigureInfo(QString value);
     bool filePathOk(QString &filePath);
     bool parseJsonData(const QString &param,  QJsonObject &jsonObj);

@@ -81,37 +81,10 @@ void Monitor::recordProcess()
     if (m_pFontTimer->isActive())
         m_pFontTimer->stop();
 
-    // 查询前台进程是否还存在，不存在关闭后台录屏进程，清除信息
-    for (auto it = m_frontRecordInfo.begin(); it != m_frontRecordInfo.end();)
+    clearFrontRecordInfos();
+    for (auto it = m_frontHomeInfo.begin(); it != m_frontHomeInfo.end(); ++it)
     {
-        QProcess process;
-        process.setProcessChannelMode(QProcess::MergedChannels);
-        process.setProgram("sh");
-        QString arg = "kill -0 " + QString::number(it.key()) + " >/dev/null 2>&1; echo $?";
-        process.setArguments(QStringList() << "-c" << arg);
-        process.start();
-        if (process.waitForFinished())
-        {
-            QByteArray data = process.readAll();
-            QString str(data.toStdString().data());
-            QStringList strlist = str.split("\n");
-            strlist.removeAll("");
-            if (strlist.size() != 1)
-            {
-                ++it;
-                continue;
-            }
-
-            if (strlist[0].toInt() != 0)
-            {
-                KLOG_INFO() << "front pid:" << it.key() << "is not exist";
-                auto &process = it.value();
-                m_frontRecordInfo.erase(it++);
-                clearProcess(process);
-                continue;
-            }
-        }
-        ++it;
+        MonitorDisk::instance().checkFrontRecordFreeSpace(it.key(), it.value());
     }
 
     m_pFontTimer->start(2000);
@@ -193,6 +166,16 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
     MonitorDisk::instance().sendProcessPid(process->pid(), from_pid);
     MonitorDisk::instance().sendProcessPid(from_pid, process->pid());
     m_frontRecordInfo.insert(from_pid, process);
+
+    QVector<int> vec;
+    auto it = m_frontHomeInfo.find(homeDir);
+    if (it != m_frontHomeInfo.end())
+    {
+        vec.append(it.value());
+    }
+
+    vec.append(from_pid);
+    m_frontHomeInfo.insert(homeDir, vec);
 }
 
 QMap<QString, QString> Monitor::getXorgLoginName()
@@ -578,5 +561,60 @@ void Monitor::clearProcess(QProcess *process)
             process = nullptr;
         }
         KLOG_INFO() << "remove success";
+    }
+}
+
+void Monitor::clearFrontRecordInfos()
+{
+    // 查询前台进程是否还存在，不存在关闭后台录屏进程，清除信息
+    for (auto it = m_frontRecordInfo.begin(); it != m_frontRecordInfo.end();)
+    {
+        QProcess process;
+        process.setProcessChannelMode(QProcess::MergedChannels);
+        process.setProgram("sh");
+        QString arg = "kill -0 " + QString::number(it.key()) + " >/dev/null 2>&1; echo $?";
+        process.setArguments(QStringList() << "-c" << arg);
+        process.start();
+        if (process.waitForFinished())
+        {
+            QByteArray data = process.readAll();
+            QString str(data.toStdString().data());
+            QStringList strlist = str.split("\n");
+            strlist.removeAll("");
+            if (strlist.size() != 1)
+            {
+                ++it;
+                continue;
+            }
+
+            if (strlist[0].toInt() != 0)
+            {
+                KLOG_INFO() << "front pid:" << it.key() << "is not exist";
+
+                // 清除文件存储路径信息, pid是唯一的
+                for (auto iter = m_frontHomeInfo.begin(); iter != m_frontHomeInfo.end(); ++iter)
+                {
+                    QVector<int> &vec = iter.value();
+                    int index = vec.indexOf(it.key());
+                    // 查找到，清除信息，没找到继续
+                    if (index != -1)
+                    {
+                        vec.remove(index);
+                        // 没有存放到对应home的进程
+                        if (vec.size() == 0)
+                        {
+                            m_frontHomeInfo.erase(iter++);
+                        }
+                        break;
+                    }
+                }
+
+                auto &process = it.value();
+                m_frontRecordInfo.erase(it++);
+                clearProcess(process);
+                continue;
+            }
+        }
+        ++it;
     }
 }

@@ -1000,9 +1000,10 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
     if (from_pid == m_recordPID && to_pid == m_selfPID && op.startsWith("totaltime")){
         QString timeText = op.split(" ")[1];
         ui->timeStamp->setText(timeText);
-    } else if (to_pid == 0 && op == "DiskSpace"){ //磁盘空间不足
+    } else if (to_pid == m_selfPID && op == "DiskSpace"){ //磁盘空间不足
         if (m_isRecording)
         {
+            KLOG_INFO() << "receive DiskSpace from" << from_pid;
             // TODO: stop record op here
             Dialog *prompt = new Dialog(this, "DiskSpace");
             on_stopBtn_clicked();

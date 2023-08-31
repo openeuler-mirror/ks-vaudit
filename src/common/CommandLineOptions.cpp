@@ -117,6 +117,11 @@ CommandLineOptions::CommandLineOptions() {
 	m_benchmark = false;
 	m_gui = false;
 	m_front_record = false;// 默认后台审计录屏
+	m_monitor_record = false; // 监控审计录屏
+	m_front_pid = 0;
+	m_front_user = "";
+	m_front_home = "";
+	m_remote_ip = "";
 
 	s_instance = this;
 }
@@ -151,10 +156,32 @@ void CommandLineOptions::Parse() {
 				CheckOptionHasNoValue(option, value);
 				PrintOptionHelp();
 				m_gui = false;
-			}else if(option == "--record"){
+			}else if(option.startsWith("--record")){
 				m_front_record = true;
+				QStringList strlist = option.split(" ");
+				strlist.removeAll("");
+				if (strlist.size() != 4)
+				{
+					Logger::LogError("[CommandLineOptions::Parse] " + Logger::tr("Error: Unknown command-line argument '%1'!").arg(arg));
+					PrintOptionHelp();
+					throw CommandLineException();
+				}
+
+				m_front_pid = strlist[1].toInt();
+				m_front_user = strlist[2];
+				m_front_home = strlist[3];
 			}else if(option.startsWith("--audit")){
-				Logger::LogInfo(option);
+				QStringList strlist = option.split(" ");
+				strlist.removeAll("");
+				if (strlist.size() != 4)
+				{
+					Logger::LogError("[CommandLineOptions::Parse] " + Logger::tr("Error: Unknown command-line argument '%1'!").arg(arg));
+					PrintOptionHelp();
+					throw CommandLineException();
+				}
+				m_monitor_record = true;
+				m_front_user = strlist[1];
+				m_remote_ip = strlist[2];
 			}else if(option == "--version") {
 				CheckOptionHasNoValue(option, value);
 				Logger::LogInfo(GetVersionInfo());

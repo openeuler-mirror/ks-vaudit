@@ -17,6 +17,7 @@ public:
     bool getContinueNotify();
     void setReserveSize(quint64 value);
     void closeWindowDeal(const char *data);
+    void setUser(QString userName);
 
 private:
 
@@ -31,7 +32,6 @@ private:
 
     ~KyNotify();
     void notify(NOTYFY_MESSAGE msg, int timing = 0);
-    void initNotify();
     void notify_send(const char *msg, const char *icon, int timeout, const char *userdata);
     void notify_info(const char *msg, int timeout = NOTIFY_TIMEOUT, const char *userdata = nullptr);
     void notify_warn(const char *msg, int timeout = NOTIFY_TIMEOUT, const char *userdata = nullptr);
@@ -44,6 +44,8 @@ private:
     int m_reserveSize;
     int m_lastSecond;
     void *m_pDiskNotify;
+    __uid_t m_uid;
+    __uid_t m_source_uid;
 };
 
 #endif

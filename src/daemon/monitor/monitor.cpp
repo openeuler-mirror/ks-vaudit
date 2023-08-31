@@ -34,6 +34,10 @@ Monitor::Monitor(QObject *parent)
     connect(&MonitorDisk::instance(), SIGNAL(SignalNotification(int, QString)), this, SLOT(receiveNotification(int, QString)));
     m_lastMaxRecordPerUser = MonitorDisk::instance().getMaxRecordPerUser();
     monitorProcess();
+    m_pFontTimer = new QTimer();
+    connect(m_pFontTimer, SIGNAL(timeout()), this, SLOT(recordProcess()));
+    connect(&MonitorDisk::instance(), &MonitorDisk::SignalFrontBackend, this, &Monitor::receiveFrontBackend);
+    recordProcess();
 }
 
 Monitor::~Monitor()
@@ -42,6 +46,9 @@ Monitor::~Monitor()
         delete m_pTimer;
     m_pTimer = nullptr;
 
+    if (m_pFontTimer)
+        delete m_pFontTimer;
+    m_pFontTimer = nullptr;
     clearSessionInfos();
 }
 
@@ -67,6 +74,47 @@ void Monitor::monitorProcess()
     }
 
     m_pTimer->start(2000);
+}
+
+void Monitor::recordProcess()
+{
+    if (m_pFontTimer->isActive())
+        m_pFontTimer->stop();
+
+    // 查询前台进程是否还存在，不存在关闭后台录屏进程，清除信息
+    for (auto it = m_frontRecordInfo.begin(); it != m_frontRecordInfo.end();)
+    {
+        QProcess process;
+        process.setProcessChannelMode(QProcess::MergedChannels);
+        process.setProgram("sh");
+        QString arg = "kill -0 " + QString::number(it.key()) + " >/dev/null 2>&1; echo $?";
+        process.setArguments(QStringList() << "-c" << arg);
+        process.start();
+        if (process.waitForFinished())
+        {
+            QByteArray data = process.readAll();
+            QString str(data.toStdString().data());
+            QStringList strlist = str.split("\n");
+            strlist.removeAll("");
+            if (strlist.size() != 1)
+            {
+                ++it;
+                continue;
+            }
+
+            if (strlist[0].toInt() != 0)
+            {
+                KLOG_INFO() << "front pid:" << it.key() << "is not exist";
+                auto &process = it.value();
+                m_frontRecordInfo.erase(it++);
+                clearProcess(process);
+                continue;
+            }
+        }
+        ++it;
+    }
+
+    m_pFontTimer->start(2000);
 }
 
 void Monitor::receiveNotification(int pid, QString message)
@@ -123,6 +171,28 @@ void Monitor::receiveNotification(int pid, QString message)
     }
 
     KLOG_INFO() << "is insert" << bInsert;
+}
+
+void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString authFile, QString userName, QString homeDir)
+{
+    // 根据前台发送的信息，启动后台进程
+    KLOG_INFO() << "from_pid:" << from_pid << "displayName:" << displayName << "authFile:" << authFile << "userName:" << userName << "homeDir:" << homeDir;
+    QProcess *process = new QProcess();
+    process->setProcessChannelMode(QProcess::MergedChannels);
+    QString logFile = m_filePath + "record-display" + displayName;
+    process->setStandardOutputFile(logFile + QString(".out"));
+    process->setStandardErrorFile(logFile + QString(".err"));
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("DISPLAY", displayName); // Add an environment variable
+    env.insert("XAUTHORITY", authFile);
+    process->setProcessEnvironment(env);
+    QStringList arg;
+    arg << QString("--record ") + QString::number(from_pid) + QString(" ") + userName + QString(" ") + homeDir;
+    process->start(m_vauditBin, arg);
+    KLOG_INFO() << "backend pid:" << process->pid() << process->arguments();
+    MonitorDisk::instance().sendProcessPid(process->pid(), from_pid);
+    MonitorDisk::instance().sendProcessPid(from_pid, process->pid());
+    m_frontRecordInfo.insert(from_pid, process);
 }
 
 QMap<QString, QString> Monitor::getXorgLoginName()
@@ -302,7 +372,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     env.insert("XAUTHORITY", info.authFile);
     process->setProcessEnvironment(env);
     QStringList arg;
-    arg << (QString("--audit-") + info.userName + QString("-") + info.ip + QString("-") + info.displayName);
+    arg << (QString("--audit ") + info.userName + QString(" ") + info.ip + QString(" ") + info.displayName);
 
     connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;

@@ -411,7 +411,7 @@ void X11Input::AllocateImage(unsigned int width, unsigned int height) {
 			throw X11Exception();
 		}
 
-		m_x11_shm_info[i].shmid = shmget(IPC_PRIVATE, m_x11_image[i]->bytes_per_line * m_x11_image[i]->height, IPC_CREAT | 0700);
+		m_x11_shm_info[i].shmid = shmget(IPC_PRIVATE, m_x11_image[i]->bytes_per_line * m_x11_image[i]->height, IPC_CREAT | 0777);
 		if(m_x11_shm_info[i].shmid == -1) {
 			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't get shared memory!"));
 			throw X11Exception();

@@ -140,12 +140,12 @@ bool Login::checkActivation()
         ui->dotWidget->setStyleSheet("border:none;"
                                      "border-radius:2px;"
                                      "background-color:#fa1919;");
-        ui->activationBtn->setText("未激活");
+        ui->activationBtn->setText(tr("Not Activated"));
     }else{
         ui->dotWidget->setStyleSheet("border:none;"
                                      "border-radius:2px;"
                                      "background-color:#2eb3ff;");
-        ui->activationBtn->setText("已激活");
+        ui->activationBtn->setText(tr("Activated"));
     }
     return m_isActivated;
 }

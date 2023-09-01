@@ -16,8 +16,6 @@ extern "C" {
 #include "libavutil/dict.h"
 }
 
-#define TIMEOUT_MS 5000
-
 MonitorDisk::MonitorDisk(QWidget *parent)
             : m_maxSaveDays(AUDIT_DEFAULT_CONFIG_MAX_SAVE_DAYS)
             , m_maxRecordPerUser(AUDIT_DEFAULT_CONFIG_MAX_RECORD_PER_USER)

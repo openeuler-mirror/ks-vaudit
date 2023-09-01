@@ -527,6 +527,8 @@ void Widget::on_remainderBox_currentIndexChanged(int index)
     }else if (index == 3){
         setValue = 30;
     }
+
+    m_timing = setValue;
     setConfig(QString("TimingReminder"), QString("%1").arg(setValue));
 }
 
@@ -992,19 +994,27 @@ bool Widget::parseJsonData(const QString &param,  QJsonObject &jsonObj)
 
 void Widget::callNotifyProcess(QString op, int minutes)
 {
-    QProcess process;
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
-    env.insert("XAUTHORITY", getenv("XAUTHORITY"));
-    process.setProcessEnvironment(env);
-    QStringList arg;
-    struct passwd *pw = getpwnam(getenv("USER"));
-    uid_t uid = pw != nullptr ? pw->pw_uid : 0;
-    arg << (QString("--record ") + op + QString(" ") + QString::number(uid) + QString(" ") + QString::number(minutes));
-    process.start("/usr/bin/ks-vaudit-notify", arg);
-    KLOG_INFO() << "notify info:" << op << "process"<< process.pid() << process.arguments();
-    process.waitForFinished();
-    process.close();
+    // 防止提示已录屏0分钟
+    if ("timing" == op && 0 == minutes)
+        return;
+
+    // 仅开始、暂停、重启、停止、定时提醒需要提示
+    if (op == "start" || op == "pause" || op == "restart" || op == "stop" || op == "timing")
+    {
+        QProcess process;
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
+        env.insert("XAUTHORITY", getenv("XAUTHORITY"));
+        process.setProcessEnvironment(env);
+        QStringList arg;
+        struct passwd *pw = getpwnam(getenv("USER"));
+        uid_t uid = pw != nullptr ? pw->pw_uid : 0;
+        arg << (QString("--record ") + op + QString(" ") + QString::number(uid) + QString(" ") + QString::number(minutes));
+        process.start("/usr/bin/ks-vaudit-notify", arg);
+        KLOG_INFO() << "notify info:" << op << "process"<< process.pid() << process.arguments();
+        process.waitForFinished();
+        process.close();
+    }
 }
 
 void Widget::realClose()
@@ -1047,7 +1057,7 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         sendSwitchControl(m_selfPID, from_pid, "process");
         KLOG_INFO() << "receive backend record pid:" << from_pid;
     } else if (to_pid == m_selfPID && op.endsWith("-done")) { //接收录屏进程操作结果
-        KLOG_INFO() << "receive op done:" << op;
+        KLOG_DEBUG() << "receive op done:" << op;
         QStringList list = op.split("-");
         if (list.size() == 2)
         {

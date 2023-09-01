@@ -53,6 +53,7 @@ private:
     void clearProcess(QProcess *process);
     void clearFrontRecordInfos();
     QString getLocalActiveUser();
+    QString frontGetXAuth(QString userName, QString display);
 
 private slots:
     void monitorProcess();

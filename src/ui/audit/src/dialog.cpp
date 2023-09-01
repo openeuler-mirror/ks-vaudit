@@ -30,9 +30,9 @@ QLabel *Dialog::getQrLabel()
 void Dialog::initUI()
 {
     if (m_dialogType == QString("exit")){
-        ui->label->setText("关闭程序后将退出麒麟信安录屏软件，是否关闭程序？");
+        ui->label->setText(tr("Confirm to exit Vaudit Audit?"));
     }else if(m_dialogType == QString("noprivilege")){
-        ui->label->setText("您无权限查看！");
+        ui->label->setText(tr("You have no privilege to view"));
     }else if(m_dialogType == QString("activate")){
         initActivateUI(true);
     }else if(m_dialogType == QString("activateFailed")){
@@ -46,17 +46,17 @@ void Dialog::initUI()
 
 void Dialog::initActivateUI(bool isSucceed)
 {
-    ui->titleText->setText("软件激活");
+    ui->titleText->setText(tr("Software Activate"));
     if (isSucceed){
-        ui->label->setText("软件激活成功！");
+        ui->label->setText(tr("Software activated success!"));
     }else{
-        ui->label->setText("激活失败，请检查激活码是否正确！");
+        ui->label->setText(tr("Activate failed, please correct activation code!"));
     }
 }
 
 void Dialog::initQRcode()
 {
-    ui->titleText->setText("机器码");
+    ui->titleText->setText(tr("Machine code"));
     this->setFixedSize(320,276);
     ui->dialogWidget->setFixedSize(320,276);
     ui->label->hide();
@@ -80,7 +80,7 @@ void Dialog::initQRcode()
 
     QLabel *label_1 = new QLabel();
     label_1->setStyleSheet("color:#fff;font-size:13px;");
-    label_1->setText("扫一扫获取机器码");
+    label_1->setText(tr("Scan to obtain the machine code"));
     label_1->setAlignment(Qt::AlignCenter);
     vlayout->addSpacing(10);
     vlayout->addWidget(m_qrCodeLabel);

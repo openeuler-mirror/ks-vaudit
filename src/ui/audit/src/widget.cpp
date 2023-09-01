@@ -142,8 +142,8 @@ void Widget::initAudadmUi()
     m_rightMenu->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
     m_rightMenu->setAttribute(Qt::WA_TranslucentBackground);
     m_rightMenu->setObjectName("listMenu");
-    m_playAction = m_rightMenu->addAction(tr("播放"));
-    m_folderAction = m_rightMenu->addAction(tr("文件位置"));
+    m_playAction = m_rightMenu->addAction(tr("Play"));
+    m_folderAction = m_rightMenu->addAction(tr("File Location"));
 
     connect(m_playAction, SIGNAL(triggered()), this, SLOT(playVideo()));
     connect(m_folderAction, SIGNAL(triggered()), this, SLOT(openDir()));
@@ -443,7 +443,7 @@ void Widget::on_pushButton_clicked()
     if (openDir.startsWith("~")){
         openDir.replace(0,1,homePath);
     }
-    dirPath = QFileDialog::getExistingDirectory(this, "请选择文件路径...", openDir, QFileDialog::ShowDirsOnly);
+    dirPath = QFileDialog::getExistingDirectory(this, tr("Please select file path ..."), openDir, QFileDialog::ShowDirsOnly);
     if (!dirPath.isEmpty()){
         ui->pathLabel->setText(dirPath);
         ui->pathLabel->setToolTip(dirPath);
@@ -653,15 +653,15 @@ QString Widget::checkNewPassword(QString inputpw)
     QString retString = "";
     QRegExp charReg = QRegExp("[\\x0020-\\x002f\\x003a-\\x0040\\x005b-\\x0060\\x007b-\\x007e]+");
     if (inputpw.length() > 30 || inputpw.length() < 8){
-        retString = "密码长度需要在8-30位之间";
+        retString = tr("Password length range should be 8-30");
     }else if(inputpw.contains(QRegExp("[\\x4e00-\\x9fa5]+"))){
-        retString = "密码不能包含中文字符";
+        retString = tr("Password cannot contains any Chinese chars");
     }else if(!inputpw.contains(charReg)){
-        retString = "密码必须包含一位特殊字符";
+        retString = tr("Password must include a specical character");
     }else if(!inputpw.contains(QRegExp("[0-9]+"))){
-        retString = "密码必须包含一位数字";
+        retString = tr("Password must include a digital number");
     }else if(!inputpw.contains(QRegExp("[a-zA-Z]+"))){
-        retString = "密码必须包含一个字母";
+        retString = tr("Password must include a letter");
     }else{
         retString = "";
     }
@@ -739,7 +739,7 @@ QString Widget::getVideoDuration(QString absPath)
     int ret = avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL);
     if (ret < 0){
         KLOG_DEBUG() << "avformat_open_input() failed:" << ret;
-        return QString("文件损坏");
+        return QString(tr("File broken"));
     }
     int ret1 = avformat_find_stream_info(pCtx,NULL);
     if(ret1 < 0){
@@ -748,7 +748,7 @@ QString Widget::getVideoDuration(QString absPath)
             avformat_close_input(&pCtx);
             pCtx=NULL;
         }
-        return QString("文件损坏");
+        return QString(tr("File broken"));
     }
 
     if (pCtx->duration != AV_NOPTS_VALUE){
@@ -760,7 +760,7 @@ QString Widget::getVideoDuration(QString absPath)
                 avformat_close_input(&pCtx);
                 pCtx=NULL;
             }
-            return QString("文件损坏");
+            return QString(tr("File broken"));
         }
         mins = secs / 60;
         secs %= 60;
@@ -773,7 +773,7 @@ QString Widget::getVideoDuration(QString absPath)
             avformat_close_input(&pCtx);
             pCtx=NULL;
         }
-        return QString("未知");
+        return QString(tr("Unknown"));
     }
 
     if (pCtx != NULL){
@@ -782,14 +782,14 @@ QString Widget::getVideoDuration(QString absPath)
     }
     // 目前假设单个视频文件超过99小时
     if (hours > 99){
-        return QString("%1").arg("大于100小时");
+        return QString("%1").arg(tr(">100 hours"));
     }
     return QString("%1:%2:%3").arg(hours,2,10,QLatin1Char('0')).arg(mins,2,10,QLatin1Char('0')).arg(secs,2,10,QLatin1Char('0'));
 }
 
 void Widget::createList(){
     QList<QString> headers;
-    headers << "视频名" << "时长" << "大小" << "日期"<<"操作";
+    headers << tr("VideoName") << tr("Duration") << tr("Size") << tr("Date") << tr("Operation");
     for (int i = 0; i < headers.size(); i++)
     {
         QStandardItem *Item = new QStandardItem(headers.at(i));
@@ -846,7 +846,7 @@ void Widget::refreshList(QString regName)
     for (int p=0,i=0; p < m_fileList.size(); ++p){
         QString fileName = m_fileList.at(p).fileName();
         QString duration = getVideoDuration(m_fileList.at(p).absoluteFilePath());
-        if (QString::compare(duration,"文件损坏") == 0){
+        if (QString::compare(duration,tr("File broken")) == 0){
             // 录制中的视频和其他原因打不开的视频不展示 #59083
             continue;
         }
@@ -1092,13 +1092,13 @@ void Widget::show_widget_page(QJsonObject arg)
     this->show();
     if (UI_AUDADM_USERNAME == currentUserName){
         initAudadmUi();
-        ui->userLevelEdit->setText("审计管理员");
+        ui->userLevelEdit->setText(tr("Audadm"));
     }else if(UI_SYSADM_USERNAME == currentUserName){
         initSysadmUi();
-        ui->userLevelEdit->setText("系统管理员");
+        ui->userLevelEdit->setText(tr("Sysadm"));
     }else if(UI_SECADM_USERNAME == currentUserName){
         initSecadmUi();
-        ui->userLevelEdit->setText("安全管理员");
+        ui->userLevelEdit->setText(tr("Secadm"));
     }else{
         KLOG_DEBUG() << "currentUserName:" << currentUserName;
     }

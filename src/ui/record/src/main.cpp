@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     }else if (translator_record.load(QLocale::system(), "ks-vaudit-record", ".", systemTranslationsPath)){
         KLOG_DEBUG() << "Loaded installed translations";
         QApplication::installTranslator(&translator_record);
-    } else {
-        KLOG_INFO() << "load translations failed";
+    }else{
+        KLOG_ERROR() << "Translation load failed";
     }
 
     Widget w;

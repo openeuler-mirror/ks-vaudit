@@ -88,6 +88,7 @@ private slots:
     void receiveNotification(int, QString);
     void sendMicToConfig();
     void sendSpkToConfig();
+    void reconnectMonitor();
 
 public:
     void setToCenter(int w, int h);
@@ -129,6 +130,7 @@ private:
     int m_toHeight;
     QTimer *m_sendMData;
     QTimer *m_sendSData;
+    QTimer *m_heartBeat;
 };
 
 #endif // WIDGET_H

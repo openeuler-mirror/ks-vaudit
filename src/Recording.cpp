@@ -277,14 +277,26 @@ Recording::Recording(QSettings* qsettings){
 	m_IdleTimer = new QTimer();
 	connect(m_IdleTimer, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
 
-	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
-
 	m_configure_interface->MonitorNotification(getpid(), "is_active");
 	KLOG_INFO() << getpid() << "send signal is_active!";
 }
 
 
 void Recording::OnRecordTimer() {
+
+	const QString &fileName = m_output_settings.file;
+	if (!fileName.isEmpty()){
+		bool ret = QFileInfo::exists(fileName);
+		if (!ret) {
+			KLOG_ERROR() << fileName << "was deleted, restart record";
+			OnRecordSave();  // 结束视频录制
+			OnRecordStart(); // 开始新视频
+		}
+	}
+
+	if (!CommandLineOptions::GetFrontRecord())
+		return;
+
 	if (m_output_manager == NULL) {
 		return;
 	}
@@ -848,7 +860,6 @@ void Recording::StopPage(bool save) {
 	if(!m_page_started)
 		return;
 
-	m_bStopRecord = true;
 	StopOutput(true);
 	StopInput();
 
@@ -1219,7 +1230,7 @@ void Recording::OnRecordStartPause() {
 			return;
 		}
 		
-		Logger::LogInfo("[Recording::record] restart eht recording ");
+		Logger::LogInfo("[Recording::record] restart the recording ");
 		if(m_separate_files){ //暂停状态下分辨率发生变动,需要截断视频
 			OnRecordSave();
 			OnRecordStart();
@@ -1250,6 +1261,11 @@ void Recording::OnRecordSave(bool confirm) {
 
 	StopPage(true);
 	SaveSettings(settings_ptr); //结束视频录制并保存但不退出程序, 这种情况下得刷新一下Qsettings
+
+	//结束视频录制后，程序并未退出，重置m_separate_files、m_pause_state这两状态变量
+	m_separate_files = false;
+	m_pause_state = false;
+	
 }
 
 /**
@@ -1466,10 +1482,6 @@ void Recording::AuditParamDeal()
 	if (!CommandLineOptions::GetMonitorRecord())
 		return;
 
-	//后台审计不需要发送录屏时间
-	if (m_tm && m_tm->isActive())
-		m_tm->stop();
-
 	m_auditBaseFileName = CommandLineOptions::GetFrontUser() + "_" + CommandLineOptions::GetRemoteIP();
 	m_settings->setValue("record/user", CommandLineOptions::GetFrontUser());
 	KLOG_INFO() << "cur display:" << getenv("DISPLAY") << "audit info:" << m_auditBaseFileName;
@@ -1588,55 +1600,6 @@ void Recording::kidleTimeoutReached(int id, int timeout)
 	}
 }
 
-//不使用 while 循环原因：非删除文件事件下read不阻塞了
-void thread_function(QString fileName, void *user)
-{
-	Recording *pThis = (Recording *)user;
-	int fd = inotify_init();
-	if (fd < 0)
-	{
-		KLOG_INFO() << "inotify_init failed" << errno << strerror(errno);
-		return;
-	}
-
-	//IN_DELETE	| IN_DELETE_SELF 对于删除没作用， IN_ATTRIB 删除有作用
-	int	wd = inotify_add_watch(fd, fileName.toStdString().data(), IN_ATTRIB | IN_CLOSE_WRITE);
-	if (wd < 0)
-	{
-		KLOG_INFO() << "inotify_add_watch failed" << fileName.toStdString().data() << errno << strerror(errno);
-		pThis->fileRemoved(true);
-		close(fd);
-		return;
-	}
-
-	int nread = 0;
-	char buf[BUFSIZ]{};
-	struct inotify_event *event;
-	int length = read(fd, buf, sizeof(buf) - 1);
-
-	// inotify 事件发生时
-	while (length > 0)
-	{
-		event = (struct inotify_event *)&buf[nread];
-		if (pThis->m_bStopRecord)
-		{
-			KLOG_INFO("stop record, event->mask:%#x, curpid:%d", event->mask, getpid());
-			inotify_rm_watch(fd, wd);
-			close(fd);
-			return;
-		}
-		nread = nread + sizeof(struct inotify_event) + event->len;
-		length = length - sizeof(struct inotify_event) - event->len;
-		KLOG_DEBUG("event->mask:%#x, nread:%d, length:%d", event->mask, nread, length);
-	}
-
-	//非删除文件和停止录屏，重新监控文件
-	inotify_rm_watch (fd, wd);
-	close(fd);
-	pThis->fileRemoved(false);
-	return;
-}
-
 void Recording::WatchFile()
 {
 	const QString &fileName = m_output_settings.file;
@@ -1650,10 +1613,6 @@ void Recording::WatchFile()
 		int ret = chown(fileName.toStdString().c_str(), pw->pw_uid, pw->pw_gid);
 		KLOG_INFO() << "chown file ret:" << ret << "errno:" << errno;
 	}
-
-	m_bStopRecord = false;
-	std::thread t(&thread_function, fileName, this);
-	t.detach();
 
 	operateCatchResume(true);
 }
@@ -1726,21 +1685,6 @@ void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 			KLOG_INFO() << getpid() << "call restart record";
 			OnRecordStartPause();
 		}
-	}
-}
-
-void Recording::onFileRemove(bool bRemove)
-{
-	if (bRemove)
-	{
-		KLOG_INFO() << "file:" << m_output_settings.file << "is deleted, restart the recording";
-		OnRecordSave();  // 结束视频录制
-		OnRecordStart(); // 开始新视频
-	}
-	else
-	{
-		KLOG_INFO() << "re-watch file" << m_output_settings.file;
-		WatchFile();
 	}
 }
 

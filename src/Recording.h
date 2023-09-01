@@ -183,8 +183,6 @@ private:
 	QTimer *m_audioTimer;
 
 public:
-	// 是否停止录像，用于结束监测文件是否被删除
-	bool m_bStopRecord;
 
 public:
 	Recording(QSettings* qsettings);
@@ -222,7 +220,6 @@ private:
 	QString getDbusSession();
 
 signals:
-	void fileRemoved(bool bRemove);
 
 public slots:
 	void UpdateConfigureData(QString, QString); //配置发生变化 响应槽
@@ -237,6 +234,5 @@ private slots:
 	//后台录屏无操作处理
 	void kidleResumeEvent();
 	void kidleTimeoutReached(int id, int timeout);
-	void onFileRemove(bool bRemove);
 	void OnIdleTimer();
 };

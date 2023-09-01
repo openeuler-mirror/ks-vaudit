@@ -61,7 +61,7 @@ private:
         CONFIG_RECORD_MIN_FREE_SPACE,       // 最小剩余磁盘，少于就通知并停止录屏，默认1G，单位：Byte
 
         CONFIG_AUDIT,                       //审计
-        CONFIG_AUDIT_FILEPATH,              // 文件保存路径，默认/opt
+        CONFIG_AUDIT_FILEPATH,              // 文件保存路径，默认opt/ks-vaudit
         CONFIG_AUDIT_FILETYPE,              // 文件保存格式，mkv、mp4，默认mkv
         CONFIG_AUDIT_RECORD_VIDIO,          // 录制视频，整数 0、1，默认1
         CONFIG_AUDIT_FPS,                   // 视频帧速，整数 2 - 60，默认10
@@ -79,7 +79,6 @@ private:
     };
 
 private:
-    QString m_confFile;
     QSharedPointer<QSettings> m_confSettings;
     QFileSystemWatcher *m_fileWatcher;
     QMap<ConfigureItem, QString> m_itemMap;

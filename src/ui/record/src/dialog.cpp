@@ -1,5 +1,6 @@
 #include "dialog.h"
 #include "ui_dialog.h"
+#include "common-definition.h"
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -55,7 +56,7 @@ void Dialog::initUI()
         initActivateUI(false);
     }else if(m_dialogType == QString("qrcode")){
         initQRcode();
-    }else if(m_dialogType == QString("DiskSpace")){
+    }else if(m_dialogType == QString(OPERATE_DISK_FRONT_NOTIFY)){
         ui->label->setText(tr("No free space on disk. Recording file saved. Please free disk storage and restart"));
     }else if(m_dialogType == QString("Warning")){
         ui->label->setText(tr("Rename failed, the file existed, please enter again!"));

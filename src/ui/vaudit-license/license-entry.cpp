@@ -5,6 +5,12 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
+#define KEY_ACTIVATION_CODE     "activation_code"
+#define KEY_MACHINE_CODE        "machine_code"
+#define KEY_ACTIVATION_STATUS   "activation_status"
+#define KEY_ACTIVATION_TIME     "activation_time"
+#define KEY_EXPIRED_TIME        "expired_time"
+
 LicenseEntry::LicenseEntry()
 {
     m_license = new License;
@@ -84,11 +90,11 @@ void LicenseEntry::getLicense(QString license_str)
                     {
                         QString jsonKey = it.key();
                         QString jsonString = it.value().toString();
-                        if (jsonKey == "activation_code")
+                        if (KEY_ACTIVATION_CODE == jsonKey)
                         {
                             m_license->activation_code = jsonString;
                         }
-                        else if (jsonKey == "machine_code")
+                        else if (KEY_MACHINE_CODE == jsonKey)
                         {
                             m_license->machine_code = jsonString;
                         }
@@ -97,15 +103,15 @@ void LicenseEntry::getLicense(QString license_str)
                     case QJsonValue::Double:
                     {
                         QString jsonKey = it.key();
-                        if (jsonKey == "activation_status")
+                        if (KEY_ACTIVATION_STATUS == jsonKey)
                         {
                             m_license->activation_status = it.value().toDouble();
                         }
-                        else if (jsonKey == "activation_time")
+                        else if (KEY_ACTIVATION_TIME == jsonKey)
                         {
                             m_license->activation_time = it.value().toDouble();
                         }
-                        else if (jsonKey == "expired_time")
+                        else if (KEY_EXPIRED_TIME == jsonKey)
                         {
                             m_license->expired_time = it.value().toDouble();
                         }

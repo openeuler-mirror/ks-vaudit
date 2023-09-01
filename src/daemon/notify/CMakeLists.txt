@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ks-vaudit-notify)
+#project(ks-vaudit-notify)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,6 +15,8 @@ file(GLOB_RECURSE NOTIFY_H_FILES ./*.h)
 file(GLOB NOTIFY_SRC "./*cpp" "./include/*.h")
 
 find_package(Qt5 COMPONENTS Core REQUIRED)
+
+file(COPY "${CMAKE_SOURCE_DIR}/src/common/common-definition.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${TARGET_NAME}
     ${NOTIFY_SRC})

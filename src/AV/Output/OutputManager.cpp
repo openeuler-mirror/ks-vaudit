@@ -264,57 +264,60 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 
 	AVFrame * avframe_gpu = NULL;
 
-	if (enc_ctx->pix_fmt == AV_PIX_FMT_VAAPI) {
-		avframe_gpu = av_frame_alloc();
-		if (avframe_gpu == NULL) {
-			Logger::LogInfo("[OutputManager::Encode] av_frame_alloc avframe_gpu failed.");
-			goto out;
-		}
+	do {
+		if (enc_ctx->pix_fmt == AV_PIX_FMT_VAAPI) {
+			avframe_gpu = av_frame_alloc();
+			if (avframe_gpu == NULL) {
+				Logger::LogInfo("[OutputManager::Encode] av_frame_alloc avframe_gpu failed.");
+				break;
+			}
 
-		avframe_gpu->format = AV_PIX_FMT_VAAPI;
-		avframe_gpu->width = frame->width;
-		avframe_gpu->height = frame->height;
-		avframe_gpu->pts = frame->pts;
+			avframe_gpu->format = AV_PIX_FMT_VAAPI;
+			avframe_gpu->width = frame->width;
+			avframe_gpu->height = frame->height;
+			avframe_gpu->pts = frame->pts;
 
-		error = av_hwframe_get_buffer(enc_ctx->hw_frames_ctx, avframe_gpu, 0);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::Encode] av_hwframe_get_buffer failed.");
-			goto out;
-		}
+			error = av_hwframe_get_buffer(enc_ctx->hw_frames_ctx, avframe_gpu, 0);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::Encode] av_hwframe_get_buffer failed.");
+				break;
+			}
 
-		error = av_hwframe_transfer_data(avframe_gpu, frame, 0);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::Encode] av_hwframe_transfer_data failed.");
-			goto out;
-		}
+			error = av_hwframe_transfer_data(avframe_gpu, frame, 0);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::Encode] av_hwframe_transfer_data failed.");
+				break;
+			}
 	
-		error = avcodec_send_frame(enc_ctx, avframe_gpu);
-	} else {
-		error = avcodec_send_frame(enc_ctx, frame);
-	}
-
-	if (error < 0) {
-		Logger::LogInfo("[OutputManager::Encode] avcodec_send_frame failed");
-		goto out;
-	}
-
-	while (error >= 0) {
-		error = avcodec_receive_packet(enc_ctx, pkt);
-		if (error == AVERROR(EAGAIN) || error == AVERROR_EOF) {
-			result = 0;
-			goto out;
-		}
-		else if (error < 0) { 
-			Logger::LogError("[OutputManager::Encode] Error during encoding");
-			result = -1;
-			goto out;
+			error = avcodec_send_frame(enc_ctx, avframe_gpu);
+		} else {
+			error = avcodec_send_frame(enc_ctx, frame);
 		}
 
-		// succeed
-		av_packet_unref(pkt);
-	}
-	
-out:
+		if (error < 0) {
+			Logger::LogInfo("[OutputManager::Encode] avcodec_send_frame failed");
+			break;
+		}
+
+		while (error >= 0) {
+			error = avcodec_receive_packet(enc_ctx, pkt);
+			if (error == AVERROR(EAGAIN) || error == AVERROR_EOF) {
+				result = 0;
+				break;
+			}
+			else if (error < 0) { 
+				Logger::LogError("[OutputManager::Encode] Error during encoding");
+				result = -1;
+				break;
+			}
+
+			// succeed
+			av_packet_unref(pkt);
+		}
+
+		break;
+
+	} while (0);
 
 	if (avframe_gpu) {
 #if SSR_USE_AV_FRAME_FREE
@@ -333,7 +336,7 @@ out:
 /*
  * nvenc refrence: https://github.com/Brainiarc7/ffmpeg-nvenc-magic/blob/master/doc/examples/decoding_encoding.c
  */
-int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
+int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) {
 
 	int result = -1;
 	int error = 0;
@@ -350,200 +353,203 @@ int OutputManager::CheckEncodeName(QString container_name, QString codecname) {
 	int i = 0;
 	int x = 0, y = 0;
 
-	// 提示函数已经过期，不需要调用了
-	// avcodec_register_all();
+	do {
+		codec = avcodec_find_encoder_by_name(codecname.toLatin1().data());
+		if (!codec) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] cannot fine codec by name: " + codecname);
+			break;
+		}
 
-	codec = avcodec_find_encoder_by_name(codecname.toLatin1().data());
-	if (!codec) {
-		Logger::LogInfo("[OutputManager::CheckEncodeNameValid] cannot fine codec by name: " + codecname);
-		goto out;
-	}
+		context = avcodec_alloc_context3(codec);
+		if (!context) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] avcodec_alloc_context3 failed, codecname: " + codecname);
+			break;
+		}
 
-	context = avcodec_alloc_context3(codec);
-	if (!context) {
-		Logger::LogInfo("[OutputManager::CheckEncodeNameValid] avcodec_alloc_context3 failed, codecname: " + codecname);
-		goto out;
-	}
+		pkt = av_packet_alloc();
+		if (!pkt) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_packet_alloc failed, codecname: " + codecname);
+			break;
+		}
 
-	pkt = av_packet_alloc();
-	if (!pkt) {
-		Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_packet_alloc failed, codecname: " + codecname);
-		goto out;
-	}
+		context->codec_id = codec->id;
+		context->codec_type = codec->type;
 
-	context->codec_id = codec->id;
-	context->codec_type = codec->type;
+		context->bit_rate = 10000;
+		/* resolution must be a multiple of two */
+		context->width = 352;
+		context->height = 288;
+		/* frames per second */
+		context->time_base = av_make_q(1, 10);
+		context->framerate = av_make_q(10, 1);
 
-	context->bit_rate = 10000;
-	/* resolution must be a multiple of two */
-	context->width = 352;
-	context->height = 288;
-	/* frames per second */
-	context->time_base = av_make_q(1, 10);
-	context->framerate = av_make_q(10, 1);
+		/* emit one intra frame every ten frames
+		 * check frame pict_type before passing frame
+		 * to encoder, if frame->pict_type is AV_PICTURE_TYPE_I
+		 * then gop_size is ignored and the output of encoder
+		 * will always be I frame irrespective to gop_size
+		 */
+		context->gop_size = 10;
+		context->max_b_frames = 1;
 
-	/* emit one intra frame every ten frames
-	 * check frame pict_type before passing frame
-	 * to encoder, if frame->pict_type is AV_PICTURE_TYPE_I
-	 * then gop_size is ignored and the output of encoder
-	 * will always be I frame irrespective to gop_size
-	 */
-	context->gop_size = 10;
-	context->max_b_frames = 1;
+		if (codecname.contains(QString(CODEC_NVENC), Qt::CaseInsensitive)) {
 
-	if (codecname.contains("nvenc", Qt::CaseInsensitive)) {
-
-		context->pix_fmt = AV_PIX_FMT_NV12;
-		av_opt_set(context->priv_data, "preset", "fast", 0);	
+			context->pix_fmt = AV_PIX_FMT_NV12;
+			av_opt_set(context->priv_data, "preset", "fast", 0);	
 		
-	} else 	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
-		error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
-			goto out;
-		}
+		} else 	if (codecname.contains(QString(CODEC_QSV), Qt::CaseInsensitive)) {
+			error = setenv("LIBVA_DRIVER_NAME", "iHD", 1);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=iHD failed, codecname: " + codecname);
+				break;
+			}
 
-		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create qsv device failed, codecname: " + codecname);
-			goto out;
-		}
+			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create qsv device failed, codecname: " + codecname);
+				break;
+			}
 
-		context->pix_fmt = AV_PIX_FMT_NV12;	
-		// bind device ref
-		context->hw_device_ctx = av_buffer_ref(hw_device_ctx_ref);
+			context->pix_fmt = AV_PIX_FMT_NV12;	
+			// bind device ref
+			context->hw_device_ctx = av_buffer_ref(hw_device_ctx_ref);
 
-	} else if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+		} else if (codecname.contains(QString(CODEC_VAAPI), Qt::CaseInsensitive)) {
 		
-		error = setenv("LIBVA_DRIVER_NAME", "i965", 1);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=i965 failed, codecname: " + codecname);
-			goto out;
-		}
+			error = setenv("LIBVA_DRIVER_NAME", "i965", 1);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] setenv LIBVA_DRIVER_NAME=i965 failed, codecname: " + codecname);
+				break;
+			}
 
 #if !SSR_USE_AVCODEC_PRIVATE_PRESET
-		X264Preset(context, "superfast");
+			X264Preset(context, "superfast");
 #else
-		av_dict_set(&options, "preset", "superfast", 0);
+			av_dict_set(&options, "preset", "superfast", 0);
 #endif
 
-		error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create vaapi device failed, codecname: " + codecname);
-			goto out;
+			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create vaapi device failed, codecname: " + codecname);
+				break;
+			}
+
+			context->pix_fmt = AV_PIX_FMT_VAAPI;
+
+			hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
+			if (hw_frames_ctx_ref == NULL) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_hwframe_ctx_alloc failed, codecname: " + codecname);
+                		break;
+			}
+
+			AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)hw_frames_ctx_ref->data;
+			hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
+			hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
+			hw_frames_ctx->initial_pool_size = 0;
+			hw_frames_ctx->width     = context->width;
+			hw_frames_ctx->height    = context->height;
+
+			error = av_hwframe_ctx_init(hw_frames_ctx_ref);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_hwframe_ctx_init failed, codecname: " + codecname);
+				break;
+			}
+
+			// bind frame ref
+			context->hw_frames_ctx = av_buffer_ref(hw_frames_ctx_ref);
+			// context->hw_frames_ctx = hw_frames_ctx_ref;
 		}
 
-		context->pix_fmt = AV_PIX_FMT_VAAPI;
-
-		hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
-		assert(hw_frames_ctx_ref != NULL);
-
-		AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)hw_frames_ctx_ref->data;
-		hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
-		hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
-		hw_frames_ctx->initial_pool_size = 0;
-		hw_frames_ctx->width     = context->width;
-		hw_frames_ctx->height    = context->height;
-
-		error = av_hwframe_ctx_init(hw_frames_ctx_ref);
+		error = avcodec_open2(context, codec, &options);
 		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_hwframe_ctx_init failed, codecname: " + codecname);
-			goto out;
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] avcodec_open2 failed, codecname: " + codecname);
+			break;
 		}
-
-		// bind frame ref
-		context->hw_frames_ctx = av_buffer_ref(hw_frames_ctx_ref);
-		// context->hw_frames_ctx = hw_frames_ctx_ref;
-	}
-
-	error = avcodec_open2(context, codec, &options);
-	if (error < 0) {
-		Logger::LogInfo("[OutputManager::CheckEncodeNameValid] avcodec_open2 failed, codecname: " + codecname);
-		goto out;
-	}
 
 #if SSR_USE_AV_FRAME_ALLOC
-	frame = av_frame_alloc();
+		frame = av_frame_alloc();
 #else
-	frame = avcodec_alloc_frame();
+		frame = avcodec_alloc_frame();
 #endif
-	if (!frame) {
-		Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_alloc failed, codecname: " + codecname);
-		goto out;
-	}
-
-	frame->width  = context->width;
-	frame->height = context->height;
-
-	if (codecname.contains("qsv", Qt::CaseInsensitive)) {
-
-		frame->format = context->pix_fmt;
-		error = av_frame_get_buffer(frame, 32);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_get_buffer failed, codecname: " + codecname);
-			goto out;
+		if (!frame) {
+			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_alloc failed, codecname: " + codecname);
+			break;
 		}
+
+		frame->width  = context->width;
+		frame->height = context->height;
+
+		if (codecname.contains(QString(CODEC_QSV), Qt::CaseInsensitive)) {
+
+			frame->format = context->pix_fmt;
+			error = av_frame_get_buffer(frame, 32);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_get_buffer failed, codecname: " + codecname);
+				break;
+			}
 		
-		/* make sure the frame data is writabl */
-		error = av_frame_make_writable(frame);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_make_writable failed, codecname: " + codecname);
-			goto out;
-		}
+			/* make sure the frame data is writabl */
+			error = av_frame_make_writable(frame);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_frame_make_writable failed, codecname: " + codecname);
+				break;
+			}
 
-	} else if (codecname.contains("vaapi", Qt::CaseInsensitive) ||
-			codecname.contains("nvenc", Qt::CaseInsensitive)) {
+		} else if (codecname.contains(QString(CODEC_VAAPI), Qt::CaseInsensitive) ||
+				codecname.contains(QString(CODEC_NVENC), Qt::CaseInsensitive)) {
 
-		frame->format = AV_PIX_FMT_NV12;
+			frame->format = AV_PIX_FMT_NV12;
 
-		// another way to alloc frame buffer
-		/*size_t totalsize = grow_align16(context->width) * context->height * 1.5;
-		frame_data = std::make_shared<AVFrameData>(totalsize);
-		uint8_t *raw_data = frame_data->GetData();
-		frame->data[0] = raw_data;
-		frame->data[1] = raw_data + context->width * context->height;*/
+			// another way to alloc frame buffer
+			/*size_t totalsize = grow_align16(context->width) * context->height * 1.5;
+			frame_data = std::make_shared<AVFrameData>(totalsize);
+			uint8_t *raw_data = frame_data->GetData();
+			frame->data[0] = raw_data;
+			frame->data[1] = raw_data + context->width * context->height;*/
 		
-		error = av_image_alloc(frame->data, frame->linesize, context->width, context->height, AV_PIX_FMT_NV12, 16);
-		if (error < 0) {
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_image_alloc failed, codecname: " + codecname);
-			goto out;
-		}
-	}
-
-	// prepare yuv image
-	for (i = 0; i < 10; i++) {
-
-		/* prepare a dummy image */
-		/* Y */
-		for (y = 0; y < context->height; y++) {
-			for (x = 0; x < context->width; x++) {
-				frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
+			error = av_image_alloc(frame->data, frame->linesize, context->width, context->height, AV_PIX_FMT_NV12, 16);
+			if (error < 0) {
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_image_alloc failed, codecname: " + codecname);
+				break;
 			}
 		}
 
-		/* Cb and Cr */
-		for (y = 0; y < context->height/2; y++) {
-			for (x = 0; x < context->width/2; x++) {
-				frame->data[1][y * frame->linesize[1] + 2 * x] = 128 + y + i * 2;
-				frame->data[1][y * frame->linesize[1] + 2 * x + 1] = 64 + x + i * 5;
+		// prepare yuv image
+#define TEST_ENCODE_IMAGE_COUNT 10
+
+		for (i = 0; i < TEST_ENCODE_IMAGE_COUNT; i++) {
+
+			/* prepare a dummy image */
+			/* Y */
+			for (y = 0; y < context->height; y++) {
+				for (x = 0; x < context->width; x++) {
+					frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
+				}
+			}
+
+			/* Cb and Cr */
+			for (y = 0; y < context->height/2; y++) {
+				for (x = 0; x < context->width/2; x++) {
+					frame->data[1][y * frame->linesize[1] + 2 * x] = 128 + y + i * 2;
+					frame->data[1][y * frame->linesize[1] + 2 * x + 1] = 64 + x + i * 5;
+				}
+			}
+
+			frame->pts = i;
+
+			/* encode the image */
+			error = Encode(context, frame, pkt);
+			if (error < 0) {
+				// encode this frame failed, mean that this codec is invalid
+				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] encode failed, codecname: " + codecname);
+				break;
 			}
 		}
+	
+		// encode all frames suceed
+		result = 0;
 
-		frame->pts = i;
-
-		/* encode the image */
-		error = Encode(context, frame, pkt);
-		if (error < 0) {
-			// encode this frame failed, mean that this codec is invalid
-			Logger::LogInfo("[OutputManager::CheckEncodeNameValid] encode failed, codecname: " + codecname);
-			goto out;
-		}
-	}
-
-	// encode all frames suceed
-	result = 0;
-
-out:
+	} while (0);
 
 	if (options) {
 		av_dict_free(&options);
@@ -552,7 +558,7 @@ out:
 
 	if (frame) {
 		// 查看文档，av_image_alloc 分配的内存需要手动释放，通过 av_frame_get_buffer 分配的貌似不需要
-		if (codecname.contains("vaapi", Qt::CaseInsensitive)) {
+		if (codecname.contains(QString(CODEC_VAAPI), Qt::CaseInsensitive)) {
 			av_freep(&frame->data[0]);
 		}
 
@@ -596,43 +602,47 @@ out:
  */
 QString OutputManager::ChooseEncodeName(QString container_name) {
 
-	if ((QString::compare(container_name, "mp4", Qt::CaseInsensitive) != 0) && 
-		QString::compare(container_name, "matroska", Qt::CaseInsensitive) != 0 && 
-		QString::compare(container_name, "ogg", Qt::CaseInsensitive) != 0) {
+	if ((QString::compare(container_name, OM_CONTAINER_MP4, Qt::CaseInsensitive) != 0) && 
+		QString::compare(container_name, OM_CONTAINER_MKV, Qt::CaseInsensitive) != 0 && 
+		QString::compare(container_name, OM_CONTAINER_OGG, Qt::CaseInsensitive) != 0) {
 		Logger::LogWarning("[OutputManager::ChooseEncodeName] container name invalid: " + container_name);
 		return QString("");
 	}
 
 	int ret = 0;
-	if (QString::compare(container_name, "mp4", Qt::CaseInsensitive) == 0 ||
-		QString::compare(container_name, "matroska", Qt::CaseInsensitive) == 0) {
+	QString codecname = QString("");
+	if (QString::compare(container_name, OM_CONTAINER_MP4, Qt::CaseInsensitive) == 0 ||
+		QString::compare(container_name, OM_CONTAINER_MKV, Qt::CaseInsensitive) == 0) {
 
 		// check nvenc
-		ret = CheckEncodeName(container_name, "h264_nvenc");
+		codecname = CODEC_H264_NVENC;
+		ret = CheckEncodeName(container_name, codecname);
 		if (ret >= 0) {
-			return QString("h264_nvenc");
+			return QString(CODEC_H264_NVENC);
 		}
 
 		// task 61427, use vaapi first on i5-6500, avoid mem leak of qsv
 		// check vaapi
-		ret = CheckEncodeName(container_name, "h264_vaapi");
+		codecname = CODEC_H264_VAAPI;
+		ret = CheckEncodeName(container_name, codecname);
 		if (ret >= 0) {
-			return QString("h264_vaapi");
+			return QString(CODEC_H264_VAAPI);
 		}
 
 		// check qsv
-		ret = CheckEncodeName(container_name, "h264_qsv");
+		codecname = CODEC_H264_QSV;
+		ret = CheckEncodeName(container_name, codecname);
 		if (ret >= 0) {
-			return QString("h264_qsv");
+			return QString(CODEC_H264_QSV);
 		}
 
-		return QString("libx264");
+		return QString(CODEC_H264_CPU);
 	}
 
-	if (QString::compare(container_name, "ogg", Qt::CaseInsensitive) == 0) {
+	if (QString::compare(container_name, OM_CONTAINER_OGG, Qt::CaseInsensitive) == 0) {
 
 		// ogg doesnot support hw acce
-		return QString("libtheora");
+		return QString(CODEC_THEORA);
 	}
 
 	return QString("");
@@ -673,7 +683,7 @@ void OutputManager::StartFragment() {
 	// quality of qsv: global_quality [1-51] lower num mean higher quality
 
 	std::vector<std::pair<QString, QString> >().swap(m_output_settings.video_options);
-	if (enc_name.contains("qsv")) {
+	if (enc_name.contains(QString(CODEC_QSV))) {
 
 		if (m_output_settings.encode_quality == "0") {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(14)));
@@ -683,8 +693,8 @@ void OutputManager::StartFragment() {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(10)));
 		}
 
-	} else if (enc_name.contains("vaapi") ||
-			enc_name.contains("nvenc")) {
+	} else if (enc_name.contains(QString(CODEC_VAAPI)) ||
+			enc_name.contains(QString(CODEC_NVENC))) {
 
 		unsigned int vaapi_kbit_rate = 0;
 
@@ -692,7 +702,7 @@ void OutputManager::StartFragment() {
 			vaapi_kbit_rate = 2048;
 
 			// bug 61543, 3.2-8H + p400 + nvenc, cpu usage bigger than 20%
-			if (enc_name.contains("nvenc")) {
+			if (enc_name.contains(QString(CODEC_NVENC))) {
 				vaapi_kbit_rate = 1024;
 			}
 		} else if (m_output_settings.encode_quality == "1") {
@@ -704,7 +714,7 @@ void OutputManager::StartFragment() {
 		vaapi_kbit_rate = vaapi_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
 		m_output_settings.video_kbit_rate = vaapi_kbit_rate;
 
-	} else if (enc_name == "libtheora") {
+	} else if (enc_name == CODEC_THEORA) {
 
 		// 在Recording.cpp里统一判断音频编码器
 //		m_output_settings.audio_codec_avname = QString("libvorbis");
@@ -724,7 +734,7 @@ void OutputManager::StartFragment() {
 		theora_kbit_rate = theora_kbit_rate * m_output_settings.video_width / 1920 * m_output_settings.video_height / 1080;
 		m_output_settings.video_kbit_rate = theora_kbit_rate;
 
-	} else if (enc_name == "libx264") {
+	} else if (enc_name == CODEC_H264_CPU) {
 
 		m_output_settings.video_options.push_back(std::make_pair(QString("crf"), QString::number(23)));
 		if (m_output_settings.encode_quality == "0") {

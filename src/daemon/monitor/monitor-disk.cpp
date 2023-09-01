@@ -266,22 +266,22 @@ void MonitorDisk::fixVidoeSuffix(const QString &filePath)
 bool MonitorDisk::checkMP4Broken(const QString &fileAbsPath)
 {
     // 检查mp4文件是否有时长，目前是没有时长的播放不了
-    AVFormatContext* pCtx = NULL;
+    AVFormatContext* pCtx = nullptr;
     bool finalret = true;
-    int ret = avformat_open_input(&pCtx, fileAbsPath.toStdString().c_str(), NULL, NULL);
+    int ret = avformat_open_input(&pCtx, fileAbsPath.toStdString().c_str(), nullptr, nullptr);
     if (ret < 0)
     {
         KLOG_DEBUG() << "avformat_open_input() failed:" << ret;
         return !finalret;
     }
-    int ret1 = avformat_find_stream_info(pCtx,NULL);
+    int ret1 = avformat_find_stream_info(pCtx,nullptr);
     if(ret1 < 0)
     {
         KLOG_DEBUG() << "avformat_find_stream_info() failed:" << ret1;
-        if (pCtx != NULL)
+        if (pCtx)
         {
             avformat_close_input(&pCtx);
-            pCtx=NULL;
+            pCtx=nullptr;
         }
         return !finalret;
     }
@@ -290,10 +290,10 @@ bool MonitorDisk::checkMP4Broken(const QString &fileAbsPath)
     {
         finalret = false;
     }
-    if (pCtx != NULL)
+    if (pCtx)
     {
         avformat_close_input(&pCtx);
-        pCtx=NULL;
+        pCtx=nullptr;
     }
     return finalret;
 }

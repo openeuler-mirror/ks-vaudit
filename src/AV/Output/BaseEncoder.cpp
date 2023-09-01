@@ -67,9 +67,9 @@ BaseEncoder::BaseEncoder(Muxer* muxer, AVStream* stream, AVCodecContext* codec_c
 
 	m_pts_cnt = 0;
 	// 初始化GPU加速相关变量
-	m_hw_device_ctx_ref = NULL;
-	m_hw_frames_ctx_ref = NULL;
-	m_avframe_gpu = NULL;
+	m_hw_device_ctx_ref = nullptr;
+	m_hw_frames_ctx_ref = nullptr;
+	m_avframe_gpu = nullptr;
 
 	try {
 		Init(codec, options);
@@ -170,7 +170,7 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 	// only for video
 	RETURN_IF_TRUE(GetCodecContext()->width <= 0 || GetCodecContext()->height <= 0)
 
-	if (m_hw_device_ctx_ref != NULL) {
+	if (m_hw_device_ctx_ref) {
 		return;
 	}
 
@@ -181,10 +181,10 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 	int ret = 0;
 	if (strstr(codec->name, "vaapi")) {
 		enc_type = EncodeTypeVaapi;
-		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
+		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", nullptr, 0);
 	} else if (strstr(codec->name, "qsv")) {
 		enc_type = EncodeTypeQsv;
-		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", nullptr, 0);
 	} else {
 		Logger::LogError(QString("[BaseEncoder::InitGpuEncode] invalid codec name: ") + codec->name);
 		return;
@@ -199,7 +199,7 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 		m_codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
 
 		m_hw_frames_ctx_ref = av_hwframe_ctx_alloc(m_hw_device_ctx_ref);
-		if (m_hw_frames_ctx_ref == NULL) {
+		if (!m_hw_frames_ctx_ref) {
 			Logger::LogError(QString("[BaseEncoder::InitGpuEncode] av_hwframe_ctx_alloc failed, codec name: ") + codec->name);
 			return;
 		}
@@ -240,8 +240,8 @@ void BaseEncoder::Init(AVCodec* codec, AVDictionary** options) {
 	m_codec_opened = true;
 
 	// show a warning for every option that wasn't recognized
-	AVDictionaryEntry *t = NULL;
-	while((t = av_dict_get(*options, "", t, AV_DICT_IGNORE_SUFFIX)) != NULL) {
+	AVDictionaryEntry *t = nullptr;
+	while((t = av_dict_get(*options, "", t, AV_DICT_IGNORE_SUFFIX))) {
 		Logger::LogWarning("[BaseEncoder::Init] " + Logger::tr("Warning: Codec option '%1' was not recognised!").arg(t->key));
 	}
 
@@ -273,7 +273,7 @@ void BaseEncoder::EncoderThread() {
 					lock->m_frame_queue.pop_front();
 				}
 			}
-			if(frame == NULL) {
+			if(!frame) {
 				if(m_should_finish) {
 					break;
 				}
@@ -290,7 +290,7 @@ void BaseEncoder::EncoderThread() {
 		if(!m_should_stop && (m_codec_context->codec->capabilities & AV_CODEC_CAP_DELAY)) {
 			Logger::LogInfo("[BaseEncoder::EncoderThread] " + Logger::tr("Flushing encoder ..."));
 			while(!m_should_stop) {
-				if(!EncodeFrame(NULL)) {
+				if(!EncodeFrame(nullptr)) {
 					break;
 				}
 			}

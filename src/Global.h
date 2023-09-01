@@ -144,14 +144,14 @@ inline bool IsPlatformX11() {
 		return false;
 #endif
 	char *v = getenv("XDG_SESSION_TYPE");
-	if(v != NULL) {
+	if(v) {
 		if(strcasecmp(v, "x11") == 0)
 			return true;
 		if(strcasecmp(v, "wayland") == 0 || strcasecmp(v, "mir") == 0)
 			return false;
 	}
 	char *d = getenv("DISPLAY");
-	return (d != NULL);
+	return (d != nullptr);
 }
 
 // replacement for QFontMetrics::width()
@@ -428,8 +428,8 @@ inline int64_t hrt_time_micro() {
 // Returns the name of the user.
 inline std::string GetUserName() {
 	std::vector<char> buf(std::max((long) 16384, sysconf(_SC_GETPW_R_SIZE_MAX)));
-	passwd pwd, *result = NULL;
-	if(getpwuid_r(geteuid(), &pwd, buf.data(), buf.size(), &result) == 0 && result != NULL)
+	passwd pwd, *result = nullptr;
+	if(getpwuid_r(geteuid(), &pwd, buf.data(), buf.size(), &result) == 0 && result)
 		return std::string(result->pw_name);
 	return "unknownuser";
 }

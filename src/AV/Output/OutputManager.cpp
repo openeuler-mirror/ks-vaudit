@@ -45,8 +45,8 @@ OutputManager::OutputManager(const OutputSettings& output_settings) {
 	{
 		SharedLock lock(&m_shared_data);
 		lock->m_fragment_number = 0;
-		lock->m_video_encoder = NULL;
-		lock->m_audio_encoder = NULL;
+		lock->m_video_encoder = nullptr;
+		lock->m_audio_encoder = nullptr;
 	}
 
 	// initialize thread signals
@@ -81,7 +81,7 @@ OutputManager::~OutputManager() {
 void OutputManager::Finish() {
 
 	// stop the synchronizer
-	if(m_synchronizer != NULL) {
+	if(m_synchronizer) {
 		m_synchronizer->NewSegment(); // needed to make sure that all data is sent to the encoders
 		m_synchronizer.reset();
 	}
@@ -91,7 +91,7 @@ void OutputManager::Finish() {
 		m_should_finish = true;
 	} else {
 		SharedLock lock(&m_shared_data);
-		assert(lock->m_muxer != NULL);
+		assert(lock->m_muxer);
 		lock->m_muxer->Finish();
 	}
 
@@ -102,7 +102,7 @@ bool OutputManager::IsFinished() {
 	if(m_fragmented) {
 		return (m_is_done || m_error_occurred);
 	} else {
-		assert(lock->m_muxer != NULL);
+		assert(lock->m_muxer);
 		return (lock->m_muxer->IsDone() || lock->m_muxer->HasErrorOccurred());
 	}
 }
@@ -115,13 +115,13 @@ void OutputManager::AddVideoFrame(std::unique_ptr<AVFrameWrapper> frame) {
 		int64_t fragment_end = m_fragment_length * m_output_format.m_video_frame_rate * lock->m_fragment_number;
 		if(frame->GetFrame()->pts < fragment_end) {
 			frame->GetFrame()->pts -= fragment_begin;
-			assert(lock->m_video_encoder != NULL);
+			assert(lock->m_video_encoder);
 			lock->m_video_encoder->AddFrame(std::move(frame));
 		} else {
 			lock->m_video_frame_queue.push_back(std::move(frame));
 		}
 	} else {
-		assert(lock->m_video_encoder != NULL);
+		assert(lock->m_video_encoder);
 		lock->m_video_encoder->AddFrame(std::move(frame));
 	}
 }
@@ -134,13 +134,13 @@ void OutputManager::AddAudioFrame(std::unique_ptr<AVFrameWrapper> frame) {
 		int64_t fragment_end = m_fragment_length * m_output_format.m_audio_sample_rate * lock->m_fragment_number;
 		if(frame->GetFrame()->pts < fragment_end) {
 			frame->GetFrame()->pts -= fragment_begin;
-			assert(lock->m_audio_encoder != NULL);
+			assert(lock->m_audio_encoder);
 			lock->m_audio_encoder->AddFrame(std::move(frame));
 		} else {
 			lock->m_audio_frame_queue.push_back(std::move(frame));
 		}
 	} else {
-		assert(lock->m_audio_encoder != NULL);
+		assert(lock->m_audio_encoder);
 		lock->m_audio_encoder->AddFrame(std::move(frame));
 	}
 }
@@ -150,7 +150,7 @@ int64_t OutputManager::GetVideoFrameDelay() {
 	{
 		SharedLock lock(&m_shared_data);
 		frames += lock->m_video_frame_queue.size();
-		if(lock->m_video_encoder != NULL) {
+		if(lock->m_video_encoder) {
 			frames += lock->m_video_encoder->GetQueuedFrameCount();
 			packets += lock->m_video_encoder->GetQueuedPacketCount();
 		}
@@ -172,28 +172,28 @@ int64_t OutputManager::GetVideoFrameDelay() {
 unsigned int OutputManager::GetTotalQueuedFrameCount() {
 	SharedLock lock(&m_shared_data);
 	unsigned int frames = lock->m_video_frame_queue.size();
-	if(lock->m_video_encoder != NULL)
+	if(lock->m_video_encoder)
 		frames += lock->m_video_encoder->GetQueuedFrameCount() + lock->m_video_encoder->GetFrameLatency();
 	return frames;
 }
 
 double OutputManager::GetActualFrameRate() {
 	SharedLock lock(&m_shared_data);
-	if(lock->m_video_encoder == NULL)
+	if(!lock->m_video_encoder)
 		return 0.0;
 	return lock->m_video_encoder->GetActualFrameRate();
 }
 
 double OutputManager::GetActualBitRate() {
 	SharedLock lock(&m_shared_data);
-	if(lock->m_muxer == NULL)
+	if(!lock->m_muxer)
 		return 0.0;
 	return lock->m_muxer->GetActualBitRate();
 }
 
 uint64_t OutputManager::GetTotalBytes() {
 	SharedLock lock(&m_shared_data);
-	if(lock->m_muxer == NULL)
+	if(!lock->m_muxer)
 		return 0;
 	return lock->m_muxer->GetTotalBytes();
 }
@@ -206,7 +206,7 @@ void OutputManager::Init() {
 	// save output format for synchronizer (we assume that this will always be the same)
 	{
 		SharedLock lock(&m_shared_data);
-		if(lock->m_video_encoder != NULL) {
+		if(lock->m_video_encoder) {
 			m_output_format.m_video_enabled = true;
 			m_output_format.m_video_width = lock->m_video_encoder->GetWidth();
 			m_output_format.m_video_height = lock->m_video_encoder->GetHeight();
@@ -216,7 +216,7 @@ void OutputManager::Init() {
 		} else {
 			m_output_format.m_video_enabled = false;
 		}
-		if(lock->m_audio_encoder != NULL) {
+		if(lock->m_audio_encoder) {
 			m_output_format.m_audio_enabled = true;
 			m_output_format.m_audio_channels = lock->m_audio_encoder->GetChannels(); //TODO// never larger than AV_NUM_DATA_POINTERS
 			assert(m_output_format.m_audio_channels <= AV_NUM_DATA_POINTERS);
@@ -246,8 +246,8 @@ void OutputManager::Free() {
 	// stop the encoders and muxers
 	{
 		SharedLock lock(&m_shared_data);
-		lock->m_video_encoder = NULL; // deleted by muxer
-		lock->m_audio_encoder = NULL; // deleted by muxer
+		lock->m_video_encoder = nullptr; // deleted by muxer
+		lock->m_audio_encoder = nullptr; // deleted by muxer
 		lock->m_muxer.reset();
 	}
 
@@ -258,16 +258,16 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 	int result = -1;
 	int error = 0;
 	
-	assert(enc_ctx != NULL);
-	assert(frame != NULL);
-	assert(pkt != NULL);
+	assert(enc_ctx);
+	assert(frame);
+	assert(pkt);
 
-	AVFrame * avframe_gpu = NULL;
+	AVFrame * avframe_gpu = nullptr;
 
 	do {
 		if (enc_ctx->pix_fmt == AV_PIX_FMT_VAAPI) {
 			avframe_gpu = av_frame_alloc();
-			if (avframe_gpu == NULL) {
+			if (!avframe_gpu) {
 				Logger::LogInfo("[OutputManager::Encode] av_frame_alloc avframe_gpu failed.");
 				break;
 			}
@@ -327,7 +327,7 @@ int OutputManager::Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt
 #else
 		av_free(avframe_gpu);
 #endif
-		avframe_gpu = NULL;
+		avframe_gpu = nullptr;
 	}
 	
 	return result;
@@ -341,14 +341,14 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 	int result = -1;
 	int error = 0;
 
-	const AVCodec *codec = NULL;
-	AVCodecContext *context = NULL;
+	const AVCodec *codec = nullptr;
+	AVCodecContext *context = nullptr;
 
-	AVBufferRef *hw_device_ctx_ref = NULL;
-	AVBufferRef *hw_frames_ctx_ref = NULL;
-	AVFrame *frame = NULL;
-	AVPacket *pkt = NULL;
-	AVDictionary* options = NULL;
+	AVBufferRef *hw_device_ctx_ref = nullptr;
+	AVBufferRef *hw_frames_ctx_ref = nullptr;
+	AVFrame *frame = nullptr;
+	AVPacket *pkt = nullptr;
+	AVDictionary* options = nullptr;
 
 	int i = 0;
 	int x = 0, y = 0;
@@ -404,7 +404,7 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 				break;
 			}
 
-			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", nullptr, 0);
 			if (error < 0) {
 				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create qsv device failed, codecname: " + codecname);
 				break;
@@ -428,7 +428,7 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 			av_dict_set(&options, "preset", "superfast", 0);
 #endif
 
-			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", NULL, 0);
+			error = av_hwdevice_ctx_create(&hw_device_ctx_ref, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", nullptr, 0);
 			if (error < 0) {
 				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] create vaapi device failed, codecname: " + codecname);
 				break;
@@ -437,7 +437,7 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 			context->pix_fmt = AV_PIX_FMT_VAAPI;
 
 			hw_frames_ctx_ref = av_hwframe_ctx_alloc(hw_device_ctx_ref);
-			if (hw_frames_ctx_ref == NULL) {
+			if (!hw_frames_ctx_ref) {
 				Logger::LogInfo("[OutputManager::CheckEncodeNameValid] av_hwframe_ctx_alloc failed, codecname: " + codecname);
                 		break;
 			}
@@ -553,7 +553,7 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 
 	if (options) {
 		av_dict_free(&options);
-		options = NULL;		
+		options = nullptr;
 	}
 
 	if (frame) {
@@ -569,27 +569,27 @@ int OutputManager::CheckEncodeName(QString &container_name, QString &codecname) 
 #else
 		av_free(frame);
 #endif
-		frame = NULL;
+		frame = nullptr;
 	}
 
 	if (hw_frames_ctx_ref) {
 		av_buffer_unref(&hw_frames_ctx_ref);
-		hw_frames_ctx_ref = NULL;
+		hw_frames_ctx_ref = nullptr;
 	}
 
 	if (hw_device_ctx_ref) {
 		av_buffer_unref(&hw_device_ctx_ref);
-		hw_device_ctx_ref = NULL;
+		hw_device_ctx_ref = nullptr;
 	}	
 	
 	if (pkt) {
 		av_packet_free(&pkt);
-		pkt = NULL;
+		pkt = nullptr;
 	}
 
 	if (context) {
 		avcodec_free_context(&context);
-		context = NULL;
+		context = nullptr;
 	}
 
 	return result;
@@ -666,8 +666,8 @@ void OutputManager::StartFragment() {
 		filename = m_output_settings.file;
 	}
 	std::unique_ptr<Muxer> muxer(new Muxer(m_output_settings.container_avname, filename));
-	VideoEncoder *video_encoder = NULL;
-	AudioEncoder *audio_encoder = NULL;
+	VideoEncoder *video_encoder = nullptr;
+	AudioEncoder *audio_encoder = nullptr;
 
 	int ret = unsetenv("LIBVA_DRIVER_NAME");
 	if (ret < 0) {
@@ -801,7 +801,7 @@ void OutputManager::StartFragment() {
 			frame->GetFrame()->pts -= fragment_begin;
 			video_encoder->AddFrame(std::move(frame));
 		}
-		while(!lock->m_audio_frame_queue.empty() && audio_encoder != NULL) {
+		while(!lock->m_audio_frame_queue.empty() && audio_encoder) {
 			int64_t fragment_begin = m_fragment_length * m_output_format.m_audio_sample_rate * (lock->m_fragment_number - 1);
 			int64_t fragment_end = m_fragment_length * m_output_format.m_audio_sample_rate * lock->m_fragment_number;
 			if(lock->m_audio_frame_queue.front()->GetFrame()->pts >= fragment_end)
@@ -822,13 +822,13 @@ void OutputManager::StopFragment() {
 	{
 		SharedLock lock(&m_shared_data);
 		muxer = std::move(lock->m_muxer);
-		lock->m_video_encoder = NULL; // deleted by muxer
-		lock->m_audio_encoder = NULL; // deleted by muxer
+		lock->m_video_encoder = nullptr; // deleted by muxer
+		lock->m_audio_encoder = nullptr; // deleted by muxer
 	}
 
 	// wait until the muxer is finished
 	// we can't hold the lock while doing this because this could take some time
-	assert(muxer != NULL);
+	assert(muxer);
 	muxer->Finish();
 	while(!muxer->IsDone() && !muxer->HasErrorOccurred()) {
 		usleep(200000);

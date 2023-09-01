@@ -57,7 +57,7 @@ public:
 
 	void Parse();
 
-	inline static CommandLineOptions* GetInstance() { assert(s_instance != NULL); return s_instance; }
+	inline static CommandLineOptions* GetInstance() { assert(s_instance); return s_instance; }
 
 	inline static const QString& GetSettingsFile() { return GetInstance()->m_settings_file; }
 	inline static const QString& GetLogFile() { return GetInstance()->m_log_file; }

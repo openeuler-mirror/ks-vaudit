@@ -78,7 +78,7 @@ unsigned int AudioEncoder::GetSampleRate() {
 
 bool AudioEncoder::AVCodecIsSupported(const QString& codec_name) {
 	AVCodec *codec = (AVCodec*)avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
-	if(codec == NULL)
+	if(!codec)
 		return false;
 	if(!av_codec_is_encoder(codec))
 		return false;
@@ -152,7 +152,7 @@ void AudioEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 
 bool AudioEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
-	if(frame != NULL) {
+	if(frame) {
 #if SSR_USE_AVFRAME_NB_SAMPLES
 		assert((unsigned int) frame->GetFrame()->nb_samples == GetFrameSize());
 #endif
@@ -170,7 +170,7 @@ bool AudioEncoder::EncodeFrame(AVFrameWrapper* frame) {
 #if SSR_USE_AVCODEC_SEND_RECEIVE
 
 	// send a frame
-	AVFrame *avframe = (frame == NULL)? NULL : frame->Release();
+	AVFrame *avframe = (!frame)? nullptr : frame->Release();
 	try {
 		if(avcodec_send_frame(GetCodecContext(), avframe) < 0) {
 			Logger::LogError("[AudioEncoder::EncodeFrame] " + Logger::tr("Error: Sending of audio frame failed!"));
@@ -206,7 +206,7 @@ bool AudioEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 	// encode the frame
 	int got_packet;
-	if(avcodec_encode_audio2(GetCodecContext(), packet->GetPacket(), (frame == NULL)? NULL : frame->GetFrame(), &got_packet) < 0) {
+	if(avcodec_encode_audio2(GetCodecContext(), packet->GetPacket(), (!frame)? nullptr : frame->GetFrame(), &got_packet) < 0) {
 		Logger::LogError("[AudioEncoder::EncodeFrame] " + Logger::tr("Error: Encoding of audio frame failed!"));
 		throw LibavException();
 	}
@@ -226,7 +226,7 @@ bool AudioEncoder::EncodeFrame(AVFrameWrapper* frame) {
 #else
 
 	// encode the frame
-	short *data = (frame == NULL)? NULL : (short*) frame->GetFrame()->data[0];
+	short *data = (!frame)? nullptr : (short*) frame->GetFrame()->data[0];
 	int bytes_encoded = avcodec_encode_audio(GetCodecContext(), m_temp_buffer.data(), m_temp_buffer.size(), data);
 	if(bytes_encoded < 0) {
 		Logger::LogError("[AudioEncoder::EncodeFrame] " + Logger::tr("Error: Encoding of audio frame failed!"));
@@ -244,7 +244,7 @@ bool AudioEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 		// set the timestamp
 		// note: pts will be rescaled and stream_index will be set by Muxer
-		if(GetCodecContext()->coded_frame != NULL && GetCodecContext()->coded_frame->pts != (int64_t) AV_NOPTS_VALUE)
+		if(GetCodecContext()->coded_frame && GetCodecContext()->coded_frame->pts != (int64_t) AV_NOPTS_VALUE)
 			packet->GetPacket()->pts = GetCodecContext()->coded_frame->pts;
 
 		// send the packet to the muxer

@@ -53,18 +53,18 @@ static void PulseAudioConnect(pa_mainloop** mainloop, pa_context** context) {
 
 	// create PulseAudio main loop
 	*mainloop = pa_mainloop_new();
-	if(*mainloop == NULL) {
+	if(*mainloop == nullptr) {
 		Logger::LogError("[PulseAudioConnect] " + Logger::tr("Error: Could not create main loop!"));
 		throw PulseAudioException();
 	}
 
 	// connect to PulseAudio
 	*context = pa_context_new(pa_mainloop_get_api(*mainloop), "ks-vaudit");
-	if(*context == NULL) {
+	if(*context == nullptr) {
 		Logger::LogError("[PulseAudioConnect] " + Logger::tr("Error: Could not create context!"));
 		throw PulseAudioException();
 	}
-	if(pa_context_connect(*context, NULL, PA_CONTEXT_NOAUTOSPAWN , NULL) < 0) {
+	if(pa_context_connect(*context, nullptr, PA_CONTEXT_NOAUTOSPAWN , nullptr) < 0) {
 #if SSR_USE_ALSA
 		Logger::LogError("[PulseAudioConnect] " + Logger::tr("Error: Could not connect! Reason: %1\n"
 															  "It is possible that your system doesn't use PulseAudio. Try using the ALSA backend instead.")
@@ -92,14 +92,14 @@ static void PulseAudioConnect(pa_mainloop** mainloop, pa_context** context) {
 }
 
 static void PulseAudioDisconnect(pa_mainloop** mainloop, pa_context** context) {
-	if(*context != NULL) {
+	if(*context != nullptr) {
 		pa_context_disconnect(*context);
 		pa_context_unref(*context);
-		*context = NULL;
+		*context = nullptr;
 	}
-	if(*mainloop != NULL) {
+	if(*mainloop != nullptr) {
 		pa_mainloop_free(*mainloop);
-		*mainloop = NULL;
+		*mainloop = nullptr;
 	}
 }
 
@@ -119,8 +119,8 @@ static void PulseAudioConnectStream(pa_mainloop* mainloop, pa_context* context, 
 	buffer_attr.tlength = (uint32_t) -1;
 
 	// create a stream
-	*stream = pa_stream_new(context, "ks-vaduit input", &sample_spec, NULL);
-	if(*stream == NULL) {
+	*stream = pa_stream_new(context, "ks-vaduit input", &sample_spec, nullptr);
+	if(*stream == nullptr) {
 		Logger::LogError("[PulseAudioConnectStream] " + Logger::tr("Error: Could not create stream! Reason: %1").arg(pa_strerror(pa_context_errno(context))));
 		throw PulseAudioException();
 	}
@@ -147,15 +147,15 @@ static void PulseAudioConnectStream(pa_mainloop* mainloop, pa_context* context, 
 }
 
 static void PulseAudioDisconnectStream(pa_stream** stream) {
-	if(*stream != NULL) {
+	if(*stream != nullptr) {
 		pa_stream_disconnect(*stream);
 		pa_stream_unref(*stream);
-		*stream = NULL;
+		*stream = nullptr;
 	}
 }
 
 static void PulseAudioCompleteOperation(pa_mainloop* mainloop, pa_operation** operation) {
-	if(*operation == NULL)
+	if(*operation == nullptr)
 		return;
 
 	// wait until the operation is done
@@ -168,12 +168,12 @@ static void PulseAudioCompleteOperation(pa_mainloop* mainloop, pa_operation** op
 
 	// delete it
 	pa_operation_unref(*operation);
-	operation = NULL;
+	operation = nullptr;
 
 }
 
 static void PulseAudioCancelOperation(pa_mainloop* mainloop, pa_operation** operation) {
-	if(*operation == NULL)
+	if(*operation == nullptr)
 		return;
 
 	// cancel it
@@ -189,7 +189,7 @@ static void PulseAudioCancelOperation(pa_mainloop* mainloop, pa_operation** oper
 
 	// delete it
 	pa_operation_unref(*operation);
-	operation = NULL;
+	operation = nullptr;
 
 }
 
@@ -199,9 +199,9 @@ PulseAudioInput::PulseAudioInput(const QString& source_name, unsigned int sample
 	m_sample_rate = sample_rate;
 	m_channels = 2;
 
-	m_pa_mainloop = NULL;
-	m_pa_context = NULL;
-	m_pa_stream = NULL;
+	m_pa_mainloop = nullptr;
+	m_pa_context = nullptr;
+	m_pa_stream = nullptr;
 	m_pa_period_size = 1024; // number of samples per period
 
 	//设置音量默认数值
@@ -253,16 +253,16 @@ std::vector<PulseAudioInput::Source> PulseAudioInput::GetSourceList() {
 
 	Logger::LogInfo("[PulseAudioInput::GetSourceList] " + Logger::tr("Generating source list ..."));
 
-	pa_mainloop *mainloop = NULL;
-	pa_context *context = NULL;
-	pa_operation *operation = NULL;
+	pa_mainloop *mainloop = nullptr;
+	pa_context *context = nullptr;
+	pa_operation *operation = nullptr;
 
 	try {
 
 		PulseAudioConnect(&mainloop, &context);
 
 		operation = pa_context_get_source_info_list(context, SourceNamesCallback, &list);
-		if(operation == NULL) {
+		if(!operation) {
 			Logger::LogError("[PulseAudioInput::GetSourceList] " + Logger::tr("Error: Could not get names of sources! Reason: %1").arg(pa_strerror(pa_context_errno(context))));
 			// throw PulseAudioException();
 			return list;
@@ -317,7 +317,7 @@ void PulseAudioInput::UpdateSourceVolume(pa_volume_t volume){
 	m_volume.values[0] = volume;
 	m_volume.values[1] = volume;
 
-	pa_operation * operation_volume = NULL;
+	pa_operation * operation_volume = nullptr;
 	try{
 		operation_volume = pa_context_set_source_volume_by_index(m_pa_context,pa_stream_get_device_index(m_pa_stream),&m_volume, SetSourceVolumeCallback, this);
 		PulseAudioCompleteOperation(m_pa_mainloop, &operation_volume);
@@ -328,10 +328,10 @@ void PulseAudioInput::UpdateSourceVolume(pa_volume_t volume){
 }
 
 void PulseAudioInput::DetectMonitor() {
-	pa_operation *operation = NULL;
+	pa_operation *operation = nullptr;
 	try {
 		operation = pa_context_get_source_info_by_index(m_pa_context, pa_stream_get_device_index(m_pa_stream), SourceInfoCallback, this);
-		if(operation == NULL) {
+		if(!operation) {
 			Logger::LogError("[PulseAudioInput::Init] " + Logger::tr("Error: Could not get source info! Reason: %1").arg(pa_strerror(pa_context_errno(m_pa_context))));
 			throw PulseAudioException();
 		}
@@ -425,7 +425,7 @@ void PulseAudioInput::InputThread() {
 				Logger::LogError("[PulseAudioInput::InputThread] " + Logger::tr("Error: pa_stream_peek failed!", "Don't translate 'pa_stream_peek'"));
 				throw PulseAudioException();
 			}
-			if(data == NULL) {
+			if(!data) {
 				if(bytes > 0) {
 					// skip hole
 					if (CONFIG_RECORD_AUDIO_MIC == m_record_audio_type){

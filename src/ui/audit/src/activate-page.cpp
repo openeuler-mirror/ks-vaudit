@@ -49,7 +49,7 @@ void ActivatePage::initUI()
 {
     this->setFixedSize(640,364);
     this->setWindowIcon(QIcon(":/images/a16px.png"));
-    this->setWindowTitle("软件激活");
+    this->setWindowTitle(tr("Software Activate"));
     // ---------------- Main Widget ------------------
     QWidget *ActivatedWidget = new QWidget(this);
     ActivatedWidget->setGeometry(0,0,640,364);
@@ -107,7 +107,7 @@ void ActivatePage::initUI()
     QLabel *titleLabel = new QLabel(titleBar);
     logoWidget->setGeometry(16,12,16,16);
     logoWidget->setStyleSheet("image:url(:/images/a16px.png);border:none");
-    titleLabel->setText("软件激活");
+    titleLabel->setText(tr("Software Activate"));
     titleLabel->setGeometry(42,4,100,30);
     titleLabel->setStyleSheet("color:#fff;font-size:12px;");
 
@@ -122,11 +122,11 @@ void ActivatePage::initUI()
                               "}");
     QVBoxLayout *mainVLayout = new QVBoxLayout(bodyWidget);
     mainVLayout->setContentsMargins(24,0,24,0);
-    QLabel *licenseCodeLabel = new QLabel("激活码");
+    QLabel *licenseCodeLabel = new QLabel(tr("Activation code"));
     m_licenseCodeEdit = new QLineEdit();
     m_licenseCodeEdit->setFixedSize(584,36);
 
-    QLabel *machineCodeLabel = new QLabel("机器码");
+    QLabel *machineCodeLabel = new QLabel(tr("Machine code"));
     QLineEdit *machineCodeEdit = new QLineEdit();
     machineCodeEdit->setStyleSheet("QLineEdit{"
                                    "background-color:#393939;"
@@ -152,16 +152,16 @@ void ActivatePage::initUI()
     hlayout->addStretch(1);
     hlayout->addWidget(qrBtn);
 
-    QLabel *dateCodeLabel = new QLabel("质保期");
+    QLabel *dateCodeLabel = new QLabel(tr("Expired date"));
 
     m_dateCodeEdit->setFixedSize(584,36);
 
     QWidget *btnGroup = new QWidget();
     QHBoxLayout *btnHLayout = new QHBoxLayout(btnGroup);
-    QString activateText = m_isActivated ? QString("重新激活") : QString("激活");
+    QString activateText = m_isActivated ? QString(tr("Re-activate")) : QString(tr("Activate"));
     m_activateBtn = new QPushButton(activateText);
     m_activateBtn->setFixedSize(110,40);
-    QPushButton *cancelBtn = new QPushButton("取消");
+    QPushButton *cancelBtn = new QPushButton(tr("Cancel"));
     cancelBtn->setFixedSize(110,40);
     m_activateBtn->setStyleSheet("QPushButton{"
                                  "background-color:#2eb3ff;"
@@ -226,10 +226,10 @@ void ActivatePage::initUI()
         m_licenseCodeEdit->setDisabled(true);
     }
 
-    QString machineCodeText = !m_machineCode.isEmpty() ? m_machineCode : QString("查询失败");
+    QString machineCodeText = !m_machineCode.isEmpty() ? m_machineCode : QString(tr("Query failed"));
     machineCodeEdit->setText(machineCodeText);
 
-    QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString("查询失败");
+    QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString(tr("Query failed"));
     m_dateCodeEdit->setText(expiredText);
     m_dateCodeEdit->setDisabled(true);
 
@@ -241,7 +241,7 @@ void ActivatePage::getLicenseInfo()
 {
     LicenseEntry::instance().getLicenseInfo(m_isActivated, m_machineCode, m_activateCode, m_expiredDate);
     // 更新质保期
-    QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString("查询失败");
+    QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString(tr("Query failed"));
     m_dateCodeEdit->setText(expiredText);
 //    KLOG_INFO() << "a:" << m_isActivated << "mc:" << m_machineCode << "ac:" << m_activateCode << "ed:" << m_expiredDate;
 }
@@ -249,8 +249,8 @@ void ActivatePage::getLicenseInfo()
 void ActivatePage::acceptBtnClicked()
 {
     //激活和重新激活复用一个按钮
-    if(m_isActivated && !m_activateCode.isEmpty() && QString::compare(m_activateBtn->text(),QString("重新激活"))==0){
-        m_activateBtn->setText("激活");
+    if(m_isActivated && !m_activateCode.isEmpty() && QString::compare(m_activateBtn->text(),QString(tr("Re-activate")))==0){
+        m_activateBtn->setText(tr("Activate"));
         m_licenseCodeEdit->setDisabled(false);
         return;
     }
@@ -262,7 +262,7 @@ void ActivatePage::acceptBtnClicked()
         // 未激活状态不会进这里
         m_licenseCodeEdit->setText(m_activateCode);
         m_licenseCodeEdit->setDisabled(true);
-        m_activateBtn->setText("重新激活");
+        m_activateBtn->setText(tr("Re-activate"));
     }
     if (ret){
         Dialog *retDialog = new Dialog(this,"activate");

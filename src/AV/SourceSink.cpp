@@ -24,23 +24,23 @@ BaseSource::BaseSource() {
 BaseSource::~BaseSource() {
 	SharedLock lock(&m_shared_data);
 	for(SinkData &s : lock->m_sinks) {
-		s.sink->m_source = NULL;
+		s.sink->m_source = nullptr;
 	}
 }
 
 BaseSink::BaseSink() {
-	m_source = NULL;
+	m_source = nullptr;
 	m_priority = 0;
 }
 BaseSink::~BaseSink() {
 	// Classes that inherit a sink should disconnect themselves in the destructor before doing anything else,
 	// otherwise inputs may try to send data to partially destructed sinks.
-	assert(m_source == NULL);
+	assert(!m_source);
 }
 void BaseSink::ConnectBaseSource(BaseSource* source, int priority) {
 	if(m_source == source && m_priority == priority)
 		return;
-	if(m_source != NULL) {
+	if(m_source) {
 		BaseSource::SharedLock lock(&m_source->m_shared_data);
 		for(auto it = lock->m_sinks.begin(); it != lock->m_sinks.end(); ++it) {
 			if(it->sink == this) {
@@ -50,7 +50,7 @@ void BaseSink::ConnectBaseSource(BaseSource* source, int priority) {
 		}
 	}
 	m_source = source;
-	if(m_source != NULL) {
+	if(m_source) {
 		BaseSource::SharedLock lock(&m_source->m_shared_data);
 		BaseSource::SinkData data(this, priority);
 		auto it = std::upper_bound(lock->m_sinks.begin(), lock->m_sinks.end(), data);

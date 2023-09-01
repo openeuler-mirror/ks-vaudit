@@ -325,11 +325,11 @@ void Recording::OnRecordTimer() {
 	if (!CommandLineOptions::GetFrontRecord())
 		return;
 
-	if (m_output_manager == NULL) {
+	if (!m_output_manager) {
 		return;
 	}
 
-	uint64_t total_time = (m_output_manager->GetSynchronizer() == NULL)? 0 : m_output_manager->GetSynchronizer()->GetTotalTime();
+	uint64_t total_time = (!m_output_manager->GetSynchronizer())? 0 : m_output_manager->GetSynchronizer()->GetTotalTime();
 	if (total_time == m_last_send_time) {
 		return;
 	}
@@ -340,7 +340,7 @@ void Recording::OnRecordTimer() {
 }
 
 void Recording::OnAudioTimer() {
-	if (m_output_manager == NULL)
+	if (!m_output_manager)
 		return;
 
 	if (!m_audio_enabled || m_audio_backend != AUDIO_BACKEND_PULSEAUDIO)
@@ -905,7 +905,7 @@ void Recording::StopPage(bool save) {
 
 	Logger::LogInfo("[PageRecord::StopPage] " + tr("Stopping page ..."));
 
-	if(m_output_manager != NULL) {
+	if(m_output_manager) {
 
 		// stop the output
 		if(save)
@@ -950,7 +950,7 @@ void Recording::StartOutput() {
 
 		Logger::LogInfo("[PageRecord::StartOutput] " + tr("Starting output ..."));
 
-		if(m_output_manager == NULL) {
+		if(!m_output_manager) {
 
 			// set the file name
 			if (m_auditBaseFileName.isEmpty())
@@ -974,7 +974,7 @@ void Recording::StartOutput() {
 			}
 
 			// for X11 recording, update the video size (if possible)
-			//if(m_x11_input != NULL)
+			//if(m_x11_input)
 			//	m_x11_input->GetCurrentSize(&m_video_in_width, &m_video_in_height);
 
 			// calculate the output width and height
@@ -1043,7 +1043,7 @@ void Recording::StopOutput(bool final) {
 
 #if SSR_USE_ALSA
 	// if final, don't play the notification (it would get interrupted anyway)
-	if(m_simple_synth != NULL && !final)
+	if(m_simple_synth && !final)
 		m_simple_synth->PlaySequence(SEQUENCE_RECORD_STOP.data(), SEQUENCE_RECORD_STOP.size());
 #endif
 
@@ -1057,8 +1057,8 @@ void Recording::StartInput() {
 	if(m_input_started)
 		return;
 
-	assert(m_x11_input == NULL);
-	assert(m_pulseaudio_input == NULL);
+	assert(!m_x11_input);
+	assert(!m_pulseaudio_input);
 
 	try {
 
@@ -1105,7 +1105,7 @@ void Recording::StartInput() {
 		Logger::LogError("[PageRecord::StartInput] " + tr("Error: Something went wrong during initialization."));
 		m_x11_input.reset();
 #if SSR_USE_OPENGL_RECORDING
-		if(m_gl_inject_input != NULL)
+		if(m_gl_inject_input)
 			m_gl_inject_input->SetCapturing(false);
 #endif
 #if SSR_USE_V4L2
@@ -1135,7 +1135,7 @@ void Recording::StopInput() {
 	m_x11_input.reset();
 	KLOG_DEBUG() << "end m_x11_input reset";
 #if SSR_USE_OPENGL_RECORDING
-	if(m_gl_inject_input != NULL)
+	if(m_gl_inject_input)
 		m_gl_inject_input->SetCapturing(false);
 #endif
 #if SSR_USE_V4L2
@@ -1157,7 +1157,7 @@ void Recording::StopInput() {
 }
 
 void Recording::FinishOutput() {
-	assert(m_output_manager != NULL);
+	assert(m_output_manager);
 
 	// tell the output manager to finish
 	m_output_manager->Finish();
@@ -1192,9 +1192,9 @@ void Recording::UpdateInput() {
 	}
 
 	// get sources
-	VideoSource *video_source = NULL;
-	AudioSourceInput *audio_source_input = NULL;
-	AudioSource *audio_source_output = NULL;
+	VideoSource *video_source = nullptr;
+	AudioSourceInput *audio_source_input = nullptr;
+	AudioSource *audio_source_output = nullptr;
 
 	video_source = m_x11_input.get();
 
@@ -1206,24 +1206,24 @@ void Recording::UpdateInput() {
 	}
 
 	// connect sinks
-	if(m_output_manager != NULL) {
+	if(m_output_manager) {
 		if(m_output_started) {
 			m_output_manager->GetSynchronizer()->ConnectVideoSource(video_source, PRIORITY_RECORD);
 			if (CONFIG_RECORD_AUDIO_MIC == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype ){
 				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(audio_source_input, PRIORITY_RECORD);
 			} else {
-				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(NULL);
+				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(nullptr);
 			}
 
 			if (CONFIG_RECORD_AUDIO_SPEAKER == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype) {
 				m_output_manager->GetSynchronizer()->ConnectAudioSource(audio_source_output, PRIORITY_RECORD);
 			} else {
-				m_output_manager->GetSynchronizer()->ConnectAudioSource(NULL);
+				m_output_manager->GetSynchronizer()->ConnectAudioSource(nullptr);
 			}
 		} else {
-			m_output_manager->GetSynchronizer()->ConnectVideoSource(NULL);
-			m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(NULL);
-			m_output_manager->GetSynchronizer()->ConnectAudioSource(NULL);
+			m_output_manager->GetSynchronizer()->ConnectVideoSource(nullptr);
+			m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(nullptr);
+			m_output_manager->GetSynchronizer()->ConnectAudioSource(nullptr);
 		}
 	}
 }

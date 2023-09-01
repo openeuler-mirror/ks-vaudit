@@ -37,7 +37,7 @@ class Monitor : public QObject
 {
     Q_OBJECT
 public:
-    explicit Monitor(QObject *parent = NULL);
+    explicit Monitor(QObject *parent = nullptr);
     ~Monitor();
     QProcess* startRecordWithDisplay(sessionInfo info);
 
@@ -55,6 +55,7 @@ private:
     QString frontGetXAuth(QString userName, QString display);
     bool processExist(int pid);
     QString getCurrentSessionDisplay();
+    bool creatLicenseObjectName();
 
 private slots:
     void monitorProcess();

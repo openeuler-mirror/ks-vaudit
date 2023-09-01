@@ -5,8 +5,13 @@
 #include <qrencode.h>
 #include <QPainter>
 #include "dialog.h"
-#include "license-entry.h"
 #include "kiran-log/qt5-log-i.h"
+#include "common-definition.h"
+#include <QDBusMessage>
+#include <QDBusConnection>
+#include <QJsonParseError>
+#include <QJsonObject>
+#include <QDateTime>
 
 ActivatePage::ActivatePage(QWidget *parent) : QDialog(parent)
 {
@@ -24,11 +29,11 @@ ActivatePage::~ActivatePage()
 {
     if (m_licenseCodeEdit){
         delete m_licenseCodeEdit;
-        m_licenseCodeEdit = NULL;
+        m_licenseCodeEdit = nullptr;
     }
     if (m_dateCodeEdit){
         delete m_dateCodeEdit;
-        m_dateCodeEdit = NULL;
+        m_dateCodeEdit = nullptr;
     }
 }
 
@@ -239,7 +244,7 @@ void ActivatePage::initUI()
 
 void ActivatePage::getLicenseInfo()
 {
-    LicenseEntry::instance().getLicenseInfo(m_isActivated, m_machineCode, m_activateCode, m_expiredDate);
+    getLicense(m_isActivated, m_machineCode, m_activateCode, m_expiredDate);
     // 更新质保期
     QString expiredText = !m_expiredDate.isEmpty() ? m_expiredDate : QString(tr("Query failed"));
     m_dateCodeEdit->setText(expiredText);
@@ -256,7 +261,7 @@ void ActivatePage::acceptBtnClicked()
     }
     QString activeCode = m_licenseCodeEdit->text();
     // 激活完后重新取结果, 更新全局变量
-    bool ret = LicenseEntry::instance().activation(activeCode);
+    bool ret = activation(activeCode);
     getLicenseInfo();
     if (m_isActivated && !m_activateCode.isEmpty()){
         // 未激活状态不会进这里
@@ -336,4 +341,64 @@ void ActivatePage::keyPressEvent(QKeyEvent *event)
     default:
         QDialog::keyPressEvent(event);
     }
+}
+
+int ActivatePage::getLicense(bool &bActive, QString &machineCode, QString &activeCode, QString &expiredTime)
+{
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
+                                                                DBUS_LICENSE_VAUDIT_PATH,
+                                                                DBUS_LICENSE_INTERFACE,
+                                                                DBUS_LICENSE_METHOD_GETLICENSE);
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
+    KLOG_DEBUG() << "msgReply " << msgReply;
+    QString errorMsg;
+
+    if (msgReply.type() != QDBusMessage::ReplyMessage)
+        return -1;
+
+    QList<QVariant> args = msgReply.arguments();
+    if (args.size() < 1)
+        return -1;
+
+    QVariant firstArg = args.takeFirst();
+
+    QJsonParseError jError;
+    QJsonDocument doc = QJsonDocument::fromJson(firstArg.toString().toLatin1(), &jError);
+    if (doc.isNull() || !doc.isObject() || jError.error != QJsonParseError::NoError)
+        return -1;
+
+    QJsonObject jsonObj = doc.object();
+    for (auto k : jsonObj.keys())
+    {
+        if (DBUS_LICENSE_ACTIVATION_STATUS == k)
+            bActive = jsonObj[k].toDouble() == 1 ? true : false;
+        else if (DBUS_LICENSE_ACTIVATION_CODE == k)
+            activeCode = jsonObj[k].toString();
+        else if (DBUS_LICENSE_MACHINE_CODE == k)
+            machineCode = jsonObj[k].toString();
+        else if (DBUS_LICENSE_EXPIRED_TIME == k)
+            expiredTime = QDateTime::fromTime_t(jsonObj[k].toDouble()).toString("yyyy-MM-dd");
+        else
+            continue;
+    }
+
+    return 0;
+}
+
+bool ActivatePage::activation(QString activeCode)
+{
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
+                                                                DBUS_LICENSE_VAUDIT_PATH,
+                                                                DBUS_LICENSE_INTERFACE,
+                                                                DBUS_LICENSE_METHOD_ACTIVATE);
+    msgMethodCall << activeCode;
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
+    KLOG_DEBUG() << "msgReply " << msgReply;
+
+    if (msgReply.type() != QDBusMessage::ErrorMessage)
+        return true;
+
+    QString errorMsg = msgReply.errorMessage();
+    KLOG_INFO() << "error:" << errorMsg;
+    return false;
 }

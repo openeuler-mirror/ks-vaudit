@@ -62,17 +62,17 @@ AVFrameWrapper::AVFrameWrapper(const std::shared_ptr<AVFrameData>& refcounted_da
 #else
 	m_frame = avcodec_alloc_frame();
 #endif
-	if(m_frame == NULL)
+	if(!m_frame)
 		std::bad_alloc();
 #if SSR_USE_AVFRAME_EXTENDED_DATA
 	// ffmpeg docs say that extended_data should point to data if it isn't used
-	if(m_frame != NULL)
+	if(m_frame)
 		m_frame->extended_data = m_frame->data;
 #endif
 }
 
 AVFrameWrapper::~AVFrameWrapper() {
-	if(m_frame != NULL) {
+	if(m_frame) {
 #if SSR_USE_AV_FRAME_FREE
 		av_frame_free(&m_frame);
 #elif SSR_USE_AVCODEC_FREE_FRAME
@@ -85,15 +85,15 @@ AVFrameWrapper::~AVFrameWrapper() {
 
 #if SSR_USE_AVCODEC_SEND_RECEIVE
 AVFrame* AVFrameWrapper::Release() {
-	assert(m_frame != NULL);
+	assert(m_frame);
 	std::shared_ptr<AVFrameData> *ptr = new std::shared_ptr<AVFrameData>(m_refcounted_data);
 	m_frame->buf[0] = av_buffer_create(m_refcounted_data->GetData(), m_refcounted_data->GetSize(), &DeleteFrameDataPointer, ptr, AV_BUFFER_FLAG_READONLY);
-	if(m_frame->buf[0] == NULL) {
+	if(!m_frame->buf[0]) {
 		delete ptr;
 		throw std::bad_alloc();
 	}
 	AVFrame *frame = m_frame;
-	m_frame = NULL;
+	m_frame = nullptr;
 	return frame;
 }
 #endif
@@ -101,13 +101,13 @@ AVFrame* AVFrameWrapper::Release() {
 AVPacketWrapper::AVPacketWrapper() {
 #if SSR_USE_AV_PACKET_ALLOC
 	m_packet = av_packet_alloc();
-	if(m_packet == NULL)
+	if(!m_packet)
 		std::bad_alloc();
 #else
 	m_packet = new AVPacket;
 	m_free_on_destruct = true;
 	av_init_packet(m_packet);
-	m_packet->data = NULL;
+	m_packet->data = nullptr;
 	m_packet->size = 0;
 #endif
 }
@@ -115,7 +115,7 @@ AVPacketWrapper::AVPacketWrapper() {
 AVPacketWrapper::AVPacketWrapper(size_t size) {
 #if SSR_USE_AV_PACKET_ALLOC
 	m_packet = av_packet_alloc();
-	if(m_packet == NULL)
+	if(!m_packet)
 		std::bad_alloc();
 #else
 	m_packet = new AVPacket;
@@ -140,17 +140,17 @@ AVPacketWrapper::~AVPacketWrapper() {
 }
 
 bool AVFormatIsInstalled(const QString& format_name) {
-	return (av_guess_format(format_name.toUtf8().constData(), NULL, NULL) != NULL);
+	return (av_guess_format(format_name.toUtf8().constData(), nullptr, nullptr) != nullptr);
 }
 
 bool AVCodecIsInstalled(const QString& codec_name) {
-	return (avcodec_find_encoder_by_name(codec_name.toUtf8().constData()) != NULL);
+	return (avcodec_find_encoder_by_name(codec_name.toUtf8().constData()) != nullptr);
 }
 
 bool AVCodecSupportsPixelFormat(const AVCodec* codec, AVPixelFormat pixel_fmt) {
 	const AVPixelFormat *p = codec->pix_fmts;
-	if(p == NULL)
-		return true; // NULL means 'unknown' or 'any', assume it is supported
+	if(!p)
+		return true; // nullptr means 'unknown' or 'any', assume it is supported
 	while(*p != AV_PIX_FMT_NONE) {
 		if(*p == pixel_fmt)
 			return true;
@@ -161,8 +161,8 @@ bool AVCodecSupportsPixelFormat(const AVCodec* codec, AVPixelFormat pixel_fmt) {
 
 bool AVCodecSupportsSampleFormat(const AVCodec* codec, AVSampleFormat sample_fmt) {
 	const AVSampleFormat *p = codec->sample_fmts;
-	if(p == NULL)
-		return true; // NULL means 'unknown' or 'any', assume it is supported
+	if(!p)
+		return true; // nullptr means 'unknown' or 'any', assume it is supported
 	while(*p != AV_SAMPLE_FMT_NONE) {
 		if(*p == sample_fmt)
 			return true;

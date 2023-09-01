@@ -20,6 +20,8 @@ protected:
     void getLicenseInfo();
     void genQRcode(QLabel *);
     void keyPressEvent(QKeyEvent *event);
+    int getLicense(bool &bActive, QString &machineCode, QString &activeCode, QString &expiredTime);
+    bool activation(QString activeCode);
 
 private slots:
     void acceptBtnClicked();

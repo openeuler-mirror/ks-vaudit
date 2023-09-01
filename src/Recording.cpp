@@ -1602,13 +1602,33 @@ void Recording::SetFileTypeSetting()
 	m_settings->setValue("output/file", file_path + "/" + file_suffix); //只能用绝对路径， 有空优化一下这地方
 }
 
+// 被切用户，在进行重启录像操作中调用catchNextResumeEvent，catchNextResumeEvent会卡住
+void checkStuck(void *user)
+{
+	Recording *pThis = (Recording *)user;
+	int cnt = 0;
+	do
+	{
+		if (pThis->m_catchFlag)
+			return;
+		sleep(1);
+	} while(cnt++ < 4);
+
+	// 卡住说明用户被切，实际也不能录像，调用exit直接退出
+	KLOG_INFO() << "call catchNextResumeEvent stuck, save and exit" << getpid();
+	exit(0);
+}
+
 void Recording::kidleResumeEvent()
 {
-	KLOG_INFO() << "move mouse or press key, m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << "pid:" << getpid() << KIdleTime::instance()->idleTime();
+	m_catchFlag = false;
+	std::thread t(&checkStuck, this);
+	t.detach();
+	KLOG_INFO() << "move mouse or press key, m_timingPause:" << m_timingPause << "cur display:" << getenv("DISPLAY") << "pid:" << getpid();
 
 	KIdleTime::instance()->removeAllIdleTimeouts();
 	KIdleTime::instance()->addIdleTimeout(m_timingPause*60000);
-
+	m_catchFlag = true;
 	// 如果定时器还在，并触发了resumingFromIdle信号，说明是第一次触发，也就是从录屏状态到录屏状态，不需要重启录屏
 	if (m_IdleTimer->isActive())
 	{
@@ -1629,13 +1649,17 @@ void Recording::kidleResumeEvent()
 
 void Recording::kidleTimeoutReached(int id, int timeout)
 {
-	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << "pid:" << getpid() << KIdleTime::instance()->idleTime();
+	KLOG_INFO() << "pause record, id:" << id << "timeout:" << timeout << "cur display:" << getenv("DISPLAY") << "pid:" << getpid();
 	// 已经触发了无操作状态，一般这里不会进(根据实测第一次触发的是resumingFromIdle信号)
 	if (m_IdleTimer->isActive())
 	{
 		m_IdleTimer->stop();
 	}
+	m_catchFlag = false;
+	std::thread t(&checkStuck, this);
+	t.detach();
 	KIdleTime::instance()->catchNextResumeEvent();
+	m_catchFlag = true;
 	if (m_page_started && m_output_started)
 	{
 		OnRecordPause();
@@ -1694,23 +1718,6 @@ bool Recording::parseJsonData(const QString &param,  QJsonObject &jsonObj)
 	return true;
 }
 
-// 被切用户，在进行重启录像操作中调用catchNextResumeEvent，catchNextResumeEvent会卡住
-void checkStuck(void *user)
-{
-	Recording *pThis = (Recording *)user;
-	int cnt = 0;
-	do
-	{
-		if (pThis->m_catchFlag)
-			return;
-		sleep(1);
-	} while(cnt++ < 3);
-
-	// 卡住说明用户被切，实际也不能录像，调用exit直接退出
-	KLOG_INFO() << "call catchNextResumeEvent stuck, save and exit" << getpid();
-	exit(0);
-}
-
 void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 {
 	//仅支持审计录屏
@@ -1721,6 +1728,9 @@ void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 	// 关掉旧的定时
 	if (m_IdleTimer->isActive())
 		m_IdleTimer->stop();
+	m_catchFlag = false;
+	std::thread t(&checkStuck, this);
+	t.detach();
 	// 关闭无操作录屏事件
 	KIdleTime::instance()->stopCatchingResumeEvent();
 	KIdleTime::instance()->removeAllIdleTimeouts();
@@ -1731,13 +1741,10 @@ void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 		if (m_timingPause != 0)
 		{
 			m_IdleTimer->start(m_timingPause*60000);
-			m_catchFlag = false;
-			std::thread t(&checkStuck, this);
-			t.detach();
 			KIdleTime::instance()->catchNextResumeEvent();
-			m_catchFlag = true;
 		}
 	}
+	m_catchFlag = true;
 
 	// 修改m_timingPause
 	if (bRestartRecord)

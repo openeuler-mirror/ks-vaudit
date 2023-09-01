@@ -300,8 +300,25 @@ void Recording::OnRecordTimer() {
 				KLOG_INFO() << getpid() << fileName << "file reaches maximum limit, save and exit process";
 				OnRecordSaveAndExit(true);
 			}
-		}
 
+			// Fps 和 Quality判断，解决被切用户修改配置没有重启的问题
+			QSettings confSettings("/etc/ks-vaudit/ks-vaudit.conf", QSettings::IniFormat);
+			if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings.value("audit/Fps").toString().toInt() 
+				|| m_settings->value("encode/quality").toString().toInt() != confSettings.value("audit/Quality").toString().toInt())
+			{
+				sleep(1);
+				QSettings confSettings1("/etc/ks-vaudit/ks-vaudit.conf", QSettings::IniFormat);
+				if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings1.value("audit/Fps").toString().toInt() 
+					|| m_settings->value("encode/quality").toString().toInt() != confSettings1.value("audit/Quality").toString().toInt())
+				{
+					m_settings->setValue("input/video_frame_rate", confSettings1.value("audit/Fps").toString().toInt());
+					m_settings->setValue("encode/quality", confSettings1.value("audit/Quality").toString().toInt());
+					KLOG_INFO() << "Fps or Quality change";
+					OnRecordSave();  // 结束视频录制
+					OnRecordStart(); // 开始新视频
+				}
+			}
+		}
 	}
 
 	if (!CommandLineOptions::GetFrontRecord())
@@ -867,7 +884,7 @@ void Recording::SaveSettings(QSettings* settings) {
 	{
 		key = "TimingPause";
 		m_timingPause = jsonObj[key].toString().toInt();
-		KLOG_INFO() << "m_timingPause:" << m_timingPause;
+		KLOG_INFO() << getpid() << "m_timingPause:" << m_timingPause;
 		key = "MinFreeSpace";
 		m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
 		key = "MaxFileSize";
@@ -1676,6 +1693,23 @@ bool Recording::parseJsonData(const QString &param,  QJsonObject &jsonObj)
 	return true;
 }
 
+// 被切用户，在进行重启录像操作中调用catchNextResumeEvent，catchNextResumeEvent会卡住
+void checkStuck(void *user)
+{
+	Recording *pThis = (Recording *)user;
+	int cnt = 0;
+	do
+	{
+		if (pThis->m_catchFlag)
+			return;
+		sleep(1);
+	} while(cnt++ < 3);
+
+	// 卡住说明用户被切，实际也不能录像，调用exit直接退出
+	KLOG_INFO() << "call catchNextResumeEvent stuck, save and exit" << getpid();
+	exit(0);
+}
+
 void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 {
 	//仅支持审计录屏
@@ -1696,7 +1730,11 @@ void Recording::operateCatchResume(bool bStartCatch, bool bRestartRecord)
 		if (m_timingPause != 0)
 		{
 			m_IdleTimer->start(m_timingPause*60000);
+			m_catchFlag = false;
+			std::thread t(&checkStuck, this);
+			t.detach();
 			KIdleTime::instance()->catchNextResumeEvent();
+			m_catchFlag = true;
 		}
 	}
 

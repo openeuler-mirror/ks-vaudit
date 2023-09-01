@@ -184,6 +184,8 @@ private:
 	QTimer *m_audioTimer;
 
 public:
+	// 后台审计无操作处理，是否卡住标记
+	bool m_catchFlag;
 
 public:
 	Recording(QSettings* qsettings);

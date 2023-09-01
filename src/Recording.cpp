@@ -229,6 +229,7 @@ Recording::Recording(QSettings* qsettings){
 	m_separate_files = false;
 	m_auditDiskEnough = true;
 	m_pNotifyProcess = nullptr;
+	m_maxFileSize = 2147483648;
 
 	//list all devices
 	for(int i=0;i< m_pulseaudio_sources.size();i++){
@@ -292,6 +293,15 @@ void Recording::OnRecordTimer() {
 			OnRecordSave();  // 结束视频录制
 			OnRecordStart(); // 开始新视频
 		}
+
+		if (!CommandLineOptions::GetFrontRecord()) {
+			QFileInfo fileinfo(fileName);
+			if (fileinfo.size() >= m_maxFileSize) {
+				KLOG_INFO() << getpid() << fileName << "file reaches maximum limit, save and exit process";
+				OnRecordSaveAndExit(true);
+			}
+		}
+
 	}
 
 	if (!CommandLineOptions::GetFrontRecord())
@@ -860,6 +870,8 @@ void Recording::SaveSettings(QSettings* settings) {
 		KLOG_INFO() << "m_timingPause:" << m_timingPause;
 		key = "MinFreeSpace";
 		m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
+		key = "MaxFileSize";
+		m_maxFileSize = jsonObj[key].toString().toULongLong();
 	}
 }
 
@@ -1428,6 +1440,8 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 					m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
 					callNotifyProcess();
 				}
+			} else if ("MaxFileSize" == key) {
+				m_maxFileSize = jsonObj[key].toString().toULongLong();
 			}
 		}
 		if (needRestart){
@@ -1718,7 +1732,8 @@ void Recording::callNotifyProcess()
 	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 	env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable
 	env.insert("XAUTHORITY", getenv("XAUTHORITY"));
-	env.insert("DBUS_SESSION_BUS_ADDRESS", getDbusSession());
+	env.insert("DBUS_SESSION_BUS_ADDRESS", ""); // 不需要DBUS_SESSION_BUS_ADDRESS，不去掉有可能弹窗到其他用户
+	KLOG_INFO() << getpid() << "DISPLAY:" << getenv("DISPLAY") << "XAUTHORITY:" << getenv("XAUTHORITY");
 	m_pNotifyProcess->setProcessEnvironment(env);
 	QStringList arg;
 	struct passwd *pw = getpwnam(CommandLineOptions::GetFrontUser().toStdString().c_str());
@@ -1732,7 +1747,7 @@ void Recording::callNotifyProcess()
 		}
 	});
 	m_pNotifyProcess->start("/usr/bin/ks-vaudit-notify", arg);
-	KLOG_INFO() << "notify process"<< m_pNotifyProcess->pid() << m_pNotifyProcess->arguments();
+	KLOG_INFO() << getpid() << "notify process"<< m_pNotifyProcess->pid() << m_pNotifyProcess->arguments();
 }
 
 void Recording::clearNotify()
@@ -1744,46 +1759,4 @@ void Recording::clearNotify()
 		delete m_pNotifyProcess;
 		m_pNotifyProcess = nullptr;
 	}
-}
-
-QString Recording::getDbusSession()
-{
-	QProcess process;
-	process.setProgram("sh");
-	QString arg = "pid=`pgrep \"gnome-session\" -u " + CommandLineOptions::GetFrontUser() + "` && cat /proc/$pid/environ";
-	KLOG_INFO() << "arg:" << arg;
-	process.setArguments(QStringList() << "-c" << arg);
-	process.start();
-
-	QString resOut;
-	if (process.waitForFinished())
-	{
-		QByteArray data = process.readAll();
-		QString str;
-		QStringList strlist;
-		for (int i = 0; i < data.size(); i++)
-		{
-			if (data[i] == '\x00' || data[i] == ' ')
-			{
-				strlist.append(str);
-				str.clear();
-				continue;
-			}
-			str = str + data[i];
-		}
-
-		int index = strlist.indexOf(QRegularExpression("^DBUS_SESSION_BUS_ADDRESS=.*"));
-		if (index != -1)
-		{
-			QStringList list = strlist[index].split("DBUS_SESSION_BUS_ADDRESS=");
-			KLOG_INFO() << "DBUS_SESSION_BUS_ADDRESS" << strlist[index] << list << list.size();
-			if (list.size() == 2)
-			{
-				resOut = list[1];
-			}
-		}
-	}
-
-	process.close();
-	return resOut;
 }

@@ -198,7 +198,7 @@ void GeneralConfigure::initData()
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_VIDIO], "1");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_FPS], "10");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_QUALITY], "1");
-    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_AUDIO], "speaker");
+    m_lastMap.insert(m_itemMap[CONFIG_AUDIT_RECORD_AUDIO], "none");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_BITRATE], "128");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT], "1");
     m_lastMap.insert(m_itemMap[CONFIG_AUDIT_WATER_PRINT_TEXT], "");

@@ -114,7 +114,7 @@ void Monitor::receiveNotification(int pid, QString message)
                     KLOG_INFO() << "audit receive disk space notify";
                     return;
                 }
-                else if (VAUDIT_ACTIVE == message)
+                if (VAUDIT_ACTIVE == message)
                 {
                     KLOG_INFO() << "audit send is_active";
                     it.value().bActive = true;

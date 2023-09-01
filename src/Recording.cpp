@@ -257,7 +257,7 @@ Recording::Recording(QSettings* qsettings){
 	for(QScreen *screen :  QApplication::screens()) {
 		if(screen != m_main_screen){
 			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)),  Qt::UniqueConnection);
-		}else if(screen == m_main_screen){
+		}else{
 			connect(m_main_screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)),  Qt::UniqueConnection); //主屏幕分辨率出现变化
 		}
 	}
@@ -568,7 +568,6 @@ void Recording::StartPage() {
 	m_pulseaudio_source_input = "";
 	m_pulseaudio_source_output = "";
 	m_audio_enabled = false;
-	m_audio_recordtype = CONFIG_RECORD_AUDIO_NONE;
 	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 
 	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
@@ -599,6 +598,8 @@ void Recording::StartPage() {
 		m_audio_recordtype = CONFIG_RECORD_AUDIO_MIC;
 	} else if (m_pulseaudio_source_output != "") {
 		m_audio_recordtype = CONFIG_RECORD_AUDIO_SPEAKER;
+	} else {
+		m_audio_recordtype = CONFIG_RECORD_AUDIO_NONE;
 	}
 
 	m_audio_channels = 2;
@@ -1398,6 +1399,8 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				m_settings->setValue("input/audio_micvolume",jsonObj[key].toString().toInt()); //麦克风音量
 			}else if(GENEARL_CONFIG_SPEAKER_VOLUME == key){ //扬声器音量设置
 				m_settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
+			}else{
+				KLOG_DEBUG() << "key:" << key;
 			}
 		}
 	}else if (GENEARL_CONFIG_AUDIT == keyStr && !isRecord){ //后台审计
@@ -1464,12 +1467,16 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				}
 			} else if (GENEARL_CONFIG_MAX_FILE_SIZE == key) {
 				m_maxFileSize = jsonObj[key].toString().toULongLong();
+			} else {
+				KLOG_DEBUG() << "key:" << key;
 			}
 		}
 		if (needRestart){
 			OnRecordSave();
 			OnRecordStart();
 		}
+	} else {
+		KLOG_DEBUG() << "keyStr:" << keyStr << "isRecord:" << isRecord;
 	}
 }
 
@@ -1515,6 +1522,8 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		operateCatchResume(true);
 		m_auditDiskEnough = true;
 		clearNotify();
+	}else {
+		Logger::LogInfo("[Recording::SwitchControl] from_pid:" + QString::number(from_pid) + "op:" + op);
 	}
 
 	if (CommandLineOptions::GetFrontRecord())

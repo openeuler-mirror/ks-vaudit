@@ -127,6 +127,10 @@ void MonitorDisk::parseConfigureInfo(QString value)
         {
             m_maxFileSize = jsonObj[key].toString().toULongLong();
         }
+        else
+        {
+            continue;
+        }
     }
 
     KLOG_DEBUG() << "FilePath:" << m_filePath << "MinFreeSpace:" << m_minFreeSpace << "maxSaveDays:" << m_maxSaveDays << "MaxRecordPerUser:" << m_maxRecordPerUser;
@@ -178,6 +182,10 @@ void MonitorDisk::parseRecordConfigureInfo(QString value)
         else if (GENEARL_CONFIG_MIN_FREE_SPACE == key)
         {
             m_recordMinFreeSpace = jsonObj[key].toString().toULongLong();
+        }
+        else
+        {
+            continue;
         }
     }
 

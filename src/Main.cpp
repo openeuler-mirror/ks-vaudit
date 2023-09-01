@@ -90,6 +90,8 @@ int main(int argc, char* argv[]) {
 		QApplication::installTranslator(&translator_ssr);
 	} else if(translator_ssr.load(QLocale::system(), "simplescreenrecorder", "_", GetApplicationSystemDir("translations"))) {
 		QApplication::installTranslator(&translator_ssr);
+	} else{
+		KLOG_DEBUG() << "load ssr translation failed";
 	}
 
 	// Qt doesn't count hidden windows, so if the main window is hidden and a dialog box is closed, Qt thinks the application should quit.

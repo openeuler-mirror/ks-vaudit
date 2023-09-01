@@ -85,11 +85,6 @@ void Monitor::recordProcess()
     {
         MonitorDisk::instance().checkFrontRecordFreeSpace(it.key(), it.value());
     }
-    for (auto i = m_frontRecordInfo.begin(); i != m_frontRecordInfo.end(); ++i){
-//        KLOG_INFO() << "key: " << i.key() << "pid: " << i.value()->pid()  << "state: " << i.value()->state();
-        if (i.value()->state() == QProcess::NotRunning)
-            MonitorDisk::instance().sendSwitchControl(i.key(), "daeth");
-    }
 
     m_pFontTimer->start(2000);
 }

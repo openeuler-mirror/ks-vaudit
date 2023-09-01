@@ -25,7 +25,7 @@ if(WITH_JACK)
 	find_package(Jack REQUIRED)
 endif()
 
-find_package(Qt5 COMPONENTS Core Gui Widgets X11Extras Multimedia REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets X11Extras Multimedia REQUIRED LinguistTools)
 
 pkg_search_module(X11_XCB REQUIRED x11-xcb)
 pkg_search_module(XET REQUIRED xext)

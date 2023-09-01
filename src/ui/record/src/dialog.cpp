@@ -42,9 +42,9 @@ QLabel *Dialog::getQrLabel()
 void Dialog::initUI()
 {
     if (m_dialogType == QString("exit")){
-        ui->label->setText("关闭程序后将退出麒麟信安录屏软件，是否关闭程序？");
+        ui->label->setText(tr("Confirm to exit Vaudit Record?"));
     }else if(m_dialogType == QString("delete")){
-        ui->label->setText("是否确认删除录屏文件？\n删除后将无法恢复，请谨慎操作！");
+        ui->label->setText(tr("Confirm to delete the file?\nThe file cannot restore, please be cautious!"));
     }else if(m_dialogType == QString("about")){
         initAboutUI();
     }else if(m_dialogType == QString("rename")){
@@ -56,16 +56,16 @@ void Dialog::initUI()
     }else if(m_dialogType == QString("qrcode")){
         initQRcode();
     }else if(m_dialogType == QString("DiskSpace")){
-        ui->label->setText("磁盘空间不足，已为您保存当前录屏，请清理空间后再进行录制");
+        ui->label->setText(tr("No free space on disk. Recording file saved. Please free disk storage and restart"));
     }else if(m_dialogType == QString("Warning")){
-        ui->label->setText("重命名失败，该文件名已存在，请重新输入！");
+        ui->label->setText(tr("Rename failed, the file existed, please enter again!"));
     }
 }
 
 void Dialog::initAboutUI()
 {
     // 如果是关于窗口，单独函数处理
-    ui->titleText->setText("关于软件");
+    ui->titleText->setText(tr("About Software"));
     ui->label->hide();
     this->setFixedSize(684,338);
     ui->dialogWidget->setFixedSize(684,338);
@@ -101,7 +101,7 @@ void Dialog::initAboutUI()
     QHBoxLayout *hwLayou1 = new QHBoxLayout(vWidget1);
 
     QLabel *label1 = new QLabel(vWidget1);
-    label1->setText("软件版本号");
+    label1->setText(tr("Software version"));
     label1->setFont(QFont("Sans Serif", 12));
     QLabel *label2 = new QLabel(vWidget1);
     label2->setText("v1.0");
@@ -118,7 +118,7 @@ void Dialog::initAboutUI()
     QHBoxLayout *hwLayou2 = new QHBoxLayout(vWidget2);
 
     QLabel *label3 = new QLabel(vWidget2);
-    label3->setText("版权信息");
+    label3->setText(tr("Copyright infomation"));
     label3->setFont(QFont("Sans Serif", 12));
     QLabel *label4 = new QLabel(vWidget2);
     label4->setText("Copyright ©2022-2023 KylinSec Co.Ltd.All Rights Reserved.");
@@ -139,7 +139,7 @@ void Dialog::initAboutUI()
 
 void Dialog::initRenameUI()
 {
-    ui->titleText->setText("重命名");
+    ui->titleText->setText(tr("Rename"));
     ui->label->hide();
 //    m_oldName = m_fileName;
 //    ui->bodyWidget->setFocusPolicy(Qt::ClickFocus);
@@ -167,7 +167,7 @@ void Dialog::initRenameUI()
     m_warningLabel->setGeometry(24,53,264,36);
     m_warningLabel->setAlignment(Qt::AlignCenter);
     m_warningLabel->setStyleSheet("color:#fa1919;");
-    m_warningLabel->setText("重命名失败，请重新输入");
+    m_warningLabel->setText(tr("Rename failed, please re-enter"));
     m_warningLabel->hide();
     m_fileNameEditor->setFocus();
     m_fileNameEditor->selectAll();
@@ -175,17 +175,17 @@ void Dialog::initRenameUI()
 
 void Dialog::initActivateUI(bool isSucceed)
 {
-    ui->titleText->setText("软件激活");
+    ui->titleText->setText(tr("Software Activate"));
     if (isSucceed){
-        ui->label->setText("软件激活成功！");
+        ui->label->setText(tr("Software activated success!"));
     }else{
-        ui->label->setText("激活失败，请检查激活码是否正确！");
+        ui->label->setText(tr("Activate failed, please correct activation code!"));
     }
 }
 
 void Dialog::initQRcode()
 {
-    ui->titleText->setText("机器码");
+    ui->titleText->setText(tr("Machine code"));
     this->setFixedSize(320,276);
     ui->dialogWidget->setFixedSize(320,276);
     ui->label->hide();
@@ -209,7 +209,7 @@ void Dialog::initQRcode()
 
     QLabel *label_1 = new QLabel();
     label_1->setStyleSheet("color:#fff;font-size:13px;");
-    label_1->setText("扫一扫获取机器码");
+    label_1->setText(tr("Scan to obtain the machine code"));
     label_1->setAlignment(Qt::AlignCenter);
     vlayout->addSpacing(10);
     vlayout->addWidget(m_qrCodeLabel);

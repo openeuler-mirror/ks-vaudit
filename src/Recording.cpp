@@ -1230,7 +1230,7 @@ void Recording::OnRecordStartPause() {
 			return;
 		}
 		
-		Logger::LogInfo("[Recording::record] restart eht recording ");
+		Logger::LogInfo("[Recording::record] restart the recording ");
 		if(m_separate_files){ //暂停状态下分辨率发生变动,需要截断视频
 			OnRecordSave();
 			OnRecordStart();
@@ -1261,6 +1261,11 @@ void Recording::OnRecordSave(bool confirm) {
 
 	StopPage(true);
 	SaveSettings(settings_ptr); //结束视频录制并保存但不退出程序, 这种情况下得刷新一下Qsettings
+
+	//结束视频录制后，程序并未退出，重置m_separate_files、m_pause_state这两状态变量
+	m_separate_files = false;
+	m_pause_state = false;
+	
 }
 
 /**

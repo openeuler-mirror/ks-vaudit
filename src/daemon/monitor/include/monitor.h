@@ -71,13 +71,14 @@ private:
     QString m_filePath;
     QString m_vauditBin;
     QTimer *m_pTimer;
-    QMutex m_mutex;
     QProcess *m_process;
+    //后台审计会话信息，key:用户名
     QMultiMap<QString, sessionInfo> m_sessionInfos;
     QMap<int, QString> m_videoFileName;
     //前台pid对应的后台进程，前台非法关闭
     QMap<int, QProcess *> m_frontRecordInfo;
     QTimer *m_pFontTimer;
+    // 存储前台录屏目录信息，key: 用户目录，value: 对应目录为key的进程pid
     QMap<QString, QVector<int>> m_frontHomeInfo;
 };
 

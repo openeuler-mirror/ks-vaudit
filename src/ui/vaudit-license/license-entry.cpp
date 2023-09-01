@@ -5,12 +5,6 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
-#define KEY_ACTIVATION_CODE     "activation_code"
-#define KEY_MACHINE_CODE        "machine_code"
-#define KEY_ACTIVATION_STATUS   "activation_status"
-#define KEY_ACTIVATION_TIME     "activation_time"
-#define KEY_EXPIRED_TIME        "expired_time"
-
 LicenseEntry::LicenseEntry()
 {
     m_license = new License;
@@ -90,11 +84,11 @@ void LicenseEntry::getLicense(QString license_str)
                     {
                         QString jsonKey = it.key();
                         QString jsonString = it.value().toString();
-                        if (KEY_ACTIVATION_CODE == jsonKey)
+                        if (LICENSE_JK_ACTIVATION_CODE == jsonKey)
                         {
                             m_license->activation_code = jsonString;
                         }
-                        else if (KEY_MACHINE_CODE == jsonKey)
+                        else if (LICENSE_JK_MACHINE_CODE == jsonKey)
                         {
                             m_license->machine_code = jsonString;
                         }
@@ -103,15 +97,15 @@ void LicenseEntry::getLicense(QString license_str)
                     case QJsonValue::Double:
                     {
                         QString jsonKey = it.key();
-                        if (KEY_ACTIVATION_STATUS == jsonKey)
+                        if (LICENSE_JK_ACTIVATION_STATUS == jsonKey)
                         {
                             m_license->activation_status = it.value().toDouble();
                         }
-                        else if (KEY_ACTIVATION_TIME == jsonKey)
+                        else if (LICENSE_JK_ACTIVATION_TIME == jsonKey)
                         {
                             m_license->activation_time = it.value().toDouble();
                         }
-                        else if (KEY_EXPIRED_TIME == jsonKey)
+                        else if (LICENSE_JK_EXPIRED_TIME == jsonKey)
                         {
                             m_license->expired_time = it.value().toDouble();
                         }

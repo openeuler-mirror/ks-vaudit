@@ -9,6 +9,7 @@
 #define GETTEXT_DOMAIN "kylin"
 #define LICENSE_LOCALEDIR "/usr/share/locale"
 
+// 被关闭后再启
 static void notification_closed(NotifyNotification *pNotify, gpointer *userdata)
 {
 	KLOG_INFO() << "close notify window and re-open";
@@ -49,10 +50,11 @@ void AuditNotify::setParam(uid_t uid, quint64 reserveSize)
 
 void AuditNotify::sendNotify()
 {
+	// uid必须与用户uid一致，否则弹窗失败
 	int ret = setreuid(m_uid, m_uid);
 	if (ret != 0)
 	{
-		KLOG_INFO() << "send notify error" << ret;
+		KLOG_INFO() << "setreuid error" << ret;
 	}
 
 	char *notify_message = NULL;
@@ -105,6 +107,7 @@ void AuditNotify::notify_send(const char *msg, const char *icon, int timeout, co
 		return;
 	}
 
+	// 订阅关闭信号
 	m_pNotify = (void *)pNotify;
 	g_signal_connect(pNotify, "closed", G_CALLBACK(notification_closed), (void *)userdata);
 }

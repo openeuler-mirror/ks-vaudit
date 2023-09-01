@@ -155,6 +155,7 @@ bool SQLConfigure::initDB()
     m_db.setUserName(m_usr);
     m_db.setPassword(m_pwd);
 
+    // 文件不存在，加密创建文件
     QFile file(SQLITE_PATH);
     if (file.exists())
         m_db.setConnectOptions("QSQLITE_USE_CIPHER=sqlcipher");
@@ -247,6 +248,7 @@ bool SQLConfigure::isNameLegal(QString name)
     return false;
 }
 
+// 创建用户
 bool SQLConfigure::createUser(const QString name, const QString pwd, const QString role)
 {
     if (name.isEmpty() || pwd.isEmpty() || role.isEmpty())
@@ -274,6 +276,7 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
     return true;
 }
 
+// 根据用户密码，删除用户信息
 bool SQLConfigure::deleteUser(const QString name, const QString pwd)
 {
     QMutexLocker locker(&m_mutex);
@@ -292,6 +295,7 @@ bool SQLConfigure::deleteUser(const QString name, const QString pwd)
     return true;
 }
 
+// 根据用户密码，更新用户信息，用户名不可改
 bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QString newpwd, const QString role)
 {
     QMutexLocker locker(&m_mutex);
@@ -335,6 +339,7 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
     return true;
 }
 
+// 通过用户和密码查询对应信息
 QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
 {
 #ifdef SUPPOORT_SQLITECIPHER

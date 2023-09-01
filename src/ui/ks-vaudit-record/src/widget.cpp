@@ -1081,6 +1081,13 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         {
             callNotifyProcess(list[0]);
         }
+    } else if (to_pid == m_selfPID && op == "daeth") {
+        KLOG_DEBUG() << "ks-vaudit dead and restart";
+        // 点击停止按钮
+        ui->stopBtn->click();
+        // 重新拉起后台
+        QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
+        sendSwitchControl(m_selfPID, 0, args);
     }
 }
 

@@ -178,6 +178,14 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
     KLOG_INFO() << "backend pid:" << process->pid() << process->arguments();
     MonitorDisk::instance().sendProcessPid(process->pid(), from_pid);
     MonitorDisk::instance().sendProcessPid(from_pid, process->pid());
+    // 规避前台录屏进程起多个，关掉旧的进程
+    auto iter = m_frontRecordInfo.find(from_pid);
+    if (iter != m_frontRecordInfo.end())
+    {
+        auto &pp = iter.value();
+        KLOG_INFO() << "clear the vaudit process corresponding to process: " << iter.key();
+        clearProcess(pp);
+    }
     // 记录前后台进程信息
     m_frontRecordInfo.insert(from_pid, process);
 

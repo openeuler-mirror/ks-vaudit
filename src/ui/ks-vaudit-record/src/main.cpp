@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
     }else{
         KLOG_DEBUG("No qss found!");
     }
-    w.move((a.desktop()->width() - w.width()) / 2, (a.desktop()->height() - w.height()) / 2);
-    w.show();
 
+    // 设置移动位置参数，在widget里将界面移到屏幕中间
+    w.setToCenter((a.desktop()->width() - w.width()) / 2, (a.desktop()->height() - w.height()) / 2);
 
     return a.exec();
 }

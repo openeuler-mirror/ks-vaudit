@@ -163,12 +163,12 @@ void BaseEncoder::IncrementPacketCounter() {
 	++lock->m_total_packets;
 }
 
+#define RETURN_IF_TRUE(condition) {if (condition) return;}
+
 void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 
 	// only for video
-	if (GetCodecContext()->width <= 0 || GetCodecContext()->height <= 0) {
-		return;
-	}
+	RETURN_IF_TRUE(GetCodecContext()->width <= 0 || GetCodecContext()->height <= 0)
 
 	if (m_hw_device_ctx_ref != NULL) {
 		return;
@@ -185,16 +185,24 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 	} else if (strstr(codec->name, "qsv")) {
 		enc_type = EncodeTypeQsv;
 		ret = av_hwdevice_ctx_create(&m_hw_device_ctx_ref, AV_HWDEVICE_TYPE_QSV, "auto", NULL, 0);
+	} else {
+		Logger::LogError(QString("[BaseEncoder::InitGpuEncode] invalid codec name: ") + codec->name);
+		return;
 	}
 
-	assert(ret >= 0);
+	if (ret < 0) {
+		Logger::LogError(QString("[BaseEncoder::InitGpuEncode] av_hwdevice_ctx_create failed, codec name: ") + codec->name);
+		return;
+	}
 	
 	if (enc_type == EncodeTypeVaapi) {
 		m_codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
 
 		m_hw_frames_ctx_ref = av_hwframe_ctx_alloc(m_hw_device_ctx_ref);
-		assert(m_hw_frames_ctx_ref != NULL);
-
+		if (m_hw_frames_ctx_ref == NULL) {
+			Logger::LogError(QString("[BaseEncoder::InitGpuEncode] av_hwframe_ctx_alloc failed, codec name: ") + codec->name);
+			return;
+		}
 		AVHWFramesContext *hw_frames_ctx = (AVHWFramesContext*)m_hw_frames_ctx_ref->data;
 		hw_frames_ctx->format    = AV_PIX_FMT_VAAPI;
 		hw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
@@ -204,7 +212,10 @@ void BaseEncoder::InitGpuEncode(AVCodec* codec) {
 
 		// vaapi编码时需要做转码，需要初始化 frames_ctx
 		ret = av_hwframe_ctx_init(m_hw_frames_ctx_ref);
-		assert(ret >= 0);
+		if (ret < 0) {
+			Logger::LogError(QString("[BaseEncoder::InitGpuEncode] av_hwframe_ctx_init failed, codec name: ") + codec->name);
+			return;
+		}
 
 		m_codec_context->hw_frames_ctx = av_buffer_ref(m_hw_frames_ctx_ref);
 	} else if (enc_type == EncodeTypeQsv) {

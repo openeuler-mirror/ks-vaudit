@@ -18,6 +18,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "PulseAudioInput.h"
+#include "common-definition.h"
 #include <pulse/operation.h>
 #include <pulse/stream.h>
 #include <pulse/volume.h>
@@ -393,7 +394,7 @@ void PulseAudioInput::InputThread() {
 
 			//前台录屏 调整音量
 			if(CommandLineOptions::GetFrontRecord()){
-				if(m_record_audio_type == "mic"){ //麦克风
+				if(CONFIG_RECORD_AUDIO_MIC == m_record_audio_type){ //麦克风
 					if(settings_ptr->value("input/audio_micvolume").toString().toInt() != m_last_mic_volume){//麦克风音量出现变化
 						m_last_mic_volume = settings_ptr->value("input/audio_micvolume").toString().toInt();
 						//pa_volume_t volume_tmp = PA_VOLUME_MUTED;
@@ -404,7 +405,7 @@ void PulseAudioInput::InputThread() {
 					}
 				}
 
-				if(m_record_audio_type == "speaker"){ //扬声器
+				if(CONFIG_RECORD_AUDIO_SPEAKER == m_record_audio_type){ //扬声器
 					if(settings_ptr->value("input/audio_speakervolume").toString().toInt() != m_last_speaker_volume){//扬声器音量
 						m_last_speaker_volume = settings_ptr->value("input/audio_speakervolume").toString().toInt();
 						//pa_volume_t volume_tmp = PA_VOLUME_MUTED;
@@ -427,7 +428,7 @@ void PulseAudioInput::InputThread() {
 			if(data == NULL) {
 				if(bytes > 0) {
 					// skip hole
-					if (m_record_audio_type == "mic"){
+					if (CONFIG_RECORD_AUDIO_MIC == m_record_audio_type){
 						PushAudioHoleInput();
 					} else {
 						PushAudioHole();
@@ -470,7 +471,7 @@ void PulseAudioInput::InputThread() {
 						if(!m_stream_is_monitor) {
 							time -= (int64_t) samples * (int64_t) 1000000 / (int64_t) m_sample_rate;
 						}
-						if (m_record_audio_type == "mic"){
+						if (CONFIG_RECORD_AUDIO_MIC == m_record_audio_type){
 							PushAudioSamplesInput(m_channels, m_sample_rate, AV_SAMPLE_FMT_S16, samples, push_data, time);
 						} else {
 							PushAudioSamples(m_channels, m_sample_rate, AV_SAMPLE_FMT_S16, samples, push_data, time);
@@ -495,7 +496,7 @@ void PulseAudioInput::InputThread() {
 			}
 
 			if (m_stream_suspended || m_stream_moved) {
-				if (m_record_audio_type == "mic"){
+				if (CONFIG_RECORD_AUDIO_MIC == m_record_audio_type){
 					PushAudioHoleInput();
 				} else {
 					PushAudioHole();

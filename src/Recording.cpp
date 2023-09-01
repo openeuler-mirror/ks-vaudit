@@ -29,6 +29,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "SimpleSynth.h"
 #include "kiran-log/qt5-log-i.h"
 #include "kidletime.h"
+#include "common-definition.h"
 #include <QAudioDeviceInfo>
 #include <sys/inotify.h>
 
@@ -105,7 +106,7 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 		if(add_timestamp) {
 			if(!newfile.isEmpty())
 				newfile += "-";
-                        newfile += now.toString("yyyyMMdd_hhmmss");
+				newfile += now.toString("yyyyMMdd_hhmmss");
 		}
 		if(counter != 1) {
 			//处理重复视频文件
@@ -126,7 +127,7 @@ static QString GetNewSegmentFile(const QString& file, bool add_timestamp) {
 	} while(QFileInfo(newfile).exists());
 
 	// 录制中的文件添加后缀 .tmp 不展示出来
-	return newfile+".tmp";
+	return newfile + FILE_SUFFIX_TMP;
 }
 
 //审计录屏文件以用户名_IP_YYYYMMDD_hhmmss_displayname命名，示例：张三_192.168.1.1_20220621_153620_1.mp4
@@ -167,7 +168,7 @@ static QString GetAuditNewSegmentFile(const QString& file, const QString &prefix
 		newfile = fi.path() + "/" + newfile;
 	} while (QFileInfo(newfile).exists());
 
-	return newfile+".tmp";
+	return newfile + FILE_SUFFIX_TMP;
 }
 
 static std::vector<std::pair<QString, QString> > GetOptionsFromString(const QString& str) {
@@ -278,7 +279,7 @@ Recording::Recording(QSettings* qsettings){
 	m_IdleTimer = new QTimer();
 	connect(m_IdleTimer, SIGNAL(timeout()), this, SLOT(OnIdleTimer()));
 
-	m_configure_interface->MonitorNotification(getpid(), "is_active");
+	m_configure_interface->MonitorNotification(getpid(), VAUDIT_ACTIVE);
 	KLOG_INFO() << getpid() << "send signal is_active!";
 }
 
@@ -302,17 +303,17 @@ void Recording::OnRecordTimer() {
 			}
 
 			// Fps 和 Quality判断，解决被切用户修改配置没有重启的问题
-			QSettings confSettings("/etc/ks-vaudit/ks-vaudit.conf", QSettings::IniFormat);
-			if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings.value("audit/Fps").toString().toInt() 
-				|| m_settings->value("encode/quality").toString().toInt() != confSettings.value("audit/Quality").toString().toInt())
+			QSettings confSettings(GENEARL_CONFIG_FILE, QSettings::IniFormat);
+			if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings.value(KEY_AUDIT_FPS).toString().toInt()
+				|| m_settings->value("encode/quality").toString().toInt() != confSettings.value(KEY_AUDIT_QUALITY).toString().toInt())
 			{
 				sleep(1);
-				QSettings confSettings1("/etc/ks-vaudit/ks-vaudit.conf", QSettings::IniFormat);
-				if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings1.value("audit/Fps").toString().toInt() 
-					|| m_settings->value("encode/quality").toString().toInt() != confSettings1.value("audit/Quality").toString().toInt())
+				QSettings confSettings1(GENEARL_CONFIG_FILE, QSettings::IniFormat);
+				if (m_settings->value("input/video_frame_rate").toString().toInt() != confSettings1.value(KEY_AUDIT_FPS).toString().toInt()
+					|| m_settings->value("encode/quality").toString().toInt() != confSettings1.value(KEY_AUDIT_QUALITY).toString().toInt())
 				{
-					m_settings->setValue("input/video_frame_rate", confSettings1.value("audit/Fps").toString().toInt());
-					m_settings->setValue("encode/quality", confSettings1.value("audit/Quality").toString().toInt());
+					m_settings->setValue("input/video_frame_rate", confSettings1.value(KEY_AUDIT_FPS).toString().toInt());
+					m_settings->setValue("encode/quality", confSettings1.value(KEY_AUDIT_QUALITY).toString().toInt());
 					KLOG_INFO() << "Fps or Quality change";
 					OnRecordSave();  // 结束视频录制
 					OnRecordStart(); // 开始新视频
@@ -349,13 +350,13 @@ void Recording::OnAudioTimer() {
 	QString defualtAudioOutput = QAudioDeviceInfo::defaultOutputDevice().deviceName();
 	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
 	bool bChangeAudio{};
-	if ((audio_enabled == "mic" || audio_enabled == "all") && defualtAudioInput != m_lastAlsaInput) {
+	if ((CONFIG_RECORD_AUDIO_MIC == audio_enabled || CONFIG_RECORD_AUDIO_ALL == audio_enabled) && defualtAudioInput != m_lastAlsaInput) {
 		KLOG_INFO() << "mic change:" << "cur input:" << defualtAudioInput << "m_lastAlsaInput:" << m_lastAlsaInput;
 		m_lastAlsaInput = defualtAudioInput;
 		bChangeAudio = true;
 
 	}
-	if ((audio_enabled == "speaker" || audio_enabled == "all") && defualtAudioOutput != m_lastAlsaOutput) { //扬声器
+	if ((CONFIG_RECORD_AUDIO_SPEAKER == audio_enabled || CONFIG_RECORD_AUDIO_ALL == audio_enabled) && defualtAudioOutput != m_lastAlsaOutput) { //扬声器
 		KLOG_INFO() << "speaker change" << m_lastAlsaInput << "cur Output:" << defualtAudioOutput << "m_lastAlsaOutput:" << m_lastAlsaOutput;
 		m_lastAlsaOutput = defualtAudioOutput;
 		bChangeAudio = true;
@@ -464,25 +465,25 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 		m_output_settings.video_width = m_video_in_width/2*2;
 		return;
 	}
-   //判断两块屏宽、高是否一致
-   int main_screen_width = 0;
-   int main_screen_height = 0;
-   int slave_screen_width = 0;
-   int slave_screen_height = 0;
+	//判断两块屏宽、高是否一致
+	int main_screen_width = 0;
+	int main_screen_height = 0;
+	int slave_screen_width = 0;
+	int slave_screen_height = 0;
 	QList<QScreen *> screen_list = QApplication::screens();
 	for(QScreen *screen :  QApplication::screens()) {
 			connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
 	}
 
-   if(screen_list.size() >= 2){
-	   main_screen_width = screen_list[0]->geometry().width();
-	   main_screen_height = screen_list[0]->geometry().height();
-	   slave_screen_width = screen_list[1]->geometry().width();
-	   slave_screen_height = screen_list[1]->geometry().height();
-	   if(!(main_screen_width == slave_screen_width && main_screen_height == slave_screen_height)){
-		   return;
-	   }
-   }
+	if(screen_list.size() >= 2){
+		main_screen_width = screen_list[0]->geometry().width();
+		main_screen_height = screen_list[0]->geometry().height();
+		slave_screen_width = screen_list[1]->geometry().width();
+		slave_screen_height = screen_list[1]->geometry().height();
+		if(!(main_screen_width == slave_screen_width && main_screen_height == slave_screen_height)){
+			return;
+		}
+	}
 
 	//分辨率变化后的处理
 	m_separate_files = true;
@@ -567,11 +568,11 @@ void Recording::StartPage() {
 	m_pulseaudio_source_input = "";
 	m_pulseaudio_source_output = "";
 	m_audio_enabled = false;
-	m_audio_recordtype = "none";
+	m_audio_recordtype = CONFIG_RECORD_AUDIO_NONE;
 	m_pulseaudio_sources = PulseAudioInput::GetSourceList();
 
 	QString audio_enabled = m_settings->value("input/audio_enabled").toString();
-	if (audio_enabled == "mic" || audio_enabled == "all"){ //录制麦克风
+	if (CONFIG_RECORD_AUDIO_MIC == audio_enabled || CONFIG_RECORD_AUDIO_ALL == audio_enabled){ //录制麦克风
 		if (!defualtAudioInput.isEmpty() && defualtAudioInput.contains("alsa_input")) {
 			// 还有两种设备:alsa_null、alsa_output（输出设备）
 			// 如果没有实际输入设备(alsa_input)、会把带"monitor"字段的output设备(扬声器设备)识别defualtAudioInput
@@ -580,7 +581,7 @@ void Recording::StartPage() {
 			m_pulseaudio_source_input = defualtAudioInput;
 		}
 	}
-	if(audio_enabled == "speaker" || audio_enabled == "all"){ //扬声器
+	if(CONFIG_RECORD_AUDIO_SPEAKER == audio_enabled || CONFIG_RECORD_AUDIO_ALL == audio_enabled){ //扬声器
 		if (m_pulseaudio_sources.size() > 0 && !defualtAudioOutput.isEmpty() && defualtAudioOutput.contains("alsa_output")){
 			// 同上alsa_input逻辑，避免重复选择同一个设备
 			for(auto asource : m_pulseaudio_sources){
@@ -593,11 +594,11 @@ void Recording::StartPage() {
 		}
 	}
 	if (m_pulseaudio_source_input != "" && m_pulseaudio_source_output != "") {
-		m_audio_recordtype = "all";
+		m_audio_recordtype = CONFIG_RECORD_AUDIO_ALL;
 	} else if (m_pulseaudio_source_input != "") {
-		m_audio_recordtype = "mic";
+		m_audio_recordtype = CONFIG_RECORD_AUDIO_MIC;
 	} else if (m_pulseaudio_source_output != "") {
-		m_audio_recordtype = "speaker";
+		m_audio_recordtype = CONFIG_RECORD_AUDIO_SPEAKER;
 	}
 
 	m_audio_channels = 2;
@@ -612,9 +613,9 @@ void Recording::StartPage() {
 
 	// get the output settings
 	m_output_settings.file = QString(""); // will be set later
-	if(m_settings->value("output/container_av", QString()).toString() == "ogv"){
+	if(m_settings->value("output/container_av", QString()).toString() == FILETYPE_OGV){
 		m_output_settings.container_avname = "ogg";
-	}else if (m_settings->value("output/container_av", QString()).toString() == "mkv"){
+	}else if (m_settings->value("output/container_av", QString()).toString() == FILETYPE_MKV){
 		m_output_settings.container_avname = "matroska";
 	}else{
 		m_output_settings.container_avname = m_settings->value("output/container_av", QString()).toString();
@@ -755,20 +756,20 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/video_w", rect.width()); //width
 	settings->setValue("input/video_h", rect.height()); //height
 
-	QString key("Fps");	
+	QString key(GENEARL_CONFIG_FPS);
 	settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt()); //帧率
 	settings->setValue("input/video_scale", false);
 	settings->setValue("input/video_scaled_w", 854);
 	settings->setValue("input/video_scaled_h", 480);
 	settings->setValue("input/video_record_cursor", false);
 
-	key = "RecordAudio";
+	key = GENEARL_CONFIG_RECORD_AUDIO;
 	QString audio_codec_name = "";
-	QString video_type = jsonObj["FileType"].toString().toLower();
-	if(QString::compare(video_type, "mp4", Qt::CaseInsensitive) == 0
-		|| QString::compare(video_type, "mkv", Qt::CaseInsensitive) == 0) {
+	QString video_type = jsonObj[GENEARL_CONFIG_FILETYPE].toString().toLower();
+	if(QString::compare(video_type, FILETYPE_MP4, Qt::CaseInsensitive) == 0
+		|| QString::compare(video_type, FILETYPE_MKV, Qt::CaseInsensitive) == 0) {
 		audio_codec_name = "aac";
-	}else if (QString::compare(video_type, "ogv", Qt::CaseInsensitive) == 0){
+	}else if (QString::compare(video_type, FILETYPE_OGV, Qt::CaseInsensitive) == 0){
 		audio_codec_name = "libvorbis";
 	}else{
 		audio_codec_name = "";
@@ -779,21 +780,21 @@ void Recording::SaveSettings(QSettings* settings) {
 
 
 	//音量设置
-	key = "MicVolume";
+	key = GENEARL_CONFIG_MIC_VOLUME;
 	settings->setValue("input/audio_micvolume",jsonObj[key].toString().toInt()); //麦克风音量
-	key = "SpeakerVolume";
+	key = GENEARL_CONFIG_SPEAKER_VOLUME;
 	settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
 
 	settings->setValue("input/audio_backend", EnumToString(Recording::AUDIO_BACKEND_PULSEAUDIO));
 	// settings->setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
 	// Logger::LogInfo("[SaveSettings] the audio source name is" + GetPulseAudioSourceName());
 
-	key = "RecordVideo";
+	key = GENEARL_CONFIG_RECORD_VIDIO;
 	settings->setValue("input/video_enabled",jsonObj[key].toString().toInt()); //是否录制视频
 	//QString::fromStdString(m_pulseaudio_sources[0].m_name);
 
 	//输出页面配置参数
-	key = "FilePath";
+	key = GENEARL_CONFIG_FILEPATH;
 	QString sys_user(getenv("USER"));
 	QString file_path(jsonObj[key].toString());
 
@@ -815,12 +816,12 @@ void Recording::SaveSettings(QSettings* settings) {
 		}
 	}
 
-	key = "FileType";
+	key = GENEARL_CONFIG_FILETYPE;
 	QString file_type = jsonObj[key].toString().toLower();
 	QString file_suffix;
 
-	if(QString::compare(file_type, "mp4", Qt::CaseInsensitive) == 0) {
-		file_suffix = ".mp4";
+	if(QString::compare(file_type, FILETYPE_MP4, Qt::CaseInsensitive) == 0) {
+		file_suffix = FILE_SUFFIX_MP4;
 
 		settings->setValue("output/container_av", file_type); //mp4 ogv 格式等
 		settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
@@ -829,19 +830,19 @@ void Recording::SaveSettings(QSettings* settings) {
 		settings->setValue("output/video_kbit_rate", 128);
 		settings->setValue("output/video_h264_crf", 23);
 		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(QString::compare(file_type, "mkv", Qt::CaseInsensitive) == 0){
-		file_suffix = ".mkv";
+	}else if(QString::compare(file_type, FILETYPE_MKV, Qt::CaseInsensitive) == 0){
+		file_suffix = FILE_SUFFIX_MKV;
 
-		settings->setValue("output/container_av", QString("mkv")); //mp4 ogv 格式等
+		settings->setValue("output/container_av", QString(FILETYPE_MKV)); //mp4 ogv 格式等
 		settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
 		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
 		settings->setValue("output/video_codec_av", "libx264"); //硬件加速用h264_vaapi
 		settings->setValue("output/video_kbit_rate", 128);
 		settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
-		file_suffix = ".ogv";
+	}else if(QString::compare(file_type, FILETYPE_OGV, Qt::CaseInsensitive) == 0){
+		file_suffix = FILE_SUFFIX_OGV;
 
-		settings->setValue("output/container_av", QString("ogv")); //mp4 ogv 格式等
+		settings->setValue("output/container_av", QString(FILETYPE_OGV)); //mp4 ogv 格式等
 		settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
 		settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_VP8));
 		settings->setValue("output/video_codec_av", "libvpx"); //硬件加速用h264_vaapi
@@ -858,14 +859,14 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("output/video_allow_frame_skipping", true);
 
 	//水印相关设置
-	key = "WaterPrint";
+	key = GENEARL_CONFIG_WATER_PRINT;
 	if(jsonObj[key].toString().toInt() == 0){
 		settings->setValue("record/is_use_watermark", 0);
-		key = "WaterPrintText";
+		key = GENEARL_CONFIG_WATER_PRINT_TEXT;
 		settings->setValue("record/water_print_text", jsonObj[key].toString());
 	}else{
 		settings->setValue("record/is_use_watermark", 1);
-		key = "WaterPrintText";
+		key = GENEARL_CONFIG_WATER_PRINT_TEXT;
 		settings->setValue("record/water_print_text", jsonObj[key].toString());
 	}
 
@@ -878,17 +879,17 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("record/hotkey_super",false);
 
 	// save encode Quality
-	settings->setValue("encode/quality", jsonObj["Quality"].toString());
-	m_output_settings.encode_quality = jsonObj["Quality"].toString();
+	settings->setValue("encode/quality", jsonObj[GENEARL_CONFIG_QUALITY].toString());
+	m_output_settings.encode_quality = jsonObj[GENEARL_CONFIG_QUALITY].toString();
 
 	if (!CommandLineOptions::GetFrontRecord())
 	{
-		key = "TimingPause";
+		key = GENEARL_CONFIG_TIMING_PAUSE;
 		m_timingPause = jsonObj[key].toString().toInt();
 		KLOG_INFO() << getpid() << "m_timingPause:" << m_timingPause;
-		key = "MinFreeSpace";
+		key = GENEARL_CONFIG_MIN_FREE_SPACE;
 		m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
-		key = "MaxFileSize";
+		key = GENEARL_CONFIG_MAX_FILE_SIZE;
 		m_maxFileSize = jsonObj[key].toString().toULongLong();
 	}
 }
@@ -1085,11 +1086,11 @@ void Recording::StartInput() {
 			if(m_audio_backend == AUDIO_BACKEND_PULSEAUDIO) {
 				Logger::LogInfo("[Recording::StartInput] m_audio_recordtype is: " + m_audio_recordtype +  "  m_pulseaudio_source_input: " + m_pulseaudio_source_input + "  m_pulseaudio_source_output: " + m_pulseaudio_source_output);
 				// 这里recordtype只用来判断是否需要new对象 这里需要加上{}
-				if (m_audio_recordtype == "mic" || m_audio_recordtype == "all"){
-					m_pulseaudio_input.reset(new PulseAudioInput(m_pulseaudio_source_input, m_audio_sample_rate, "mic"));
+				if (CONFIG_RECORD_AUDIO_MIC == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype){
+					m_pulseaudio_input.reset(new PulseAudioInput(m_pulseaudio_source_input, m_audio_sample_rate, CONFIG_RECORD_AUDIO_MIC));
 				}
-				if (m_audio_recordtype == "speaker" || m_audio_recordtype == "all"){
-					m_pulseaudio_output.reset(new PulseAudioInput(m_pulseaudio_source_output, m_audio_sample_rate, "speaker"));
+				if (CONFIG_RECORD_AUDIO_SPEAKER == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype){
+					m_pulseaudio_output.reset(new PulseAudioInput(m_pulseaudio_source_output, m_audio_sample_rate, CONFIG_RECORD_AUDIO_SPEAKER));
 				}
 
 			}
@@ -1207,13 +1208,13 @@ void Recording::UpdateInput() {
 	if(m_output_manager != NULL) {
 		if(m_output_started) {
 			m_output_manager->GetSynchronizer()->ConnectVideoSource(video_source, PRIORITY_RECORD);
-			if (m_audio_recordtype == "mic" || m_audio_recordtype == "all"){
+			if (CONFIG_RECORD_AUDIO_MIC == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype ){
 				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(audio_source_input, PRIORITY_RECORD);
 			} else {
 				m_output_manager->GetSynchronizer()->ConnectAudioSourceInput(NULL);
 			}
 
-			if (m_audio_recordtype == "speaker" || m_audio_recordtype == "all") {
+			if (CONFIG_RECORD_AUDIO_SPEAKER == m_audio_recordtype || CONFIG_RECORD_AUDIO_ALL == m_audio_recordtype) {
 				m_output_manager->GetSynchronizer()->ConnectAudioSource(audio_source_output, PRIORITY_RECORD);
 			} else {
 				m_output_manager->GetSynchronizer()->ConnectAudioSource(NULL);
@@ -1353,112 +1354,112 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 	if (!parseJsonData(value, jsonObj))
 		return;
 
-	if(keyStr == "record" && isRecord){
+	if(GENEARL_CONFIG_RECORD == keyStr && isRecord){
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:record] --------------keys and value is -------------" + key + "==========" + jsonObj[key].toString());
 
 			//修改settings
-			if(key == "Fps"){
+			if(GENEARL_CONFIG_FPS == key){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
-			}else if(key == "RecordAudio"){
+			}else if(GENEARL_CONFIG_RECORD_AUDIO == key){
 				m_settings->setValue("input/audio_enabled",jsonObj[key].toString());
-			}else if(key == "FilePath" || key == "FileType"){
+			}else if(GENEARL_CONFIG_FILEPATH == key || GENEARL_CONFIG_FILETYPE == key){
 				// 修改fileType需要一起修改filePath
 				QString file_path(jsonObj[key].toString());
 				QString file_suffix;
-				QString fileType = jsonObj["FileType"].toString();
-				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
-					file_suffix = ".mp4";
+				QString fileType = jsonObj[GENEARL_CONFIG_FILETYPE].toString();
+				if(QString::compare(fileType, FILETYPE_MP4, Qt::CaseInsensitive) == 0){
+					file_suffix = FILE_SUFFIX_MP4;
 					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
-					m_settings->setValue("output/container_av", "mp4");
-				}else if(QString::compare(fileType, "mkv", Qt::CaseInsensitive) == 0){
-						file_suffix = ".mkv";
+					m_settings->setValue("output/container_av", FILETYPE_MP4);
+				}else if(QString::compare(fileType, FILETYPE_MKV, Qt::CaseInsensitive) == 0){
+						file_suffix = FILE_SUFFIX_MKV;
 						m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
-						m_settings->setValue("output/container_av", "mkv");
-				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
-					file_suffix = ".ogv";
+						m_settings->setValue("output/container_av", FILETYPE_MKV);
+				}else if (QString::compare(fileType, FILETYPE_OGV, Qt::CaseInsensitive) == 0){
+					file_suffix = FILE_SUFFIX_OGV;
 					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
-					m_settings->setValue("output/container_av", "ogv");
+					m_settings->setValue("output/container_av", FILETYPE_OGV);
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
 				}
 				m_settings->setValue("output/file", file_path + "/" + file_suffix);
 				SetFileTypeSetting();
-			}else if(key == "Quality"){
+			}else if(GENEARL_CONFIG_QUALITY == key){
 				m_settings->setValue("encode/quality", jsonObj[key].toString());
-				m_output_settings.encode_quality = jsonObj["Quality"].toString();
-			}else if(key == "WaterPrint"){
+				m_output_settings.encode_quality = jsonObj[GENEARL_CONFIG_QUALITY].toString();
+			}else if(GENEARL_CONFIG_WATER_PRINT == key){
 				m_settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}else if(key == "WaterPrintText"){
+			}else if(GENEARL_CONFIG_WATER_PRINT_TEXT == key){
 				m_settings->setValue("record/water_print_text", jsonObj[key].toString());
-			}else if(key == "RecordVideo"){ //更新是否开启视频配置
+			}else if(GENEARL_CONFIG_RECORD_VIDIO == key){ //更新是否开启视频配置
 				m_settings->setValue("input/video_enabled", jsonObj[key].toString().toInt());
-			}else if(key == "MicVolume"){ //麦克风音量设置
+			}else if(GENEARL_CONFIG_MIC_VOLUME == key){ //麦克风音量设置
 				m_settings->setValue("input/audio_micvolume",jsonObj[key].toString().toInt()); //麦克风音量
-			}else if(key == "SpeakerVolume"){ //扬声器音量设置
+			}else if(GENEARL_CONFIG_SPEAKER_VOLUME == key){ //扬声器音量设置
 				m_settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
 			}
 		}
-	}else if (keyStr == "audit" && !isRecord){ //后台审计
+	}else if (GENEARL_CONFIG_AUDIT == keyStr && !isRecord){ //后台审计
 		bool needRestart = false;
 		for(auto key:jsonObj.keys()){
 			Logger::LogInfo("[Recording::UpdateConfigureData:audit] --------------keys and value is --------------" + key + "==========" + jsonObj[key].toString());
 			// #61800 后台审计修改单个用户最大录屏数时，monitor会重启所有进程
 			// 因此这里其他配置不需要更新重启线程了
-			if (key == "MaxRecordPerUser"){
+			if (key == GENEARL_CONFIG_MAX_RECORD_PER_USER){
 				needRestart = false;
 				break;
 			}
 			//修改settings
-			if(key == "Fps"){
+			if(GENEARL_CONFIG_FPS == key){
 				m_settings->setValue("input/video_frame_rate", jsonObj[key].toString().toInt());
 				needRestart = true;
-			}else if(key == "RecordAudio"){
+			}else if(GENEARL_CONFIG_RECORD_AUDIO == key){
 				m_settings->setValue("input/audio_enabled",jsonObj[key].toString());
 				needRestart = true;
-			}else if(key == "Quality"){
+			}else if(GENEARL_CONFIG_QUALITY == key){
 				m_settings->setValue("encode/quality", jsonObj[key].toString());
-				m_output_settings.encode_quality = jsonObj["Quality"].toString();
+				m_output_settings.encode_quality = jsonObj[GENEARL_CONFIG_QUALITY].toString();
 				needRestart = true;
-			}else if(key == "FilePath" || key == "FileType"){
+			}else if(GENEARL_CONFIG_FILEPATH == key || GENEARL_CONFIG_FILETYPE == key){
 				// 修改fileType需要一起修改filePath
 				QString file_path(jsonObj[key].toString());
 				QString file_suffix;
-				QString fileType = jsonObj["FileType"].toString();
+				QString fileType = jsonObj[GENEARL_CONFIG_FILETYPE].toString();
 				needRestart = true;
-				if(QString::compare(fileType, "mp4", Qt::CaseInsensitive) == 0){
-					file_suffix = ".mp4";
+				if(QString::compare(fileType, FILETYPE_MP4, Qt::CaseInsensitive) == 0){
+					file_suffix = FILE_SUFFIX_MP4;
 					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MP4));
-					m_settings->setValue("output/container_av", "mp4");
-				}else if(QString::compare(fileType, "mkv", Qt::CaseInsensitive) == 0){
-						file_suffix = ".mkv";
+					m_settings->setValue("output/container_av", FILETYPE_MP4);
+				}else if(QString::compare(fileType, FILETYPE_MKV, Qt::CaseInsensitive) == 0){
+						file_suffix = FILE_SUFFIX_MKV;
 						m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
-						m_settings->setValue("output/container_av", "mkv");
-				}else if (QString::compare(fileType, "ogv", Qt::CaseInsensitive) == 0){
-					file_suffix = ".ogv";
+						m_settings->setValue("output/container_av", FILETYPE_MKV);
+				}else if (QString::compare(fileType, FILETYPE_OGV, Qt::CaseInsensitive) == 0){
+					file_suffix = FILE_SUFFIX_OGV;
 					m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
-					m_settings->setValue("output/container_av", "ogv");
+					m_settings->setValue("output/container_av", FILETYPE_OGV);
 				}else{
 					KLOG_DEBUG() << "container_av 没有这种配置:" << fileType;
 				}
 				m_settings->setValue("output/file", file_path + "/" + file_suffix);
 				SetFileTypeSetting();
-			}else if(key == "WaterPrint"){
+			}else if(GENEARL_CONFIG_WATER_PRINT == key){
 				m_settings->setValue("record/is_use_watermark", jsonObj[key].toString().toInt());
-			}else if(key == "WaterPrintText"){
+			}else if(GENEARL_CONFIG_WATER_PRINT_TEXT == key){
 				m_settings->setValue("record/water_print_text", jsonObj[key].toString());
-			} else if (key == "TimingPause") {
+			} else if (GENEARL_CONFIG_TIMING_PAUSE == key) {
 				m_timingPause = jsonObj[key].toString().toInt();
 				KLOG_INFO() << "m_timingPause:" << m_timingPause;
 				//m_timingPause为0：关闭
 				operateCatchResume(0 == m_timingPause ? false : true, true);
-			} else if (key == "MinFreeSpace") {
+			} else if (GENEARL_CONFIG_MIN_FREE_SPACE == key) {
 				if (m_lastMinFreeSpace != jsonObj[key].toString().toULongLong())
 				{
 					m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
 					callNotifyProcess();
 				}
-			} else if ("MaxFileSize" == key) {
+			} else if (GENEARL_CONFIG_MAX_FILE_SIZE == key) {
 				m_maxFileSize = jsonObj[key].toString().toULongLong();
 			}
 		}
@@ -1478,13 +1479,13 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 		return;
 	}
 	//start stop restart exit
-	if(op == "start"){
+	if(OPERATE_RECORD_START == op){
 		Logger::LogInfo("[Recording::SwitchControl] start record");
 		OnRecordStart();
-	}else if(op == "pause"){
+	}else if(OPERATE_RECORD_PAUSE == op){
 		Logger::LogInfo("[Recording::SwitchControl] pause record");
 		OnRecordPause();
-	}else if(op == "restart"){
+	}else if(OPERATE_RECORD_RESTART == op){
 		if (!m_page_started || !m_output_started) // 防止之前为录像状态，再次调用时关闭录像
 		{
 			Logger::LogInfo("[Recording::SwitchControl] restart record");
@@ -1493,21 +1494,21 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 			}
 			OnRecordStartPause();
 		}
-	}else if(op == "stop"){
+	}else if(OPERATE_RECORD_STOP == op){
 		Logger::LogInfo("[Recording::SwitchControl] stop record");
 		OnRecordSave(); //结束视频录制但不退出
-	}else if(op == "exit"){
+	}else if(OPERATE_RECORD_EXIT == op){
 		Logger::LogInfo("[Recording::SwitchControl] exit signal");
 		OnRecordSaveAndExit(true);
 		// 应该用qApp->quit()来退出 清理qt控件
 //		exit(0);
-	} else if(op == "disk_notify"){
+	} else if(OPERATE_DISK_NOTIFY == op){
 		KLOG_INFO() << "disk space deal";
 		m_auditDiskEnough = false;
 		operateCatchResume(false);
 		m_configure_interface->MonitorNotification(getpid(), op);
 		callNotifyProcess();
-	} else if(op == "disk_notify_stop") {
+	} else if(OPERATE_DISK_NOTIFY_STOP == op) {
 		operateCatchResume(true);
 		m_auditDiskEnough = true;
 		clearNotify();
@@ -1515,7 +1516,7 @@ void Recording::SwitchControl(int from_pid,int to_pid,QString op){
 
 	if (CommandLineOptions::GetFrontRecord())
 	{
-		m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, op + "-done");
+		m_configure_interface->SwitchControl(m_selfPID, m_recordUiPID, op + OPERATE_RECORD_DONE);
 	}
 }
 
@@ -1545,11 +1546,11 @@ void Recording::SetFileTypeSetting()
 	if (!parseJsonData(value, jsonObj))
 		return;
 
-	QString file_type = jsonObj["FileType"].toString().toLower();
+	QString file_type = jsonObj[GENEARL_CONFIG_FILETYPE].toString().toLower();
 	QString file_suffix;
 
-	if(QString::compare(file_type, "mp4", Qt::CaseInsensitive) == 0) {
-		file_suffix = ".mp4";
+	if(QString::compare(file_type, FILETYPE_MP4, Qt::CaseInsensitive) == 0) {
+		file_suffix = FILE_SUFFIX_MP4;
 
 		m_settings->setValue("output/audio_codec_av", "aac");
 		m_settings->setValue("output/container_av", file_type); //mp4 ogv 格式等
@@ -1559,20 +1560,20 @@ void Recording::SetFileTypeSetting()
 		m_settings->setValue("output/video_kbit_rate", 128);
 		m_settings->setValue("output/video_h264_crf", 23);
 		m_settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(QString::compare(file_type, "mkv", Qt::CaseInsensitive) == 0){
-		file_suffix = ".mkv";
+	}else if(QString::compare(file_type, FILETYPE_MKV, Qt::CaseInsensitive) == 0){
+		file_suffix = FILE_SUFFIX_MKV;
 
-		m_settings->setValue("output/container_av", QString("mkv")); //mp4 ogv 格式等
+		m_settings->setValue("output/container_av", QString(FILETYPE_MKV)); //mp4 ogv 格式等
 		m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_MKV));
 		m_settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_H264));
 		m_settings->setValue("output/video_codec_av", "libx264"); //硬件加速用h264_vaapi
 		m_settings->setValue("output/video_kbit_rate", 128);
 		m_settings->setValue("output/video_h264_preset", (Recording::enum_h264_preset)Recording::H264_PRESET_SUPERFAST);
-	}else if(QString::compare(file_type, "ogv", Qt::CaseInsensitive) == 0){
-		file_suffix = ".ogv";
+	}else if(QString::compare(file_type, FILETYPE_OGV, Qt::CaseInsensitive) == 0){
+		file_suffix = FILE_SUFFIX_OGV;
 
 		m_settings->setValue("output/audio_codec_av", "libvorbis");
-		m_settings->setValue("output/container_av", QString("ogv")); //mp4 ogv 格式等
+		m_settings->setValue("output/container_av", QString(FILETYPE_OGV)); //mp4 ogv 格式等
 		m_settings->setValue("output/container", EnumToString(Recording::CONTAINER_OGG));
 		m_settings->setValue("output/video_codec", EnumToString(Recording::VIDEO_CODEC_VP8));
 		m_settings->setValue("output/video_codec_av", "libvpx"); //硬件加速用h264_vaapi
@@ -1582,7 +1583,7 @@ void Recording::SetFileTypeSetting()
 		Logger::LogError("[Recording:SetFileTypeSetting]: The container name error: "+file_type);
 		return;
 	}
-	QString file_path(jsonObj["FilePath"].toString());
+	QString file_path(jsonObj[GENEARL_CONFIG_FILEPATH].toString());
 
 	if(file_path.contains('~')){
 		QString home_dir = CommandLineOptions::GetFrontHome();

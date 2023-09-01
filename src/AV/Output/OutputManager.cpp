@@ -19,7 +19,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "OutputManager.h"
 #include "X264Presets.h"
-
+#include "common-definition.h"
 #include "Logger.h"
 
 const size_t OutputManager::THROTTLE_THRESHOLD_FRAMES = 20;
@@ -685,11 +685,11 @@ void OutputManager::StartFragment() {
 	std::vector<std::pair<QString, QString> >().swap(m_output_settings.video_options);
 	if (enc_name.contains(QString(CODEC_QSV))) {
 
-		if (m_output_settings.encode_quality == "0") {
+		if (QUALITY_FLUENT_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(14)));
-		} else if (m_output_settings.encode_quality == "1") {
+		} else if (QUALITY_SD_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(12)));
-		} else if (m_output_settings.encode_quality == "2") {
+		} else if (QUALITY_HD_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("global_quality"), QString::number(10)));
 		}
 
@@ -705,9 +705,9 @@ void OutputManager::StartFragment() {
 			if (enc_name.contains(QString(CODEC_NVENC))) {
 				vaapi_kbit_rate = 1024;
 			}
-		} else if (m_output_settings.encode_quality == "1") {
+		} else if (QUALITY_SD_VALUE == m_output_settings.encode_quality) {
 			vaapi_kbit_rate = 4096;
-		} else if (m_output_settings.encode_quality == "2") {
+		} else if (QUALITY_HD_VALUE == m_output_settings.encode_quality) {
 			vaapi_kbit_rate = 8192;
 		}
 
@@ -723,11 +723,11 @@ void OutputManager::StartFragment() {
 
 		unsigned int theora_kbit_rate = 0;
 
-		if (m_output_settings.encode_quality == "0") {
+		if (QUALITY_FLUENT_VALUE == m_output_settings.encode_quality) {
 			theora_kbit_rate = 2048;
-		} else if (m_output_settings.encode_quality == "1") {
+		} else if (QUALITY_SD_VALUE == m_output_settings.encode_quality) {
 			theora_kbit_rate = 4096;
-		} else if (m_output_settings.encode_quality == "2") {
+		} else if (QUALITY_HD_VALUE == m_output_settings.encode_quality) {
 			theora_kbit_rate = 8192;
 		}
 
@@ -737,11 +737,11 @@ void OutputManager::StartFragment() {
 	} else if (enc_name == CODEC_H264_CPU) {
 
 		m_output_settings.video_options.push_back(std::make_pair(QString("crf"), QString::number(23)));
-		if (m_output_settings.encode_quality == "0") {
+		if (QUALITY_FLUENT_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("superfast")));
-		} else if (m_output_settings.encode_quality == "1") {
+		} else if (QUALITY_SD_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("fast")));
-		} else if (m_output_settings.encode_quality == "2") {
+		} else if (QUALITY_HD_VALUE == m_output_settings.encode_quality) {
 			m_output_settings.video_options.push_back(std::make_pair(QString("preset"), QString("veryslow")));
 		}
 

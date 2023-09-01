@@ -1,4 +1,5 @@
 #include "record-notify.h"
+#include "common-definition.h"
 #include <glib/gi18n.h>
 #include <locale.h>
 #include <libnotify/notify.h>
@@ -27,28 +28,28 @@ RecordNotify& RecordNotify::instance()
 void RecordNotify::sendNotify(QString op, uid_t uid, int timing)
 {
 	QString notify_message;
-	if (op == "start")
+	if (OPERATE_RECORD_START == op)
 	{
 		notify_message = _("<b>\t已开始录屏</b>\n");
 	}
-	else if (op == "pause")
+	else if (OPERATE_RECORD_PAUSE == op)
 	{
 		notify_message = _("<b>\t已暂停录屏</b>\n");
 	}
-	else if (op == "restart")
+	else if (OPERATE_RECORD_RESTART == op)
 	{
 		notify_message = _("<b>\t已开始录屏</b>\n");
 	}
-	else if (op == "stop")
+	else if (OPERATE_RECORD_STOP == op)
 	{
 		notify_message = _("<b>\t已停止录屏</b>\n");
 	}
-	else if (op == "timing")
+	else if (OPERATE_NOTIFY_TIMING == op)
 	{
 		QString tmp = QString("%1").arg(timing);
 		notify_message = _("<b>\t已录屏") + tmp + _("分钟</b>\n");
 	}
-	else if (op == "error")
+	else if (OPERATE_NOTIFY_ERROR == op)
 	{
 		notify_message = _("<b>\t录屏进程异常，请重新开始录屏</b>\n");
 	}

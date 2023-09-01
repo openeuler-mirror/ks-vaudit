@@ -19,6 +19,9 @@
 #define PARAM_USER_ROLE         "role"
 #define PARAM_USER_OLD_PASSWD   "old_passwd"
 #define PARAM_DB_PASSWD         "db_passwd"
+#define PLACEHOLDER_PASSWD      ":password"
+#define PLACEHOLDER_ROLE        ":role"
+#define PLACEHOLDER_NAME        ":name"
 
 SQLConfigure &SQLConfigure::Instance()
 {
@@ -123,7 +126,9 @@ QString SQLConfigure::queryUser(const QString param)
 SQLConfigure::SQLConfigure()
 {
     m_usr = "vaudit";
-    m_pwd = "12345678";
+    QByteArray data = "TVRJek5EVTJOemc9";
+    QByteArray tmp = QByteArray::fromBase64(data);
+    m_pwd =  QByteArray::fromBase64(tmp);
     KLOG_INFO() << "sqldrivers: " << QSqlDatabase::drivers();
     initDB();
 }
@@ -218,8 +223,6 @@ bool SQLConfigure::checkUserPasswd(const QString name, const QString pwd)
     QString sql = "select * from user_infos where name = ? and password = ?";
     m_query->prepare(sql);
     m_query->addBindValue(name);
-    // QByteArray byteArr(pwd.toStdString().data());
-    // m_query->addBindValue(byteArr.toBase64());
     m_query->addBindValue(pwd);
     if (!m_query->exec())
     {
@@ -260,8 +263,6 @@ bool SQLConfigure::createUser(const QString name, const QString pwd, const QStri
     m_query->prepare(sql);
     m_query->addBindValue(name);
     m_query->addBindValue(role);
-    // QByteArray byteArr(pwd.toStdString().data());
-    // m_query->addBindValue(byteArr.toBase64());
     m_query->addBindValue(pwd);
 
     if (!m_query->exec())
@@ -306,27 +307,23 @@ bool SQLConfigure::updateUser(const QString name, const QString oldpwd, const QS
     {
         QString sql = "update user_infos set role = :role where name = :name";
         m_query->prepare(sql);
-        m_query->bindValue(":role", role);
-        m_query->bindValue(":name", name);
+        m_query->bindValue(PLACEHOLDER_ROLE, role);
+        m_query->bindValue(PLACEHOLDER_NAME, name);
     }
     else if (role.isEmpty())
     {
         QString sql = "update user_infos set password = :password where name = :name";
         m_query->prepare(sql);
-        // QByteArray byteArr(newpwd.toStdString().data());
-        // m_query->bindValue(":password", byteArr.toBase64());
-        m_query->bindValue(":password", newpwd);
-        m_query->bindValue(":name", name);
+        m_query->bindValue(PLACEHOLDER_PASSWD, newpwd);
+        m_query->bindValue(PLACEHOLDER_NAME, name);
     }
     else
     {
         QString sql = "update user_infos set role = :role, password = :password where name = :name";
         m_query->prepare(sql);
-        m_query->bindValue(":role", role);
-        // QByteArray byteArr(newpwd.toStdString().data());
-        // m_query->bindValue(":password", byteArr.toBase64());
-        m_query->bindValue(":password", newpwd);
-        m_query->bindValue(":name", name);
+        m_query->bindValue(PLACEHOLDER_ROLE, role);
+        m_query->bindValue(PLACEHOLDER_PASSWD, newpwd);
+        m_query->bindValue(PLACEHOLDER_NAME, name);
     }
 
     if (!m_query->exec())
@@ -372,7 +369,6 @@ QString SQLConfigure::queryUser(const QString name, const QString dbpwd)
         QJsonObject jsonObj;
         jsonObj[PARAM_USER] = m_query->value(1).toString();
         jsonObj[PARAM_USER_ROLE] = m_query->value(2).toString();
-        //jsonObj[PARAM_USER_PASSWD] = QByteArray::fromBase64(m_query->value(3).toByteArray()).toStdString().data();
         jsonObj[PARAM_USER_PASSWD] = m_query->value(3).toString();
         jsonarr.append(jsonObj);
     }

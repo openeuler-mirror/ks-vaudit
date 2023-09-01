@@ -1,4 +1,5 @@
 #include "audit-notify.h"
+#include "common-definition.h"
 #include <glib/gi18n.h>
 #include <locale.h>
 #include <libnotify/notify.h>
@@ -58,7 +59,7 @@ void AuditNotify::sendNotify()
 	QString tmp = QString("%1").arg(m_reserveSize);
 	QString str = _("<b>\t请先清理磁盘空间至少预留") + tmp + _("G，否则将无法进行录屏!</b>\n");
 	// 超时时间改为10s，解决切换用户发送提示成功，但不显示的问题（重新发送）
-	notify_send(str.toStdString().c_str(), "gtk-dialog-warning", 10*1000, "disk_notify");
+	notify_send(str.toStdString().c_str(), "gtk-dialog-warning", 10*1000, OPERATE_DISK_NOTIFY);
 }
 
 AuditNotify::~AuditNotify()

@@ -8,6 +8,7 @@
 #include "general-configure.h"
 #include "configure_adaptor.h"
 #include "kiran-log/qt5-log-i.h"
+#include "common-definition.h"
 #include <QDBusConnection>
 #include <QDBusError>
 
@@ -63,7 +64,7 @@ bool VauditConfigureDbus::SetAuditItemValue(const QString &item_value)
     if (!GeneralConfigure::Instance().setAuditConfigure(item_value))
         return false;
 
-    this->ConfigureChanged("audit", item_value);
+    this->ConfigureChanged(GENEARL_CONFIG_AUDIT, item_value);
     return true;
 }
 
@@ -72,7 +73,7 @@ bool VauditConfigureDbus::SetRecordItemValue(const QString &item_value)
     if (!GeneralConfigure::Instance().setRecordConfigure(item_value))
         return false;
 
-    this->ConfigureChanged("record", item_value);
+    this->ConfigureChanged(GENEARL_CONFIG_RECORD, item_value);
     return true;
 }
 

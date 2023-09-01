@@ -46,6 +46,7 @@ void Login::initUI()
     ui->label_3->hide();
     ui->userBox->setView(new QListView());
     getUserInfo();
+    checkActivation();
 }
 
 void Login::on_accept_clicked()
@@ -111,7 +112,7 @@ bool Login::checkLogin()
     QString currentPasswd = ui->passwdEdit->text();
     for (auto i : m_userInfoArray){
         QJsonObject o = i.toObject();
-        KLOG_DEBUG() <<"origin:" << o["passwd"].toString() << "after:" << base64ToStr(o["passwd"].toString()) << "cur:" << QString::compare(o["passwd"].toString(), currentPasswd);
+//        KLOG_DEBUG() <<"origin:" << o["passwd"].toString() << "after:" << base64ToStr(o["passwd"].toString()) << "cur:" << QString::compare(o["passwd"].toString(), currentPasswd);
         if (o["user"] == currentText && base64ToStr(o["passwd"].toString()) == currentPasswd) {
             m_currentUserInfo = o;
             return true;

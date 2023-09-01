@@ -388,6 +388,16 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     process->setStandardErrorFile(logFile + QString(".err"));
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     env.insert("DISPLAY", info.displayName); // Add an environment variable
+
+    // 62419
+    if (info.userName != "root") {
+        QString authpath = "/home/" + info.userName + "/.Xauthority";
+        QFile authfile(authpath);
+        if (authfile.exists()) {
+            info.authFile = "/home/" + info.userName + "/.Xauthority";
+        }
+    }
+ 
     env.insert("XAUTHORITY", info.authFile);
     process->setProcessEnvironment(env);
     QStringList arg;

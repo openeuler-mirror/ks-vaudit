@@ -85,6 +85,10 @@ private slots:
     void refreshTime(int, int, QString);
     void openActivate();
     void on_fpsBox_currentIndexChanged(int index);
+    void receiveNotification(int, QString);
+
+public:
+    void setToCenter(int w, int h);
 
 signals:
 
@@ -119,6 +123,8 @@ private:
     Dialog *m_pConfirm;
     int m_timing{};
     int m_lastMinutes{};
+    int m_toWidth;
+    int m_toHeight;
 };
 
 #endif // WIDGET_H

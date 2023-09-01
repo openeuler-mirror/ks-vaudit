@@ -280,6 +280,7 @@ Recording::Recording(QSettings* qsettings){
 	connect(this, SIGNAL(fileRemoved(bool)), this, SLOT(onFileRemove(bool)));
 
 	m_configure_interface->MonitorNotification(getpid(), "is_active");
+	KLOG_INFO() << getpid() << "send signal is_active!";
 }
 
 
@@ -1399,7 +1400,6 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				if (m_lastMinFreeSpace != jsonObj[key].toString().toULongLong())
 				{
 					m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
-					clearNotify();
 					callNotifyProcess();
 				}
 			}
@@ -1759,6 +1759,7 @@ void Recording::OnIdleTimer()
 
 void Recording::callNotifyProcess()
 {
+	clearNotify();
 	m_pNotifyProcess = new QProcess();
 	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 	env.insert("DISPLAY", getenv("DISPLAY")); // Add an environment variable

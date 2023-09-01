@@ -86,6 +86,8 @@ private slots:
     void openActivate();
     void on_fpsBox_currentIndexChanged(int index);
     void receiveNotification(int, QString);
+    void sendMicToConfig();
+    void sendSpkToConfig();
 
 public:
     void setToCenter(int w, int h);
@@ -125,6 +127,8 @@ private:
     int m_lastMinutes{};
     int m_toWidth;
     int m_toHeight;
+    QTimer *m_sendMData;
+    QTimer *m_sendSData;
 };
 
 #endif // WIDGET_H

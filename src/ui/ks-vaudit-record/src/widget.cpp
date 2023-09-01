@@ -27,6 +27,8 @@ extern "C" {
 #include <pwd.h>
 }
 
+#define SLIDER_DELAY_MS 100
+
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
@@ -44,6 +46,12 @@ Widget::Widget(QWidget *parent) :
         m_activatePage->setFocus();
         m_activatePage->exec();
     }
+    m_sendMData = new QTimer();
+    m_sendSData = new QTimer();
+    m_sendMData->setSingleShot(true);
+    m_sendSData->setSingleShot(true);
+    connect(m_sendMData,SIGNAL(timeout()),this,SLOT(sendMicToConfig()));
+    connect(m_sendSData,SIGNAL(timeout()),this,SLOT(sendSpkToConfig()));
     init_ui();
 }
 
@@ -59,6 +67,14 @@ Widget::~Widget()
         m_model->clear();
         delete m_model;
         m_model = NULL;
+    }
+    if (m_sendMData) {
+        delete m_sendMData;
+        m_sendMData = nullptr;
+    }
+    if (m_sendSData) {
+        delete m_sendSData;
+        m_sendSData = nullptr;
     }
 }
 
@@ -316,8 +332,9 @@ void Widget::on_volumnSlider_valueChanged(int value)
     }else if (value >=50){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v1.svg);border:none;");
     }
-    // 滑块值变动，传递给配置中心
-    setConfig("SpeakerVolume", QString("%1").arg(value));
+    if (m_sendSData){
+        m_sendSData->start(SLIDER_DELAY_MS);
+    }
 }
 
 void Widget::on_audioBtn_clicked()
@@ -337,8 +354,9 @@ void Widget::on_audioSlider_valueChanged(int value)
     }else if (value > 0){
         ui->audioBtn->setStyleSheet("image:url(:/images/m1.svg);border:none;");
     }
-    // 滑块值变动，传递给配置中心
-    setConfig("MicVolume", QString("%1").arg(value));
+    if (m_sendMData){
+        m_sendMData->start(SLIDER_DELAY_MS);
+    }
 }
 
 void Widget::on_playBtn_clicked()
@@ -1075,6 +1093,20 @@ void Widget::receiveNotification(int pid, QString message)
         this->move(m_toWidth, m_toHeight);
         this->show();
     }
+}
+
+void Widget::sendMicToConfig()
+{
+    // 滑块值变动，传递给配置中心
+    int value = ui->audioSlider->value();
+    setConfig("MicVolume", QString("%1").arg(value));
+}
+
+void Widget::sendSpkToConfig()
+{
+    // 滑块值变动，传递给配置中心
+    int value = ui->volumnSlider->value();
+    setConfig("SpeakerVolume", QString("%1").arg(value));
 }
 
 void Widget::openActivate()

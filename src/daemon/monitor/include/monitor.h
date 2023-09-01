@@ -52,9 +52,9 @@ private:
     void clearSessionInfos();
     void clearProcess(QProcess *process);
     void clearFrontRecordInfos();
-    QString getLocalActiveUser();
     QString frontGetXAuth(QString userName, QString display);
     bool processExist(int pid);
+    QString getCurrentSessionDisplay();
 
 private slots:
     void monitorProcess();

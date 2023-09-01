@@ -263,7 +263,8 @@ std::vector<PulseAudioInput::Source> PulseAudioInput::GetSourceList() {
 		operation = pa_context_get_source_info_list(context, SourceNamesCallback, &list);
 		if(operation == NULL) {
 			Logger::LogError("[PulseAudioInput::GetSourceList] " + Logger::tr("Error: Could not get names of sources! Reason: %1").arg(pa_strerror(pa_context_errno(context))));
-			throw PulseAudioException();
+			// throw PulseAudioException();
+			return list;
 		}
 		PulseAudioCompleteOperation(mainloop, &operation);
 

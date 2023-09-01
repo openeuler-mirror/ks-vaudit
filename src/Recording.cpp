@@ -785,8 +785,8 @@ void Recording::SaveSettings(QSettings* settings) {
 	settings->setValue("input/audio_speakervolume",jsonObj[key].toString().toInt()); //扬声器音量
 
 	settings->setValue("input/audio_backend", EnumToString(Recording::AUDIO_BACKEND_PULSEAUDIO));
-	//settings->setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
-	Logger::LogInfo("[SaveSettings] the audio source name is" + GetPulseAudioSourceName());
+	// settings->setValue("input/audio_pulseaudio_source", GetPulseAudioSourceName());
+	// Logger::LogInfo("[SaveSettings] the audio source name is" + GetPulseAudioSourceName());
 
 	key = "RecordVideo";
 	settings->setValue("input/video_enabled",jsonObj[key].toString().toInt()); //是否录制视频

@@ -319,6 +319,8 @@ void Widget::on_waterprintCheck_stateChanged(int arg1)
         ui->waterprintText->show();
         ui->waterprintConfirm->show();
         ui->label_6->show();
+    }else {
+        KLOG_DEBUG() << "arg:" << arg1;
     }
     setConfig(QString(GENEARL_CONFIG_WATER_PRINT), ret);
 }
@@ -330,6 +332,8 @@ void Widget::on_volumnBtn_clicked()
         ui->volumnBtn->setStyleSheet("image:url(:/images/v0.svg);border:none;");
     }else if (ui->volumnSlider->value() == VOLUME_MIN_VALUE){
         ui->volumnSlider->setValue(VOLUME_MAX_VALUE);
+    }else {
+        KLOG_DEBUG() << "value error";
     }
 }
 
@@ -341,6 +345,8 @@ void Widget::on_volumnSlider_valueChanged(int value)
         ui->volumnBtn->setStyleSheet("image:url(:/images/v2.svg);border:none;");
     }else if (value >= VOLUME_MID_VALUE){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v1.svg);border:none;");
+    }else {
+        KLOG_DEBUG() << "value error";
     }
     if (m_sendSData){
         m_sendSData->start(SLIDER_DELAY_MS);
@@ -354,6 +360,8 @@ void Widget::on_audioBtn_clicked()
         ui->audioBtn->setStyleSheet("image:url(:/images/m0.svg);border:none;");
     }else if (ui->audioSlider->value() == VOLUME_MIN_VALUE){
         ui->audioSlider->setValue(VOLUME_MAX_VALUE);
+    }else {
+        KLOG_DEBUG() << "value error";
     }
 }
 
@@ -363,6 +371,8 @@ void Widget::on_audioSlider_valueChanged(int value)
         ui->audioBtn->setStyleSheet("image:url(:/images/m0.svg);border:none;");
     }else if (value > VOLUME_MIN_VALUE){
         ui->audioBtn->setStyleSheet("image:url(:/images/m1.svg);border:none;");
+    }else {
+        KLOG_DEBUG() << "value error";
     }
     if (m_sendMData){
         m_sendMData->start(SLIDER_DELAY_MS);
@@ -536,6 +546,8 @@ void Widget::on_audioBox_currentIndexChanged(int index)
     }else if(UI_INDEX_LEVEL_3 == index){
         setValue = QString(CONFIG_RECORD_AUDIO_NONE);
         v.setValue(0);
+    }else{
+        KLOG_DEBUG() << "index error:" << index;
     }
     ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
     setConfig(QString(GENEARL_CONFIG_RECORD_AUDIO), setValue);
@@ -557,6 +569,8 @@ void Widget::on_remainderBox_currentIndexChanged(int index)
         setValue = TIMING_REMINDER_LEVEL_2;
     }else if (UI_INDEX_LEVEL_3 == index){
         setValue = TIMING_REMINDER_LEVEL_3;
+    }else {
+        KLOG_DEBUG() << "index error:" << index;
     }
 
     m_timing = setValue;
@@ -570,6 +584,8 @@ void Widget::on_typeBox_currentIndexChanged(int index)
         setValue = QString(UI_FILETYPE_MKV);
     }else if (UI_INDEX_LEVEL_1 == index){
         setValue = QString(UI_FILETYPE_MP4);
+    }else {
+        KLOG_DEBUG() << "index error:" << index;
     }
     setConfig(QString(GENEARL_CONFIG_FILETYPE), setValue);
 }
@@ -919,15 +935,15 @@ void Widget::readConfig()
                 int setIndex = UI_INDEX_LEVEL_0;
                 QVariant v(1|32);
                 QString auditType = jsonObj[k].toString();
-                if (QString(CONFIG_RECORD_AUDIO_ALL) == auditType){
-                    setIndex = UI_INDEX_LEVEL_0;
-                }else if(QString(CONFIG_RECORD_AUDIO_SPEAKER) == auditType){
+                if(QString(CONFIG_RECORD_AUDIO_SPEAKER) == auditType){
                     setIndex = UI_INDEX_LEVEL_1;
                 }else if(QString(CONFIG_RECORD_AUDIO_MIC) == auditType){
                     setIndex = UI_INDEX_LEVEL_2;
                 }else if(QString(CONFIG_RECORD_AUDIO_NONE) == auditType){
                     setIndex = UI_INDEX_LEVEL_3;
                     v.setValue(0);
+                }else{
+                    setIndex = UI_INDEX_LEVEL_0;
                 }
 
                 ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
@@ -942,14 +958,14 @@ void Widget::readConfig()
                 ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
             }else if(GENEARL_CONFIG_TIMING_REMINDER == k){
                 int setIndex = UI_INDEX_LEVEL_0;
-                if (TIMING_REMINDER_LEVEL_0 == jsonObj[k].toString().toInt()){
-                    setIndex = UI_INDEX_LEVEL_0;
-                }else if (TIMING_REMINDER_LEVEL_1 == jsonObj[k].toString().toInt()){
+                if (TIMING_REMINDER_LEVEL_1 == jsonObj[k].toString().toInt()){
                     setIndex = UI_INDEX_LEVEL_1;
                 }else if (TIMING_REMINDER_LEVEL_2 == jsonObj[k].toString().toInt()){
                     setIndex = UI_INDEX_LEVEL_2;
                 }else if (TIMING_REMINDER_LEVEL_3 == jsonObj[k].toString().toInt()){
                     setIndex = UI_INDEX_LEVEL_3;
+                }else{
+                    setIndex = UI_INDEX_LEVEL_0;
                 }
                 ui->remainderBox->setCurrentIndex(setIndex);
                 m_timing = jsonObj[k].toString().toInt();
@@ -962,6 +978,8 @@ void Widget::readConfig()
                 ui->audioSlider->setValue(jsonObj[k].toString().toInt());
             }else if(GENEARL_CONFIG_SPEAKER_VOLUME == k){
                 ui->volumnSlider->setValue(jsonObj[k].toString().toInt());
+            }else{
+                KLOG_DEBUG() << "item:" << k;
             }
         }
     }
@@ -1066,7 +1084,13 @@ void Widget::realClose()
 
 void Widget::refreshTime(int from_pid, int to_pid, QString op)
 {
-    if (from_pid == m_recordPID && to_pid == m_selfPID && op.startsWith("totaltime")){
+    if (to_pid != m_selfPID)
+        return;
+
+    if (op.startsWith("totaltime")){
+        if (from_pid != m_recordPID)
+            return;
+
         QString timeText = op.split(" ")[1];
         ui->timeStamp->setText(timeText);
         m_heartBeat->start(HEARTBEAT_MS);
@@ -1081,7 +1105,7 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
                 m_lastMinutes = minute;
             }
         }
-    } else if (to_pid == m_selfPID && OPERATE_DISK_FRONT_NOTIFY == op){ //磁盘空间不足
+    } else if (OPERATE_DISK_FRONT_NOTIFY == op){ //磁盘空间不足
         if (m_isRecording)
         {
             KLOG_INFO() << "receive DiskSpace from" << from_pid;
@@ -1090,16 +1114,18 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
             on_stopBtn_clicked();
             prompt->exec();
         }
-    } else if (to_pid == m_selfPID && OPERATE_FRONT_PROCESS == op) { //接收后台进程pid
+    } else if (OPERATE_FRONT_PROCESS == op) { //接收后台进程pid
         m_recordPID = from_pid;
         KLOG_INFO() << "receive backend record pid:" << from_pid;
-    } else if (to_pid == m_selfPID && op.endsWith("-done")) { //接收录屏进程操作结果
+    } else if (op.endsWith(OPERATE_RECORD_DONE)) { //接收录屏进程操作结果
         KLOG_DEBUG() << "receive op done:" << op;
         QStringList list = op.split("-");
         if (list.size() == 2)
         {
             callNotifyProcess(list[0]);
         }
+    } else {
+        KLOG_DEBUG() << "from_pid:" << from_pid << "op:" << op;
     }
 }
 

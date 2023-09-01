@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QDebug>
 
 Dialog::Dialog(QWidget *parent, QString dialogType) :
     QDialog(parent),
@@ -38,6 +39,8 @@ void Dialog::initUI()
         initActivateUI(false);
     }else if(m_dialogType == QString("qrcode")){
         initQRcode();
+    }else{
+        qDebug() << "m_dialogType:" << m_dialogType;
     }
 }
 

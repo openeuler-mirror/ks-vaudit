@@ -8,7 +8,7 @@ class KSVAUDITCONFIGUREDBUSSHARED_EXPORT VauditConfigureDbus : public QObject
 {
     Q_OBJECT
 public:
-    explicit VauditConfigureDbus(QObject *parent = NULL);
+    explicit VauditConfigureDbus(QObject *parent = nullptr);
 
 public slots:
     QString GetRecordInfo();

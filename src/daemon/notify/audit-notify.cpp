@@ -57,7 +57,7 @@ void AuditNotify::sendNotify()
 		KLOG_INFO() << "setreuid error" << ret;
 	}
 
-	char *notify_message = NULL;
+	char *notify_message = nullptr;
 	QString tmp = QString("%1").arg(m_reserveSize);
 	QString str = _("<b>\t请先清理磁盘空间至少预留") + tmp + _("G，否则将无法进行录屏!</b>\n");
 	// 超时时间改为10s，解决切换用户发送提示成功，但不显示的问题（重新发送）
@@ -76,7 +76,7 @@ void AuditNotify::clearData()
 	if (m_pNotify)
 	{
 		KLOG_INFO() << "close notify window";
-		notify_notification_close((NotifyNotification *)m_pNotify, NULL);
+		notify_notification_close((NotifyNotification *)m_pNotify, nullptr);
 		g_object_unref(m_pNotify);
 		m_pNotify = nullptr;
 	}
@@ -90,16 +90,16 @@ void AuditNotify::notify_send(const char *msg, const char *icon, int timeout, co
 	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon);
 	KLOG_DEBUG() << "not 3.2-8, icon:" << icon;
 #else
-	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, NULL);
+	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, nullptr);
 	KLOG_DEBUG() << "is 3.2-8, icon:" << icon;
 #endif
 	notify_notification_set_timeout(pNotify, timeout);
-	GError *error = NULL;
+	GError *error = nullptr;
 	if (!notify_notification_show(pNotify, &error))
 	{
 		KLOG_INFO() << "Error while displaying notification:" << error->message;
 		g_error_free(error);
-		notify_notification_close(pNotify, NULL);
+		notify_notification_close(pNotify, nullptr);
 		g_object_unref(pNotify);
 		sleep(5);
 		notify_uninit();

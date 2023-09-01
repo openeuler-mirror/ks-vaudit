@@ -52,7 +52,7 @@ public:
 	static void LogWarning(const QString& str);
 	static void LogError(const QString& str);
 
-	inline static Logger* GetInstance() { assert(s_instance != NULL); return s_instance; }
+	inline static Logger* GetInstance() { assert(s_instance); return s_instance; }
 
 signals:
 	void NewLine(Logger::enum_type type, QString str);
@@ -112,12 +112,12 @@ inline void WriteBmp(const uint8_t *image, int imageWidth, int imageHeight)
 }
 
 inline void WriteRGB(const uint8_t * data, int width, int height) {
-	static FILE * fp = NULL;
+	static FILE * fp = nullptr;
 	const char * path= "/tmp/ramfs/vaudit.bgra";
 
-	if (fp == NULL) {
+	if (!fp) {
 		fp = fopen(path, "w");
-		if (fp == NULL) {
+		if (!fp) {
 			Logger::LogError("open debug file failed, path: " + QString(path));
 			return;
 		}
@@ -131,7 +131,7 @@ inline void WriteNv12(uint8_t * data, size_t size, const char* filename) {
 	static std::map<std::string, FILE *> filemap;
 	std::map<std::string, FILE *>::iterator item;
 
-	FILE * fp = NULL;
+	FILE * fp = nullptr;
 	char path[128] = "/tmp/ramfs/vaudit.nv12";
 	if (filename) {
 		snprintf(path, sizeof(path), "/tmp/ramfs/%s", filename);
@@ -139,7 +139,7 @@ inline void WriteNv12(uint8_t * data, size_t size, const char* filename) {
 	item = filemap.find(path);
 	if (item == filemap.end()) {
 		fp = fopen(path, "w");
-		if (fp == NULL) {
+		if (!fp) {
 			Logger::LogError("open debug file failed, path: " + QString(path));
 			return;
 		}

@@ -5,4 +5,3 @@ set(LRELEASE Qt5::lrelease)
 
 add_subdirectory(record)
 add_subdirectory(audit)
-add_subdirectory(vaudit-license)

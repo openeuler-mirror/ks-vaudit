@@ -16,7 +16,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
-#include "license-entry.h"
 #include "common-definition.h"
 
 extern "C" {
@@ -67,12 +66,12 @@ Widget::~Widget()
     sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_EXIT);
     if (m_dbusInterface){
         delete m_dbusInterface;
-        m_dbusInterface = NULL;
+        m_dbusInterface = nullptr;
     }
     if (m_model){
         m_model->clear();
         delete m_model;
-        m_model = NULL;
+        m_model = nullptr;
     }
     if (m_sendMData) {
         delete m_sendMData;
@@ -602,9 +601,9 @@ void Widget::renameVideo()
     QString oldName = sender()->property("S_OLDNAME").toString();
 
 //    KLOG_DEBUG() << oldName << "left:" << oldName.left(oldName.lastIndexOf(".")) << "right:" << oldName.right(4);
-    if (m_renameDialog != NULL){
+    if (m_renameDialog){
 //        delete m_renameDialog;
-        m_renameDialog = NULL;
+        m_renameDialog = nullptr;
     }
     m_renameDialog = new Dialog(this, QString("rename"), oldName);
     connect(m_renameDialog, SIGNAL(rename_file()), this, SLOT(realRename()));
@@ -721,18 +720,18 @@ QString Widget::getVideoDuration(QString absPath)
     int secs = 0;
     int mins = 0;
     int hours = 0;
-    AVFormatContext* pCtx = NULL;
-    int ret = avformat_open_input(&pCtx, absPath.toStdString().c_str(), NULL, NULL);
+    AVFormatContext* pCtx = nullptr;
+    int ret = avformat_open_input(&pCtx, absPath.toStdString().c_str(), nullptr, nullptr);
     if (ret < 0){
         KLOG_DEBUG() << "avformat_open_input() failed:" << ret;
         return QString(tr("File broken"));
     }
-    int ret1 = avformat_find_stream_info(pCtx,NULL);
+    int ret1 = avformat_find_stream_info(pCtx,nullptr);
     if(ret1 < 0){
         KLOG_DEBUG() << "avformat_find_stream_info() failed:" << ret1;
-        if (pCtx != NULL){
+        if (pCtx){
             avformat_close_input(&pCtx);
-            pCtx=NULL;
+            pCtx=nullptr;
         }
         return QString(tr("File broken"));
     }
@@ -742,9 +741,9 @@ QString Widget::getVideoDuration(QString absPath)
         secs = duration / AV_TIME_BASE;
         // #59083 过滤掉时长为0播放不了的视频
         if (secs == 0){
-            if (pCtx != NULL){
+            if (pCtx){
                 avformat_close_input(&pCtx);
-                pCtx=NULL;
+                pCtx=nullptr;
             }
             return QString(tr("File broken"));
         }
@@ -755,16 +754,16 @@ QString Widget::getVideoDuration(QString absPath)
         // KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
     }else{
         // #62390 没有时长的视频显示为 "未知"
-        if (pCtx != NULL){
+        if (pCtx){
             avformat_close_input(&pCtx);
-            pCtx=NULL;
+            pCtx=nullptr;
         }
         return QString(tr("Unknown"));
     }
 
-    if (pCtx != NULL){
+    if (pCtx){
         avformat_close_input(&pCtx);
-        pCtx=NULL;
+        pCtx=nullptr;
     }
     // 目前假设单个视频文件超过99小时
     if (hours > 99){

@@ -32,8 +32,8 @@ extern "C" {
 #include<signal.h>
 }
 
-static std::unique_ptr<Recording> recording_screen = NULL;
-QSettings* settings_ptr = NULL;
+static std::unique_ptr<Recording> recording_screen = nullptr;
+QSettings* settings_ptr = nullptr;
 
 
 static void sig_handler(int sig){

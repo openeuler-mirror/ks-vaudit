@@ -30,14 +30,14 @@ Muxer::Muxer(const QString& container_name, const QString& output_file) {
 	m_container_name = container_name;
 	m_output_file = output_file;
 
-	m_format_context = NULL;
+	m_format_context = nullptr;
 	m_started = false;
 
 	// initialize stream data
 	for(int i = 0; i < MUXER_MAX_STREAMS; ++i) {
 		StreamLock lock(&m_stream_data[i]);
 		lock->m_is_done = false;
-		m_encoders[i] = NULL;
+		m_encoders[i] = nullptr;
 	}
 
 	// initialize shared data
@@ -89,10 +89,10 @@ VideoEncoder* Muxer::AddVideoEncoder(const QString& codec_name, const std::vecto
 					 unsigned int bit_rate, unsigned int width, unsigned int height, unsigned int frame_rate) {
 
 	AVCodec *codec = FindCodec(codec_name);
-	AVCodecContext *codec_context = NULL;
+	AVCodecContext *codec_context = nullptr;
 	AVStream *stream = AddStream(codec, &codec_context);
 	VideoEncoder *encoder;
-	AVDictionary *options = NULL;
+	AVDictionary *options = nullptr;
 	try {
 		VideoEncoder::PrepareStream(stream, codec_context, codec, &options, codec_options, bit_rate, width, height, frame_rate);
 		m_encoders[stream->index] = encoder = new VideoEncoder(this, stream, codec_context, codec, &options);
@@ -113,10 +113,10 @@ VideoEncoder* Muxer::AddVideoEncoder(const QString& codec_name, const std::vecto
 AudioEncoder* Muxer::AddAudioEncoder(const QString& codec_name, const std::vector<std::pair<QString, QString> >& codec_options,
 									 unsigned int bit_rate, unsigned int channels, unsigned int sample_rate) {
 	AVCodec *codec = FindCodec(codec_name);
-	AVCodecContext *codec_context = NULL;
+	AVCodecContext *codec_context = nullptr;
 	AVStream *stream = AddStream(codec, &codec_context);
 	AudioEncoder *encoder;
-	AVDictionary *options = NULL;
+	AVDictionary *options = nullptr;
 	try {
 		AudioEncoder::PrepareStream(stream, codec_context, codec, &options, codec_options, bit_rate, channels, sample_rate);
 		m_encoders[stream->index] = encoder = new AudioEncoder(this, stream, codec_context, codec, &options);
@@ -139,11 +139,11 @@ void Muxer::Start() {
 
 	// make sure all encoders were created successfully
 	for(unsigned int i = 0; i < m_format_context->nb_streams; ++i) {
-		assert(m_encoders[i] != NULL);
+		assert(m_encoders[i]);
 	}
 
 	// write header
-	if(avformat_write_header(m_format_context, NULL) != 0) {
+	if(avformat_write_header(m_format_context, nullptr) != 0) {
 		Logger::LogError("[Muxer::Start] " + Logger::tr("Error: Can't write header!", "Don't translate 'header'"));
 		throw LibavException();
 	}
@@ -157,7 +157,7 @@ void Muxer::Finish() {
 	assert(m_started);
 	Logger::LogInfo("[Muxer::Finish] " + Logger::tr("Finishing encoders ..."));
 	for(unsigned int i = 0; i < m_format_context->nb_streams; ++i) {
-		assert(m_encoders[i] != NULL);
+		assert(m_encoders[i]);
 		m_encoders[i]->Finish(); // no deadlock: nothing in Muxer is locked in this thread (and BaseEncoder::Finish is lock-free, but that could change)
 	}
 }
@@ -195,10 +195,10 @@ unsigned int Muxer::GetQueuedPacketCount(unsigned int stream_index) {
 void Muxer::Init() {
 	
 	// get the format we want (this is just a pointer, we don't have to free this)
-	AVOutputFormat *format = (AVOutputFormat*)av_guess_format(m_container_name.toUtf8().constData(), NULL, NULL);
+	AVOutputFormat *format = (AVOutputFormat*)av_guess_format(m_container_name.toUtf8().constData(), nullptr, nullptr);
 	Logger::LogInfo("[Muxer::Init] the m_container_name is: " + m_container_name);
 
-	if(format == NULL) {
+	if(!format) {
 		Logger::LogError("[Muxer::Init] " + Logger::tr("Error: Can't find chosen output format!"));
 		throw LibavException();
 	}
@@ -208,7 +208,7 @@ void Muxer::Init() {
 	// allocate format context
 	// ffmpeg probably wants us to use avformat_alloc_output_context2 instead, but libav doesn't have it and I can't figure out why it's needed anyway
 	m_format_context = avformat_alloc_context();
-	if(m_format_context == NULL) {
+	if(!m_format_context) {
 		Logger::LogError("[Muxer::Init] " + Logger::tr("Error: Can't allocate format context!"));
 		throw LibavException();
 	}
@@ -223,7 +223,7 @@ void Muxer::Init() {
 }
 
 void Muxer::Free() {
-	if(m_format_context != NULL) {
+	if(m_format_context) {
 
 		// write trailer (needed to free private muxer data)
 		if(m_started) {
@@ -236,29 +236,29 @@ void Muxer::Free() {
 
 		// destroy the encoders
 		for(unsigned int i = 0; i < m_format_context->nb_streams; ++i) {
-			if(m_encoders[i] != NULL) {
+			if(m_encoders[i]) {
 				delete m_encoders[i]; // no deadlock: nothing in Muxer is locked in this thread
-				m_encoders[i] = NULL;
+				m_encoders[i] = nullptr;
 			}
 		}
 
 		// close file
-		if(m_format_context->pb != NULL) {
+		if(m_format_context->pb) {
 			avio_close(m_format_context->pb);
-			m_format_context->pb = NULL;
+			m_format_context->pb = nullptr;
 		}
 
 		// free everything
 #if SSR_USE_AVFORMAT_FREE_CONTEXT
 		avformat_free_context(m_format_context);
-		m_format_context = NULL;
+		m_format_context = nullptr;
 #else
 		for(unsigned int i = 0; i < m_format_context->nb_streams; ++i) {
 			av_freep(&m_format_context->streams[i]->codec);
 			av_freep(&m_format_context->streams[i]);
 		}
 		av_free(m_format_context);
-		m_format_context = NULL;
+		m_format_context = nullptr;
 #endif
 
 	}
@@ -266,7 +266,7 @@ void Muxer::Free() {
 
 AVCodec* Muxer::FindCodec(const QString& codec_name) {
 	AVCodec *codec = (AVCodec*)avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
-	if(codec == NULL) {
+	if(!codec) {
 		Logger::LogError("[Muxer::FindCodec] " + Logger::tr("Error: Can't find codec, codec name: %1").arg(codec_name));
 		throw LibavException();
 	}
@@ -281,25 +281,25 @@ AVStream* Muxer::AddStream(AVCodec* codec, AVCodecContext** codec_context) {
 
 	// create a new stream
 #if SSR_USE_AVSTREAM_CODECPAR
-	AVStream *stream = avformat_new_stream(m_format_context, NULL);
+	AVStream *stream = avformat_new_stream(m_format_context, nullptr);
 #elif SSR_USE_AVFORMAT_NEW_STREAM
 	AVStream *stream = avformat_new_stream(m_format_context, codec);
 #else
 	AVStream *stream = av_new_stream(m_format_context, m_format_context->nb_streams);
 #endif
-	if(stream == NULL) {
+	if(!stream) {
 		Logger::LogError("[Muxer::AddStream] " + Logger::tr("Error: Can't create new stream!"));
 		throw LibavException();
 	}
 	assert(stream->index == (int) m_format_context->nb_streams - 1);
 #if SSR_USE_AVSTREAM_CODECPAR
 	*codec_context = avcodec_alloc_context3(codec);
-	if(*codec_context == NULL) {
+	if(*codec_context == nullptr) {
 		Logger::LogError("[Muxer::AddStream] " + Logger::tr("Error: Can't create new codec context!"));
 		throw LibavException();
 	}
 #else
-	assert(stream->codec != NULL);
+	assert(stream->codec);
 	*codec_context = stream->codec;
 #endif
 	//stream->id = m_format_context->nb_streams - 1;
@@ -365,7 +365,7 @@ void Muxer::MuxerThread() {
 			}
 
 			// if there is no packet, wait and try again later
-			if(packet == NULL) {
+			if(!packet) {
 				usleep(20000);
 				continue;
 			}

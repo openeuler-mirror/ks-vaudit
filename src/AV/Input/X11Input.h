@@ -111,6 +111,10 @@ private:
 
 private:
 	void InputThread();
+	// 将InputThread里的内容拆为多个函数
+	void followCursor(unsigned int &grab_x, unsigned int &grab_y, unsigned int &grab_width, unsigned int &grab_height, bool &has_initial_cursor, int64_t diff_timestamp);
+	void getImageAndClearSpace(unsigned int grab_x, unsigned int grab_y, unsigned int grab_width, unsigned int grab_height);
+	int drawWatermark(unsigned int grab_width, unsigned int grab_height, int64_t timestamp, uint8_t *&image_data);
 
 signals:
 	void CurrentRectangleChanged();

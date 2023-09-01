@@ -198,4 +198,19 @@
 #define UI_SYSADM_USERNAME                          "sysadm"
 #define UI_SECADM_USERNAME                          "secadm"
 #define UI_AUDADM_USERNAME                          "audadm"
+#define DBUS_TIMEOUT_MS                             5000
+#define DBUS_LICENSE_DESTIONATION                   "com.kylinsec.Kiran.LicenseManager"
+#define DBUS_LICENSE_OBJECT_PATH                    "/com/kylinsec/Kiran/LicenseManager"
+#define DBUS_LICENSE_OBJECT_VAUDIT_NAME             "KSVAUDITRECORD"
+#define DBUS_LICENSE_VAUDIT_PATH                    "/com/kylinsec/Kiran/LicenseObject/KSVAUDITRECORD"
+#define DBUS_LICENSE_INTERFACE                      "com.kylinsec.Kiran.LicenseObject"
+#define DBUS_LICENSE_METHOD_OBJECK                  "GetLicenseObject"
+#define DBUS_LICENSE_METHOD_GETLICENSE              "GetLicense"
+#define DBUS_LICENSE_METHOD_ACTIVATE                "ActivateByActivationCode"
+#define DBUS_LICENSE_ACTIVATION_CODE                "activation_code"
+#define DBUS_LICENSE_ACTIVATION_STATUS              "activation_status"
+#define DBUS_LICENSE_ACTIVATION_TIME                "activation_time"
+#define DBUS_LICENSE_MACHINE_CODE                   "machine_code"
+#define DBUS_LICENSE_EXPIRED_TIME                   "expired_time"
+
 #endif

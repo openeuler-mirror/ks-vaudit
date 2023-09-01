@@ -55,6 +55,7 @@ private:
     QString frontGetXAuth(QString userName, QString display);
     bool processExist(int pid);
     QString getCurrentSessionDisplay();
+    bool creatLicenseObjectName();
 
 private slots:
     void monitorProcess();

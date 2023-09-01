@@ -16,7 +16,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
-#include "license-entry.h"
 #include "common-definition.h"
 
 extern "C" {

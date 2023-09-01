@@ -26,6 +26,20 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Synchronizer.h"
 #include "OutputSettings.h"
 
+#define OM_CONTAINER_MP4 "mp4"
+#define OM_CONTAINER_OGG "ogg"
+#define OM_CONTAINER_MKV "matroska"
+
+#define CODEC_H264_VAAPI "h264_vaapi"
+#define CODEC_H264_QSV "h264_qsv"
+#define CODEC_H264_NVENC "h264_nvenc"
+#define CODEC_H264_CPU "libx264"
+#define CODEC_THEORA "libtheora"
+
+#define CODEC_VAAPI "vaapi"
+#define CODEC_QSV "qsv"
+#define CODEC_NVENC "nvenc"
+
 class OutputManager {
 
 private:
@@ -111,7 +125,7 @@ private:
 
 	// detect which encode type should be used according to cpu type and gpu type
 	inline int Encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt);
-	inline int CheckEncodeName(QString container_name, QString codecname);
+	inline int CheckEncodeName(QString &container_name, QString &codecname);
 	inline QString ChooseEncodeName(QString container_name);
 
 public:

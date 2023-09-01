@@ -266,15 +266,6 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
 		lock->m_current_height = m_height;
 	}
 
-	if(m_width == 0 || m_height == 0) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Width or height is zero!"));
-		throw X11Exception();
-	}
-	if(m_width > SSR_MAX_IMAGE_SIZE || m_height > SSR_MAX_IMAGE_SIZE) {
-		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Width or height is too large, the maximum width and height is %1!").arg(SSR_MAX_IMAGE_SIZE));
-		throw X11Exception();
-	}
-
 	try {
 		Init();
 	} catch(...) {
@@ -365,7 +356,7 @@ void X11Input::Init() {
 	m_fps_current = 0.0;
 
 	//initialize the watermark_content
-	if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){
+	if(!settings_ptr->value("record/is_use_watermark").toBool()){
 		m_is_use_watermarking = false;
 		watermark_content = settings_ptr ->value("record/water_print_text").toString();
 	}else{
@@ -573,6 +564,14 @@ void X11Input::InputThread() {
 
 		pid_t tid = gettid();
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
+		if(m_width == 0 || m_height == 0) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Width or height is zero!"));
+			throw X11Exception();
+		}
+		if(m_width > SSR_MAX_IMAGE_SIZE || m_height > SSR_MAX_IMAGE_SIZE) {
+			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Width or height is too large, the maximum width and height is %1!").arg(SSR_MAX_IMAGE_SIZE));
+			throw X11Exception();
+		}
 
 		unsigned int grab_x = m_x, grab_y = m_y, grab_width = m_width/2*2, grab_height = m_height/2*2;
 		bool has_initial_cursor = false;

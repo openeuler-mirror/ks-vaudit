@@ -60,7 +60,13 @@ void RecordNotify::sendNotify(QString op, uid_t uid, int timing)
 	}
 
 	KLOG_INFO() << "notify info:" << notify_message;
-	setreuid(uid, uid);
+	// uid必须与用户uid一致，否则弹窗失败
+	int ret = setreuid(uid, uid);
+	if (ret != 0)
+	{
+		KLOG_INFO() << "setreuid error" << ret;
+	}
+
 	notify_send(notify_message.toStdString().c_str());
 }
 

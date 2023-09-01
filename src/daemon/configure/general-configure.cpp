@@ -40,11 +40,13 @@ GeneralConfigure::GeneralConfigure(QObject *parent)
     m_itemMap.insert(CONFIG_AUDIT_MAX_FILE_SIZE,        KEY_AUDIT_MAX_FILE_SIZE);
     m_itemMap.insert(CONFIG_AUDIT_MAX_RECORD_PER_USER,  KEY_AUDIT_MAX_RECORD_PER_USER);
 
+    // QSettings new出来后需要立即设置编码，否则不能解析中文
     m_confSettings = QSharedPointer<QSettings>(new QSettings(GENEARL_CONFIG_FILE, QSettings::IniFormat));
     m_confSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
     initConfig();
 
     m_fileWatcher = new QFileSystemWatcher();
+    // 直接监控文件，会发生修改文件但没触发信号
     connect(m_fileWatcher, SIGNAL(directoryChanged(QString)), this, SLOT(onDirectoryChanged(QString)));
     m_fileWatcher->addPath(GENEARL_CONFIG_PATH);
 }
@@ -134,16 +136,19 @@ void GeneralConfigure::initConfig()
         m_confSettings->sync();
         // 2: CONFIG_RECORD 和 CONFIG_AUDIT
         bool bAdd = m_itemMap.size() > m_confSettings->allKeys().size() + 2;
+        // 有新增选项，先初始化m_lastMap
         if (bAdd)
         {
             initData();
         }
 
+        // 读取配置文件里的数据，更新m_lastMap
         for (auto key : m_confSettings->allKeys())
         {
             m_lastMap.insert(key, m_confSettings->value(key).toString());
         }
 
+        // 有新增选项：需要再将m_lastMap写入配置文件，添加新选项
         if (bAdd)
         {
             for (auto it = m_lastMap.begin(); it != m_lastMap.end(); it++)
@@ -387,6 +392,7 @@ void GeneralConfigure::rewriteConfig()
     m_confSettings->sync();
 }
 
+// 手动修改后台配置文件处理
 void GeneralConfigure::onDirectoryChanged(QString)
 {
     QMutexLocker locker(&m_mutex);
@@ -401,6 +407,7 @@ void GeneralConfigure::onDirectoryChanged(QString)
     fileSize = file.size();
     file.close();
 
+    // 文件有数据，但QSetting 没获取到文件数据
     if (fileSize && m_confSettings->allKeys().size() == 0)
         return;
 
@@ -410,6 +417,7 @@ void GeneralConfigure::onDirectoryChanged(QString)
         dataMap.insert(key,  m_confSettings->value(key).toString());
     }
 
+    // 配置文件选项和默认选项个数不一样：人为在配置文件里添加东西，属于破坏文件，重新将默认选项写入到配置文件
     if (dataMap.size() != m_lastMap.size())
     {
         KLOG_INFO() << "number of options changed externally, restore file, old:" << m_lastMap.size() << "new:" << dataMap.size() << "fileSize:" << fileSize;
@@ -417,9 +425,11 @@ void GeneralConfigure::onDirectoryChanged(QString)
         return;
     }
 
+    // 文件数据没有改变
     if (dataMap == m_lastMap)
         return;
 
+    // 配置文件选项和默认选项,选项内容不一样：人为修改配置文件选项，属于破坏文件，重新将默认选项写入到配置文件
     if (dataMap.keys() != m_lastMap.keys())
     {
         KLOG_INFO() << "options changed, restore file, old:" << m_lastMap.keys() << "new:" << dataMap.keys();
@@ -429,6 +439,7 @@ void GeneralConfigure::onDirectoryChanged(QString)
  
     KLOG_INFO() << "data changed";
     QJsonObject recordObj, auditObj;
+    // 循环查找每个选项的值是否有改变，并判断值是否符合要求，符合要求的修改成功，发送配置改变通知，不符合的值修改为默认值
     for (auto k : dataMap.keys())
     {
         if (m_lastMap[k] != dataMap[k])
@@ -451,12 +462,14 @@ void GeneralConfigure::onDirectoryChanged(QString)
         }
     }
 
+    // 录屏配置改变
     if (recordObj.size())
     {
         QJsonDocument minDoc(recordObj);
         this->ConfigureChanged(m_itemMap[CONFIG_RECORD], QString::fromUtf8(minDoc.toJson(QJsonDocument::Compact).constData()));
     }
 
+    // 审计配置改变
     if (auditObj.size())
     {
         QJsonDocument maxDoc(auditObj);

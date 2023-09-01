@@ -4,9 +4,7 @@
 #include <QObject>
 
 #define LICENSE_OBJECT_RECORD_NAME "KSVAUDITRECORD"
-//#define LICENSE_OBJECT_OS_NAME "KylinSecOS"
 #define TIMEOUT_MS 5000
-#define KIRAN_LICENSE_INTERFACE "com.kylinsec.Kiran.LicenseHelper"
 #define LICENSE_OBJECT_DBUS_NAME "com.kylinsec.Kiran.LicenseObject"
 #define METHOD_GET_LICENSE "GetLicense"
 #define METHOD_GET_LICENSE_JSON "GetLicenseJson"

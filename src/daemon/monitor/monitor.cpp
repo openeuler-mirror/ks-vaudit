@@ -2,6 +2,7 @@
 #include "monitor.h"
 #include "monitor-disk.h"
 #include "common-definition.h"
+#include <kylin-license/license-i.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -19,9 +20,10 @@
 //dbus-send --system --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Display2 org.gnome.DisplayManager.Display.GetX11DisplayName
 //张三_192.168.1.1_20220621_153620.mp4
 
+#define TIMEOUT_MS                 5000
+
 Monitor::Monitor(QObject *parent)
 {
-    creatLicenseObjectName();
     m_isActive = isLicenseActive();
     KLOG_DEBUG() << "Current thread ID: " << QThread::currentThreadId() << "m_isActive:" << m_isActive;
     QDir dir;
@@ -112,7 +114,7 @@ void Monitor::receiveNotification(int pid, QString message)
                     KLOG_INFO() << "audit receive disk space notify";
                     return;
                 }
-                if (VAUDIT_ACTIVE == message)
+                else if (VAUDIT_ACTIVE == message)
                 {
                     KLOG_INFO() << "audit send is_active";
                     it.value().bActive = true;
@@ -176,14 +178,6 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
     KLOG_INFO() << "backend pid:" << process->pid() << process->arguments();
     MonitorDisk::instance().sendProcessPid(process->pid(), from_pid);
     MonitorDisk::instance().sendProcessPid(from_pid, process->pid());
-    // 规避前台录屏进程起多个，关掉旧的进程
-    auto iter = m_frontRecordInfo.find(from_pid);
-    if (iter != m_frontRecordInfo.end())
-    {
-        auto &pp = iter.value();
-        KLOG_INFO() << "clear the vaudit process corresponding to process: " << iter.key();
-        clearProcess(pp);
-    }
     // 记录前后台进程信息
     m_frontRecordInfo.insert(from_pid, process);
 
@@ -285,7 +279,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), VAUDIT_LOCAL_IP, arr[index1+1], arr[index2 + 1], nullptr, false, false, time(nullptr), true, false};
+            struct sessionInfo info = {it.value(), VAUDIT_LOCAL_IP, arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL), true, false};
             vecInfo.push_back(info);
         }
     }
@@ -370,7 +364,7 @@ QVector<sessionInfo> Monitor::getXvncInfo()
             if (index == -1 || index2 == -1)
                 continue;
 
-            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index2+1], nullptr, false, false, time(nullptr), false, false};
+            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index2+1], nullptr, false, false, time(NULL), false, false};
             vecInfo.push_back(info);
         }
         process.close();
@@ -430,18 +424,18 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 pp = nullptr;
             }
 
-        #if 1
-            QString displayName = getCurrentSessionDisplay();
-            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
-            if (info.bLocal && !displayName.isEmpty() && value.displayName != displayName)
+        #if 0
+            QString loginUser = getLocalActiveUser();
+            // 本地未激活用户不启进程
+            if (info.userName != loginUser && info.bLocal)
             {
-                KLOG_INFO() << value.userName << value.displayName << "is not active user" << "cur display:" << displayName;
+                KLOG_INFO() << value.userName << value.displayName << "is not active user";
                 m_sessionInfos.erase(it);
                 return;
             }
         #endif
 
-            value.stTime = time(nullptr);
+            value.stTime = time(NULL);
             value.bStart = false;
             value.bActive = false;
             value.bNotify = false;
@@ -500,7 +494,7 @@ void Monitor::DealSession(bool isDiskOk)
     }
 
     // 拉起新启的会话的录屏进程
-    QString loginDisplay;
+    QString loginUser;
     for (sessionInfo info : infos)
     {
         if (!m_sessionInfos.contains(info.userName, info))
@@ -512,14 +506,15 @@ void Monitor::DealSession(bool isDiskOk)
                 continue;
             }
 
-        #if 1
+        #if 0
             // 获取激活的会话，对于本对只会有一个会话正在使用，一次循环内仅需获取一次
-            if (loginDisplay.isEmpty())
+            if (loginUser.isEmpty())
             {
-                loginDisplay = getCurrentSessionDisplay();
+                loginUser = getLocalActiveUser();
             }
-            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
-            if (info.bLocal && !loginDisplay.isEmpty() && info.displayName != loginDisplay)
+
+            // 本地未激活用户不启进程
+            if (info.userName != loginUser && info.bLocal)
                 continue;
         #endif
 
@@ -537,7 +532,7 @@ void Monitor::DealSession(bool isDiskOk)
         {
             if (!val.bActive)
             {
-                if (time(nullptr) - val.stTime > 10)
+                if (time(NULL) - val.stTime > 10)
                 {
                     // 约10s没收到子进程的已激活信息，认为子进程卡住，杀掉子进程并清除信息
                     auto &process = it.value().process;
@@ -594,11 +589,11 @@ void Monitor::DealSession(bool isDiskOk)
 
 bool Monitor::isLicenseActive()
 {
-    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
-                                                                DBUS_LICENSE_VAUDIT_PATH,
-                                                                DBUS_LICENSE_INTERFACE,
-                                                                DBUS_LICENSE_METHOD_GETLICENSE);
-    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(LICENSE_MANAGER_DBUS_NAME,
+                                                                QString(LICENSE_OBJECT_OBJECT_PATH) + "/KSVAUDITRECORD",
+                                                                 "com.kylinsec.Kiran.LicenseObject",
+                                                                "GetLicense");
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, TIMEOUT_MS);
     //KLOG_DEBUG() << "msgReply " << msgReply;
     QString errorMsg;
 
@@ -617,10 +612,13 @@ bool Monitor::isLicenseActive()
             }
 
             QJsonObject jsonObj = doc.object();
-            auto iter = jsonObj.find(DBUS_LICENSE_ACTIVATION_STATUS);
-            if (iter != jsonObj.end())
+            for (auto key : jsonObj.keys())
             {
-                return iter.value().toDouble() == 1 ? true : false;
+                if ("activation_status" == key)
+                {
+                    int activation_status = jsonObj[key].toDouble();
+                    return activation_status != LicenseActivationStatus::LAS_ACTIVATED ? false : true;
+                }
             }
 
             return false;
@@ -685,14 +683,6 @@ void Monitor::clearFrontRecordInfos()
                     }
                     break;
                 }
-<<<<<<< HEAD
-
-                auto &pp = it.value();
-                m_frontRecordInfo.erase(it++);
-                clearProcess(pp);
-                continue;
-=======
->>>>>>> master
             }
 
             auto &pp = it.value();
@@ -702,6 +692,23 @@ void Monitor::clearFrontRecordInfos()
         }
         ++it;
     }
+}
+
+QString Monitor::getLocalActiveUser()
+{
+    QProcess process;
+    process.setProgram("sh");
+    QString arg = "cat /var/log/secure | grep 'pam: gdm-password:' | grep 'session opened for user' | tail -n 1 | awk '{t=$0; gsub(/.*for user | by.*/,\"\",t);print t}' | tr -d '\n'";
+    process.setArguments(QStringList() << "-c" << arg);
+    process.start();
+    QString resOut;
+    if (process.waitForFinished())
+    {
+        resOut = process.readAllStandardOutput().toStdString().data();
+    }
+
+    process.close();
+    return resOut;
 }
 
 // 获取前台会话XAUTHORITY
@@ -778,73 +785,4 @@ bool Monitor::processExist(int pid)
     }
     process.close();
     return bExist;
-}
-
-// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Seat1 org.freedesktop.ConsoleKit.Seat.GetActiveSession
-// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Session2 org.freedesktop.ConsoleKit.Session.GetX11Display
-QString Monitor::getCurrentSessionDisplay()
-{
-    QString displayName;
-    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
-                                                                "/org/freedesktop/ConsoleKit/Seat1",
-                                                                "org.freedesktop.ConsoleKit.Seat",
-                                                                "GetActiveSession");
-    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
-    KLOG_DEBUG() << "msgReply " << msgReply;
-    QString session;
-    if (msgReply.type() != QDBusMessage::ReplyMessage)
-        return displayName;
-
-    QList<QVariant> args = msgReply.arguments();
-    if (args.size() < 1)
-        return displayName;
-
-    QVariant firstArg = args.takeFirst();
-    if (firstArg.canConvert<QDBusObjectPath>())
-    {
-        QDBusObjectPath arg = firstArg.value<QDBusObjectPath>();
-        session = arg.path();
-    }
-
-    if (session.isEmpty())
-        return displayName;
-
-
-    QDBusMessage msgMethodCall1 = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
-                                                                session,
-                                                                "org.freedesktop.ConsoleKit.Session",
-                                                                "GetX11Display");
-    QDBusMessage msgReply1 = QDBusConnection::systemBus().call(msgMethodCall1, QDBus::Block, DBUS_TIMEOUT_MS);
-    KLOG_DEBUG() << session << "GetX11AuthorityFile msgReply" << msgReply1;
-
-    if (msgReply1.type() != QDBusMessage::ReplyMessage)
-        return displayName;
-
-    QList<QVariant> args1 = msgReply1.arguments();
-    if (args1.size() < 1)
-        return displayName;
-
-    displayName = args1.takeFirst().toString();
-    KLOG_DEBUG() << "current session " << session << "displayName:" << displayName;
-    return displayName;
-}
-
-bool Monitor::creatLicenseObjectName()
-{
-    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
-                                                                DBUS_LICENSE_OBJECT_PATH,
-                                                                DBUS_LICENSE_DESTIONATION,
-                                                                DBUS_LICENSE_METHOD_OBJECK);
-    msgMethodCall << DBUS_LICENSE_OBJECT_VAUDIT_NAME;
-
-    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
-    KLOG_INFO() << "msgReply:" << msgReply;
-    if (msgReply.type() != QDBusMessage::ReplyMessage)
-        return false;
-
-    QList<QVariant> args = msgReply.arguments();
-    if (args.size() < 1)
-        return false;
-
-    return true;
 }

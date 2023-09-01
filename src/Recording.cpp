@@ -1457,7 +1457,10 @@ void Recording::UpdateConfigureData(QString keyStr, QString value){
 				if (m_lastMinFreeSpace != jsonObj[key].toString().toULongLong())
 				{
 					m_lastMinFreeSpace = jsonObj[key].toString().toULongLong();
-					callNotifyProcess();
+					if (m_pNotifyProcess)
+					{
+						callNotifyProcess();
+					}
 				}
 			} else if (GENEARL_CONFIG_MAX_FILE_SIZE == key) {
 				m_maxFileSize = jsonObj[key].toString().toULongLong();

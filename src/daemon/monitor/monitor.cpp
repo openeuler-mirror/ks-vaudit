@@ -424,12 +424,12 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 pp = nullptr;
             }
 
-        #if 0
-            QString loginUser = getLocalActiveUser();
-            // 本地未激活用户不启进程
-            if (info.userName != loginUser && info.bLocal)
+        #if 1
+            QString displayName = getCurrentSessionDisplay();
+            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
+            if (info.bLocal && !displayName.isEmpty() && value.displayName != displayName)
             {
-                KLOG_INFO() << value.userName << value.displayName << "is not active user";
+                KLOG_INFO() << value.userName << value.displayName << "is not active user" << "cur display:" << displayName;
                 m_sessionInfos.erase(it);
                 return;
             }
@@ -494,7 +494,7 @@ void Monitor::DealSession(bool isDiskOk)
     }
 
     // 拉起新启的会话的录屏进程
-    QString loginUser;
+    QString loginDisplay;
     for (sessionInfo info : infos)
     {
         if (!m_sessionInfos.contains(info.userName, info))
@@ -506,15 +506,14 @@ void Monitor::DealSession(bool isDiskOk)
                 continue;
             }
 
-        #if 0
+        #if 1
             // 获取激活的会话，对于本对只会有一个会话正在使用，一次循环内仅需获取一次
-            if (loginUser.isEmpty())
+            if (loginDisplay.isEmpty())
             {
-                loginUser = getLocalActiveUser();
+                loginDisplay = getCurrentSessionDisplay();
             }
-
-            // 本地未激活用户不启进程
-            if (info.userName != loginUser && info.bLocal)
+            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
+            if (info.bLocal && !loginDisplay.isEmpty() && info.displayName != loginDisplay)
                 continue;
         #endif
 
@@ -694,23 +693,6 @@ void Monitor::clearFrontRecordInfos()
     }
 }
 
-QString Monitor::getLocalActiveUser()
-{
-    QProcess process;
-    process.setProgram("sh");
-    QString arg = "cat /var/log/secure | grep 'pam: gdm-password:' | grep 'session opened for user' | tail -n 1 | awk '{t=$0; gsub(/.*for user | by.*/,\"\",t);print t}' | tr -d '\n'";
-    process.setArguments(QStringList() << "-c" << arg);
-    process.start();
-    QString resOut;
-    if (process.waitForFinished())
-    {
-        resOut = process.readAllStandardOutput().toStdString().data();
-    }
-
-    process.close();
-    return resOut;
-}
-
 // 获取前台会话XAUTHORITY
 QString Monitor::frontGetXAuth(QString userName, QString display)
 {
@@ -785,4 +767,53 @@ bool Monitor::processExist(int pid)
     }
     process.close();
     return bExist;
+}
+
+// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Seat1 org.freedesktop.ConsoleKit.Seat.GetActiveSession
+// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Session2 org.freedesktop.ConsoleKit.Session.GetX11Display
+QString Monitor::getCurrentSessionDisplay()
+{
+    QString displayName;
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
+                                                                "/org/freedesktop/ConsoleKit/Seat1",
+                                                                "org.freedesktop.ConsoleKit.Seat",
+                                                                "GetActiveSession");
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, TIMEOUT_MS);
+    KLOG_DEBUG() << "msgReply " << msgReply;
+    QString session;
+    if (msgReply.type() != QDBusMessage::ReplyMessage)
+        return displayName;
+
+    QList<QVariant> args = msgReply.arguments();
+    if (args.size() < 1)
+        return displayName;
+
+    QVariant firstArg = args.takeFirst();
+    if (firstArg.canConvert<QDBusObjectPath>())
+    {
+        QDBusObjectPath arg = firstArg.value<QDBusObjectPath>();
+        session = arg.path();
+    }
+
+    if (session.isEmpty())
+        return displayName;
+
+
+    QDBusMessage msgMethodCall1 = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
+                                                                session,
+                                                                "org.freedesktop.ConsoleKit.Session",
+                                                                "GetX11Display");
+    QDBusMessage msgReply1 = QDBusConnection::systemBus().call(msgMethodCall1, QDBus::Block, TIMEOUT_MS);
+    KLOG_DEBUG() << session << "GetX11AuthorityFile msgReply" << msgReply1;
+
+    if (msgReply1.type() != QDBusMessage::ReplyMessage)
+        return displayName;
+
+    QList<QVariant> args1 = msgReply1.arguments();
+    if (args1.size() < 1)
+        return displayName;
+
+    displayName = args1.takeFirst().toString();
+    KLOG_INFO() << "current session " << session << "displayName:" << displayName;
+    return displayName;
 }

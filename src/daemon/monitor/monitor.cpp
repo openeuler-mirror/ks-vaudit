@@ -675,6 +675,14 @@ void Monitor::clearFrontRecordInfos()
                     }
                     break;
                 }
+<<<<<<< HEAD
+
+                auto &pp = it.value();
+                m_frontRecordInfo.erase(it++);
+                clearProcess(pp);
+                continue;
+=======
+>>>>>>> master
             }
 
             auto &pp = it.value();

@@ -25,12 +25,7 @@ MonitorDisk::MonitorDisk(QWidget *parent)
             , m_filePath(AUDIT_DEFAULT_CONFIG_FILEPATH)
             , m_recordFilePath(RECORD_DEFAULT_CONFIG_FILEPATH)
 {
-    m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
-    if (!m_dbusInterface)
-    {
-        KLOG_WARNING() << "configure dbus Interface is null";
-        exit(1);
-    }
+    m_dbusInterface = new ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     connect(m_dbusInterface, SIGNAL(ConfigureChanged(QString, QString)), this, SLOT(UpdateConfigureData(QString, QString)));
     connect(m_dbusInterface, SIGNAL(SignalNotification(int, QString)), this, SLOT(ReceiveNotification(int, QString)));
     connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int, QString)), this, SLOT(switchControlSlot(int, int, QString)));

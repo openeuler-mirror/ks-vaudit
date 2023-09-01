@@ -40,11 +40,11 @@ Widget::Widget(QWidget *parent) :
     m_dbusInterface = new ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     m_activatePage = new ActivatePage();
     m_isActivated = m_activatePage->getActivation();
-    init_ui();
     if (!m_isActivated){
         m_activatePage->setFocus();
         m_activatePage->exec();
     }
+    init_ui();
 }
 
 Widget::~Widget()

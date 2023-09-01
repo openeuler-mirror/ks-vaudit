@@ -1071,7 +1071,7 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         // 屏幕定时提示处理
         if (m_timing != 0)
         {
-            QStringList list = op.split(":");
+            QStringList list = timeText.split(":");
             int minute = list[0].toInt() * 60 + list[1].toInt();
             if ((m_lastMinutes != minute) && (minute % m_timing == 0))
             {

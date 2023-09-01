@@ -4,6 +4,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QDebug>
 
 Dialog::Dialog(QWidget *parent, QString dialogType, QString fileName) :
     QDialog(parent),
@@ -60,6 +61,8 @@ void Dialog::initUI()
         ui->label->setText(tr("No free space on disk. Recording file saved. Please free disk storage and restart"));
     }else if(m_dialogType == QString("Warning")){
         ui->label->setText(tr("Rename failed, the file existed, please enter again!"));
+    }else{
+        qDebug() << "m_dialogType:" << m_dialogType;
     }
 }
 
@@ -226,6 +229,8 @@ void Dialog::on_accept_clicked()
         emit delete_file();
     }else if(m_dialogType == QString("rename")){
         emit rename_file();
+    }else{
+        qDebug() << "m_dialogType:" << m_dialogType;
     }
     this->close();
 }

@@ -285,7 +285,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), VAUDIT_LOCAL_IP, arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL), true, false};
+            struct sessionInfo info = {it.value(), VAUDIT_LOCAL_IP, arr[index1+1], arr[index2 + 1], nullptr, false, false, time(nullptr), true, false};
             vecInfo.push_back(info);
         }
     }
@@ -370,7 +370,7 @@ QVector<sessionInfo> Monitor::getXvncInfo()
             if (index == -1 || index2 == -1)
                 continue;
 
-            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index2+1], nullptr, false, false, time(NULL), false, false};
+            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index2+1], nullptr, false, false, time(nullptr), false, false};
             vecInfo.push_back(info);
         }
         process.close();
@@ -431,7 +431,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
             }
         #endif
 
-            value.stTime = time(NULL);
+            value.stTime = time(nullptr);
             value.bStart = false;
             value.bActive = false;
             value.bNotify = false;
@@ -527,7 +527,7 @@ void Monitor::DealSession(bool isDiskOk)
         {
             if (!val.bActive)
             {
-                if (time(NULL) - val.stTime > 10)
+                if (time(nullptr) - val.stTime > 10)
                 {
                     // 约10s没收到子进程的已激活信息，认为子进程卡住，杀掉子进程并清除信息
                     auto &process = it.value().process;

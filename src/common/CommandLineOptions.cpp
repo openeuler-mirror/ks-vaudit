@@ -21,7 +21,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Logger.h"
 
-CommandLineOptions *CommandLineOptions::s_instance = NULL;
+CommandLineOptions *CommandLineOptions::s_instance = nullptr;
 
 void PrintOptionHelp() {
 	Logger::LogInfo(
@@ -102,7 +102,7 @@ void CheckOptionHasNoValue(const QString &option, const QString &value) {
 }
 
 CommandLineOptions::CommandLineOptions() {
-	assert(s_instance == NULL);
+	assert(!s_instance);
 
 	// default values
 	m_settings_file = DefaultSettingsFile();
@@ -128,7 +128,7 @@ CommandLineOptions::CommandLineOptions() {
 
 CommandLineOptions::~CommandLineOptions() {
 	assert(s_instance == this);
-	s_instance = NULL;
+	s_instance = nullptr;
 }
 
 void CommandLineOptions::Parse() {

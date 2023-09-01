@@ -88,11 +88,11 @@ void RecordNotify::notify_send(const char *msg)
 	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon);
 	KLOG_DEBUG() << "not 3.2-8, icon:" << icon;
 #else
-	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, NULL);
+	NotifyNotification *pNotify = notify_notification_new(_("提示"), msg, icon, nullptr);
 	KLOG_DEBUG() << "is 3.2-8, icon:" << icon;
 #endif
 	notify_notification_set_timeout(pNotify, NOTIFY_TIMEOUT);
-	GError *error = NULL;
+	GError *error = nullptr;
 	if (!notify_notification_show(pNotify, &error))
 	{
 		KLOG_INFO() << "Error while displaying notification:" << error->message;

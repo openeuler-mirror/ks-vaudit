@@ -36,6 +36,7 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 #include "Synchronizer.h"
 #include "VideoEncoder.h"
 
+#define HIDE_WATERMARK_CONTENT    "\x12\x34\x56\x78"
 /*
 The code in this file is based on the MIT-SHM example code and the x11grab device in libav/ffmpeg (which is GPL):
 http://www.xfree86.org/current/mit-shm.html
@@ -137,7 +138,7 @@ static void X11ImageDrawCursor(Display* dpy, XImage* image, int recording_area_x
 
 	// get the cursor
 	XFixesCursorImage *xcim = XFixesGetCursorImage(dpy);
-	if(xcim == NULL)
+	if(!xcim)
 		return;
 
 	// calculate the position of the cursor
@@ -209,8 +210,8 @@ static uint8_t* X11ImageDrawWatermark(uint8_t* image_data,QString watermark_cont
 	cairo_surface_flush(surface);
 	uint8_t * imagedata_front = cairo_image_surface_get_data(surface);
 	cairo_surface_destroy(surface);
-	cr = NULL;
-	surface = NULL;
+	cr = nullptr;
+	surface = nullptr;
 
 	return imagedata_front;
 }
@@ -226,11 +227,11 @@ X11Input::X11Input(unsigned int x, unsigned int y, unsigned int width, unsigned 
 	m_follow_cursor = follow_cursor;
 	m_follow_fullscreen = follow_full_screen;
 
-	m_x11_display = NULL;
+	m_x11_display = nullptr;
 	// use two image buffer to check whether image changed to prev image
 	m_x11_img_idx = 0;
-	m_x11_image[0] = NULL;
-	m_x11_image[1] = NULL;
+	m_x11_image[0] = nullptr;
+	m_x11_image[1] = nullptr;
 	m_x11_shm_info[0].shmseg = 0;
 	m_x11_shm_info[0].shmid = -1;
 	m_x11_shm_info[0].shmaddr = (char*) -1;
@@ -328,8 +329,8 @@ void X11Input::Init() {
 
 	// do the X11 stuff
 	// we need a separate display because the existing one would interfere with what Qt is doing in some cases
-	m_x11_display = XOpenDisplay(NULL); //QX11Info::display();
-	if(m_x11_display == NULL) {
+	m_x11_display = XOpenDisplay(nullptr); //QX11Info::display();
+	if(!m_x11_display) {
 		Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't open X display!", "Don't translate 'display'"));
 		throw X11Exception();
 	}
@@ -381,9 +382,9 @@ void X11Input::Init() {
 
 void X11Input::Free() {
 	FreeImage();
-	if(m_x11_display != NULL) {
+	if(m_x11_display) {
 		XCloseDisplay(m_x11_display);
-		m_x11_display = NULL;
+		m_x11_display = nullptr;
 	}
 }
 
@@ -405,8 +406,8 @@ void X11Input::AllocateImage(unsigned int width, unsigned int height) {
 	FreeImage();
 
 	for (int i = 0;i < 2; i++) {
-		m_x11_image[i] = XShmCreateImage(m_x11_display, m_x11_visual, m_x11_depth, ZPixmap, NULL, &m_x11_shm_info[i], width, height);
-		if(m_x11_image[i] == NULL) {
+		m_x11_image[i] = XShmCreateImage(m_x11_display, m_x11_visual, m_x11_depth, ZPixmap, nullptr, &m_x11_shm_info[i], width, height);
+		if(!m_x11_image[i]) {
 			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't create shared image!"));
 			throw X11Exception();
 		}
@@ -417,7 +418,7 @@ void X11Input::AllocateImage(unsigned int width, unsigned int height) {
 			throw X11Exception();
 		}
 
-		m_x11_shm_info[i].shmaddr = (char*) shmat(m_x11_shm_info[i].shmid, NULL, SHM_RND);
+		m_x11_shm_info[i].shmaddr = (char*) shmat(m_x11_shm_info[i].shmid, nullptr, SHM_RND);
 		if(m_x11_shm_info[i].shmaddr == (char*) -1) {
 			Logger::LogError("[X11Input::Init] " + Logger::tr("Error: Can't attach to shared memory!"));
 			throw X11Exception();
@@ -447,13 +448,13 @@ void X11Input::FreeImage() {
 		}
 
 		if(m_x11_shm_info[i].shmid != -1) {
-			shmctl(m_x11_shm_info[i].shmid, IPC_RMID, NULL);
+			shmctl(m_x11_shm_info[i].shmid, IPC_RMID, nullptr);
 			m_x11_shm_info[i].shmid = -1;
 		}
 
-		if(m_x11_image[i] != NULL) {
+		if(m_x11_image[i]) {
 			XDestroyImage(m_x11_image[i]);
-			m_x11_image[i] = NULL;
+			m_x11_image[i] = nullptr;
 		}
 	}
 }
@@ -570,20 +571,6 @@ void X11Input::UpdateScreenConfiguration() {
 void X11Input::InputThread() {
 	try {
 
-		// init opengl env and create window for nvenc
-		/*int argc = 1;
-		char *argv[1] = {(char*)"dummy"};
-
-		glutInit(&argc, argv);
-		glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
-		glutInitWindowSize(80, 60);
-
-		m_window = glutCreateWindow("gl");
-		if (!m_window) {
-			Logger::LogError("[X11Input::InputThread] create glut window failed");
-			glutHideWindow();
-		}*/
-
 		pid_t tid = gettid();
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread started. tid: ") + QString::number(tid));
 
@@ -613,31 +600,8 @@ void X11Input::InputThread() {
 
 			// follow the cursor
 			if(m_follow_cursor) {
-				int mouse_x, mouse_y, dummy;
-				Window dummy_win;
-				unsigned int dummy_mask;
-				if(XQueryPointer(m_x11_display, m_x11_root, &dummy_win, &dummy_win, &dummy, &dummy, &mouse_x, &mouse_y, &dummy_mask)) {
-					if(m_follow_fullscreen) {
-						for(Rect &rect : m_screen_rects) {
-							if(mouse_x >= (int) rect.m_x1 && mouse_y >= (int) rect.m_y1 && mouse_x < (int) rect.m_x2 && mouse_y < (int) rect.m_y2) {
-								grab_x = rect.m_x1;
-								grab_y = rect.m_y1;
-								grab_width = rect.m_x2 - rect.m_x1;
-								grab_height = rect.m_y2 - rect.m_y1;
-								break;
-							}
-						}
-					} else {
-						int grab_x_target = (mouse_x - (int) grab_width / 2) >> 1;
-						int grab_y_target = (mouse_y - (int) grab_height / 2) >> 1;
-						int frac = (has_initial_cursor)? lrint(1024.0 * exp(-1e-5 * (double) (timestamp - last_timestamp))) : 0;
-						grab_x_target = (grab_x_target + ((int) (grab_x >> 1) - grab_x_target) * frac / 1024) << 1;
-						grab_y_target = (grab_y_target + ((int) (grab_y >> 1) - grab_y_target) * frac / 1024) << 1;
-						grab_x = clamp(grab_x_target, (int) m_screen_bbox.m_x1, (int) m_screen_bbox.m_x2 - (int) grab_width);
-						grab_y = clamp(grab_y_target, (int) m_screen_bbox.m_y1, (int) m_screen_bbox.m_y2 - (int) grab_height);
-					}
-				}
-				has_initial_cursor = true;
+				int64_t diff_timestamp = timestamp - last_timestamp;
+				followCursor(grab_x, grab_y, grab_width, grab_height, has_initial_cursor, diff_timestamp);
 			}
 
 			// save current size
@@ -656,101 +620,39 @@ void X11Input::InputThread() {
 			int old_img_idx = m_x11_img_idx;
 			m_x11_img_idx = m_x11_img_idx == 0 ? 1 : 0;
 
-			if (m_is_only_audio)
-			{
+			if (m_is_only_audio) { // 只录制音频
 				int image_stride = grab_width * 4;
-				PushVideoFrame(grab_width, grab_height, m_black_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
 				++m_frame_counter;
-				last_timestamp = timestamp;
-				continue;
-			}
-
-			// get the image
-			if(m_x11_use_shm) {
-				AllocateImage(grab_width, grab_height);
-				if(!XShmGetImage(m_x11_display, m_x11_root, m_x11_image[m_x11_img_idx], grab_x, grab_y, AllPlanes)) {
-					Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (using shared memory)!\n"
-									 "    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
-					throw X11Exception();
-				}
-			} else {
-				if(m_x11_image[m_x11_img_idx] != NULL) {
-					XDestroyImage(m_x11_image[m_x11_img_idx]);
-					m_x11_image[m_x11_img_idx] = NULL;
-				}
-				m_x11_image[m_x11_img_idx] = XGetImage(m_x11_display, m_x11_root, grab_x, grab_y, grab_width, grab_height, AllPlanes, ZPixmap);
-				if(m_x11_image[m_x11_img_idx] == NULL) {
-					Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (not using shared memory)!\n"
-									 "    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
-					throw X11Exception();
-				}
-			}
-
-			// clear the dead space
-			for(size_t i = 0; i < m_screen_dead_space.size(); ++i) {
-				Rect rect = m_screen_dead_space[i];
-				if(rect.m_x1 < grab_x)
-					rect.m_x1 = grab_x;
-				if(rect.m_y1 < grab_y)
-					rect.m_y1 = grab_y;
-				if(rect.m_x2 > grab_x + grab_width)
-					rect.m_x2 = grab_x + grab_width;
-				if(rect.m_y2 > grab_y + grab_height)
-					rect.m_y2 = grab_y + grab_height;
-				if(rect.m_x2 > rect.m_x1 && rect.m_y2 > rect.m_y1)
-					X11ImageClearRectangle(m_x11_image[m_x11_img_idx], rect.m_x1 - grab_x, rect.m_y1 - grab_y, rect.m_x2 - rect.m_x1, rect.m_y2 - rect.m_y1);
-			}
-
-			// draw the cursor
-			if(m_record_cursor) {
-				X11ImageDrawCursor(m_x11_display, m_x11_image[m_x11_img_idx], grab_x, grab_y);
-			}
-
-			// increase the frame counter
-			++m_frame_counter;
-
-			// push the frame
-			uint8_t *image_data = (uint8_t*) m_x11_image[m_x11_img_idx]->data;
-			int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
-			AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image[m_x11_img_idx]);
-          
-			//TODO: 这地方以后优化一下, 每10帧检测一次, QSetting内部用的读写锁
-			if(settings_ptr->value("record/is_use_watermark").toUInt() == 0){//动态检测水印是否开启
-				m_is_use_watermarking = false;
-			}else{
-				m_is_use_watermarking = true;
-			}
-
-			int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
-
-			// 如果存在隐藏水印说明数据重复，推送黑图
-			if (!(strncmp((char *)(&image_data[100]), "\x12\x34\x56\x78", 4) || strncmp((char *)(&image_data[200]), "\x12\x34\x56\x78", 4)
-				|| strncmp((char *)(&image_data[300]), "\x12\x34\x56\x78", 4) || strncmp((char *)(&image_data[400]), "\x12\x34\x56\x78", 4)))
-			{
 				PushVideoFrame(grab_width, grab_height, m_black_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
-				last_timestamp = timestamp;
-				continue;
-			}
-			// 打隐藏水印，在100 200 300 400 四个位置打上特定值
-			for (int i = 100; i < 500; i=i+100)
-			{
-				strncpy((char *)(&image_data[i]), "\x12\x34\x56\x78", 4);
-			}
-
-			// 需要先打水印再判断是否变化
-			if (m_is_use_watermarking) {
-				watermark_content = settings_ptr ->value("record/water_print_text").toString();
-				X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
-			}
-
-			if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
-				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 0);
 			} else {
-				PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
-			}
-    
-			last_timestamp = timestamp;
+				getImageAndClearSpace(grab_x, grab_y, grab_width, grab_height);
 
+				// draw the cursor
+				if(m_record_cursor) {
+					X11ImageDrawCursor(m_x11_display, m_x11_image[m_x11_img_idx], grab_x, grab_y);
+				}
+
+				// increase the frame counter
+				++m_frame_counter;
+
+				// push the frame
+				uint8_t *image_data = (uint8_t*) m_x11_image[m_x11_img_idx]->data;
+				AVPixelFormat x11_image_format = X11ImageGetPixelFormat(m_x11_image[m_x11_img_idx]);
+			
+				if (!drawWatermark(grab_width, grab_height, timestamp, image_data))
+				{
+					int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
+					int image_size = m_x11_image[m_x11_img_idx]->bytes_per_line * m_x11_image[m_x11_img_idx]->height;
+
+					if (m_x11_image[old_img_idx] && m_x11_image[old_img_idx]->data && memcmp(m_x11_image[old_img_idx]->data, image_data, image_size) == 0) {
+						PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 0);
+					} else {
+						PushVideoFrame(grab_width, grab_height, image_data, image_stride, x11_image_format, SWS_CS_DEFAULT, timestamp, 1);
+					}
+				}
+			}
+
+			last_timestamp = timestamp;
 		}
 
 		Logger::LogInfo("[X11Input::InputThread] " + Logger::tr("Input thread stopped."));
@@ -762,9 +664,104 @@ void X11Input::InputThread() {
 		m_error_occurred = true;
 		Logger::LogError("[X11Input::InputThread] " + Logger::tr("Unknown exception in input thread."));
 	}
+}
 
-//	if (m_window) {
-//		glutDestroyWindow(m_window);
-//		m_window = 0;
-//	}
+void X11Input::followCursor(unsigned int &grab_x, unsigned int &grab_y, unsigned int &grab_width, unsigned int &grab_height, bool &has_initial_cursor, int64_t diff_timestamp)
+{
+	int mouse_x, mouse_y, dummy;
+	Window dummy_win;
+	unsigned int dummy_mask;
+	if(XQueryPointer(m_x11_display, m_x11_root, &dummy_win, &dummy_win, &dummy, &dummy, &mouse_x, &mouse_y, &dummy_mask)) {
+		if(m_follow_fullscreen) {
+			for(Rect &rect : m_screen_rects) {
+				if(mouse_x >= (int) rect.m_x1 && mouse_y >= (int) rect.m_y1 && mouse_x < (int) rect.m_x2 && mouse_y < (int) rect.m_y2) {
+					grab_x = rect.m_x1;
+					grab_y = rect.m_y1;
+					grab_width = rect.m_x2 - rect.m_x1;
+					grab_height = rect.m_y2 - rect.m_y1;
+					break;
+				}
+			}
+		} else {
+			int grab_x_target = (mouse_x - (int) grab_width / 2) >> 1;
+			int grab_y_target = (mouse_y - (int) grab_height / 2) >> 1;
+			int frac = (has_initial_cursor)? lrint(1024.0 * exp(-1e-5 * (double) (diff_timestamp))) : 0;
+			grab_x_target = (grab_x_target + ((int) (grab_x >> 1) - grab_x_target) * frac / 1024) << 1;
+			grab_y_target = (grab_y_target + ((int) (grab_y >> 1) - grab_y_target) * frac / 1024) << 1;
+			grab_x = clamp(grab_x_target, (int) m_screen_bbox.m_x1, (int) m_screen_bbox.m_x2 - (int) grab_width);
+			grab_y = clamp(grab_y_target, (int) m_screen_bbox.m_y1, (int) m_screen_bbox.m_y2 - (int) grab_height);
+		}
+	}
+	has_initial_cursor = true;
+}
+
+void X11Input::getImageAndClearSpace(unsigned int grab_x, unsigned int grab_y, unsigned int grab_width, unsigned int grab_height)
+{
+	// get the image
+	if(m_x11_use_shm) {
+		AllocateImage(grab_width, grab_height);
+		if(!XShmGetImage(m_x11_display, m_x11_root, m_x11_image[m_x11_img_idx], grab_x, grab_y, AllPlanes)) {
+			Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (using shared memory)!\n"
+							"    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
+			throw X11Exception();
+		}
+	} else {
+		if(m_x11_image[m_x11_img_idx]) {
+			XDestroyImage(m_x11_image[m_x11_img_idx]);
+			m_x11_image[m_x11_img_idx] = nullptr;
+		}
+		m_x11_image[m_x11_img_idx] = XGetImage(m_x11_display, m_x11_root, grab_x, grab_y, grab_width, grab_height, AllPlanes, ZPixmap);
+		if(!m_x11_image[m_x11_img_idx]) {
+			Logger::LogError("[X11Input::InputThread] " + Logger::tr("Error: Can't get image (not using shared memory)!\n"
+							"    Usually this means the recording area is not completely inside the screen. Or did you change the screen resolution?"));
+			throw X11Exception();
+		}
+	}
+
+	// clear the dead space
+	for(size_t i = 0; i < m_screen_dead_space.size(); ++i) {
+		Rect rect = m_screen_dead_space[i];
+		if(rect.m_x1 < grab_x)
+			rect.m_x1 = grab_x;
+		if(rect.m_y1 < grab_y)
+			rect.m_y1 = grab_y;
+		if(rect.m_x2 > grab_x + grab_width)
+			rect.m_x2 = grab_x + grab_width;
+		if(rect.m_y2 > grab_y + grab_height)
+			rect.m_y2 = grab_y + grab_height;
+		if(rect.m_x2 > rect.m_x1 && rect.m_y2 > rect.m_y1)
+			X11ImageClearRectangle(m_x11_image[m_x11_img_idx], rect.m_x1 - grab_x, rect.m_y1 - grab_y, rect.m_x2 - rect.m_x1, rect.m_y2 - rect.m_y1);
+	}
+}
+
+int X11Input::drawWatermark(unsigned int grab_width, unsigned int grab_height, int64_t timestamp, uint8_t *&image_data)
+{
+	//TODO: 这地方以后优化一下, 每10帧检测一次, QSetting内部用的读写锁
+	if(settings_ptr->value("record/is_use_watermark").toBool()){//动态检测水印是否开启
+		m_is_use_watermarking = true;
+	}else{
+		m_is_use_watermarking = false;
+	}
+
+	int image_stride = m_x11_image[m_x11_img_idx]->bytes_per_line;
+	// 如果存在隐藏水印说明数据重复，推送黑图
+	if (!(strncmp((char *)(&image_data[100]), HIDE_WATERMARK_CONTENT, 4) || strncmp((char *)(&image_data[200]), HIDE_WATERMARK_CONTENT, 4)
+		|| strncmp((char *)(&image_data[300]), HIDE_WATERMARK_CONTENT, 4) || strncmp((char *)(&image_data[400]), HIDE_WATERMARK_CONTENT, 4)))
+	{
+		PushVideoFrame(grab_width, grab_height, m_black_image_data.data(), image_stride, AV_PIX_FMT_BGRA, SWS_CS_DEFAULT, timestamp, 1);
+		return -1;
+	}
+	// 打隐藏水印，在100 200 300 400 四个位置打上特定值
+	for (int i = 100; i < 500; i=i+100)
+	{
+		strncpy((char *)(&image_data[i]), HIDE_WATERMARK_CONTENT, 4);
+	}
+
+	// 需要先打水印再判断是否变化
+	if (m_is_use_watermarking) {
+		watermark_content = settings_ptr ->value("record/water_print_text").toString();
+		X11ImageDrawWatermark(image_data, watermark_content, grab_width, grab_height);
+	}
+
+	return 0;
 }

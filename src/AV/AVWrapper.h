@@ -62,7 +62,7 @@ private:
 public:
 	inline AVFrameData(size_t size) {
 		m_data = (uint8_t*) av_malloc(size);
-		if(m_data == NULL)
+		if(!m_data)
 			throw std::bad_alloc();
 		m_size = size;
 	}
@@ -146,6 +146,6 @@ bool AVCodecSupportsSampleFormat(const AVCodec* codec, AVSampleFormat sample_fmt
 
 #if !SSR_USE_AV_CODEC_IS_ENCODER
 inline int av_codec_is_encoder(const AVCodec* codec) {
-	return (codec != NULL && (codec->encode != NULL || codec->encode2 != NULL));
+	return (codec && (codec->encode || codec->encode2));
 }
 #endif

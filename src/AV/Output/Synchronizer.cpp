@@ -126,7 +126,7 @@ static std::unique_ptr<AVFrameWrapper> CreateVideoFrame(unsigned int width, unsi
 	for(unsigned int p = 0; p < planes; ++p) {
 		totalsize += planesize[p];
 	}
-	std::shared_ptr<AVFrameData> frame_data = (reuse_data == NULL)? std::make_shared<AVFrameData>(totalsize) : reuse_data;
+	std::shared_ptr<AVFrameData> frame_data = (!reuse_data) ? std::make_shared<AVFrameData>(totalsize) : reuse_data;
 	std::unique_ptr<AVFrameWrapper> frame(new AVFrameWrapper(frame_data));
 	uint8_t *data = frame->GetRawData();
 	for(unsigned int p = 0; p < planes; ++p) {
@@ -213,9 +213,9 @@ Synchronizer::Synchronizer(OutputManager *output_manager) {
 Synchronizer::~Synchronizer() {
 
 	// disconnect
-	ConnectVideoSource(NULL);
-	ConnectAudioSource(NULL);
-	ConnectAudioSourceInput(NULL);
+	ConnectVideoSource(nullptr);
+	ConnectAudioSource(nullptr);
+	ConnectAudioSourceInput(nullptr);
 
 	// tell the thread to stop
 	if(m_thread.joinable()) {
@@ -289,7 +289,7 @@ void Synchronizer::Init() {
 		videolock->m_next_timestamp = SINK_TIMESTAMP_ASAP;
 
 		videolock->m_nvenc_inited = 0;
-		videolock->m_nvenc = NULL;
+		videolock->m_nvenc = nullptr;
 
 		videolock->m_image_cnt = 0;
 		videolock->m_scale_cnt = 0;
@@ -456,10 +456,10 @@ int Synchronizer::EncodeFrameByNvenc(VideoLock &videolock, const uint8_t* data, 
 
 void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const uint8_t* data, int stride, AVPixelFormat format, int colorspace, int64_t timestamp, int changed) {
 	assert(m_output_format->m_video_enabled);
-	assert(data != NULL);
+	assert(data);
 
 	// add new block to sync diagram
-	if(m_sync_diagram != NULL)
+	if(m_sync_diagram)
 		m_sync_diagram->AddBlock(0, (double) timestamp * 1.0e-6, (double) timestamp * 1.0e-6 + 1.0 / (double) m_output_format->m_video_frame_rate, QColor(255, 0, 0));
 
 	VideoLock videolock(&m_video_data);
@@ -477,8 +477,8 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 
 	// check if there is voice
 	SharedLock lock(&m_shared_data);
-	if (data == NULL && lock->m_last_video_read_data == NULL) {
-		Logger::LogError("[Synchronizer::ReadVideoFrame] image_data is NULL and no last video frame data");
+	if (!data && !lock->m_last_video_read_data) {
+		Logger::LogError("[Synchronizer::ReadVideoFrame] image_data is nullptr and no last video frame data");
 		return;
 	}
 
@@ -488,7 +488,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 
 	// statistics changed image count
 	videolock->m_image_cnt += 1;
-	std::unique_ptr<AVFrameWrapper> converted_frame = NULL;
+	std::unique_ptr<AVFrameWrapper> converted_frame = nullptr;
 
 	// 应用了云桌面的nvenc库的情况下，不开启图像变化检测，否则图像会有锯齿
 	if (changed) {
@@ -496,7 +496,7 @@ void Synchronizer::ReadVideoFrame(unsigned int width, unsigned int height, const
 		videolock->m_scale_cnt += 1;
 
 		// create the converted frame
-		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, NULL);
+		converted_frame = CreateVideoFrame(m_output_format->m_video_width, m_output_format->m_video_height, m_output_format->m_video_pixel_format, nullptr);
 
 		// 单独的 nvenc 接口，rgb2yuv和编码在一起，cpu占用低，但是文件占用大，暂时禁用，后续优化后再放开
 		int ret = -1; // EncodeFrameByNvenc(videolock, data, converted_frame);
@@ -582,10 +582,10 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 		return;
 
 	// add new block to sync diagram
-	if(m_sync_diagram != NULL)
+	if(m_sync_diagram)
 		m_sync_diagram->AddBlock(1, (double) timestamp * 1.0e-6, (double) timestamp * 1.0e-6 + (double) sample_count / (double) sample_rate, QColor(0, 255, 0));
 
-	MutexDataPair<AudioData> * audio_data = NULL;
+	MutexDataPair<AudioData> * audio_data = nullptr;
 	if (CONFIG_RECORD_AUDIO_MIC == type) {
 		audio_data = &m_audio_data_input;
 	} else {
@@ -708,7 +708,7 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 	//qDebug() << "current_drift" << current_drift << "average_drift" << audiolock->m_average_drift << "drift_correction" << drift_correction;
 
 	// convert the samples
-	const float *data_float = NULL; // to keep GCC happy
+	const float *data_float = nullptr; // to keep GCC happy
 	if(format == AV_SAMPLE_FMT_FLT) {
 		if(channels == m_output_format->m_audio_channels) {
 			data_float = (const float*) data;
@@ -789,7 +789,7 @@ void Synchronizer::ReadAudioHoleReal(QString &type) {
 	assert(m_output_format->m_audio_enabled);
 	assert(CONFIG_RECORD_AUDIO_MIC == type || CONFIG_RECORD_AUDIO_SPEAKER == type);
 
-	MutexDataPair<AudioData> *audio_data = NULL;
+	MutexDataPair<AudioData> *audio_data = nullptr;
 	if (CONFIG_RECORD_AUDIO_MIC == type) {
 		audio_data = &m_audio_data_input;
 	} else {
@@ -990,7 +990,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 		}
 
 		// insert duplicate frames if needed, up to either the next frame or the segment end
-		if(lock->m_last_video_frame_data != NULL) {
+		if(lock->m_last_video_frame_data) {
 			while(lock->m_video_pts + m_max_frames_skipped < std::min(next_pts, segment_stop_video_pts)) {
 
 				Logger::LogInfo("[Synchronizer::FlushVideoBuffer] create duplicate_frame");
@@ -1001,7 +1001,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 				duplicate_frame->GetFrame()->pts = lock->m_video_pts + m_max_frames_skipped;
 
 				// add new block to sync diagram
-				if(m_sync_diagram != NULL) {
+				if(m_sync_diagram) {
 					double t = (double) duplicate_frame->GetFrame()->pts / (double) m_output_format->m_video_frame_rate;
 					m_sync_diagram->AddBlock(2, t, t + 1.0 / (double) m_output_format->m_video_frame_rate, QColor(255, 196, 0));
 				}
@@ -1042,7 +1042,7 @@ void Synchronizer::FlushVideoBuffer(Synchronizer::SharedData* lock, int64_t segm
 			frame->GetFrame()->pts = 0;
 
 		// add new block to sync diagram
-		if(m_sync_diagram != NULL) {
+		if(m_sync_diagram) {
 			double t = (double) frame->GetFrame()->pts / (double) m_output_format->m_video_frame_rate;
 			m_sync_diagram->AddBlock(2, t, t + 1.0 / (double) m_output_format->m_video_frame_rate, QColor(255, 0, 0));
 		}
@@ -1133,7 +1133,7 @@ void Synchronizer::FlushAudioBuffer(Synchronizer::SharedData* lock, int64_t segm
 		int64_t samples_left = std::min(samples_max, (int64_t) lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels);
 
 		// add new block to sync diagram
-		if(m_sync_diagram != NULL && samples_left > 0) {
+		if(m_sync_diagram && samples_left > 0) {
 			double t = (double) lock->m_audio_samples / (double) m_output_format->m_audio_sample_rate;
 			m_sync_diagram->AddBlock(3, t, t + (double) samples_left / (double) m_output_format->m_audio_sample_rate, QColor(0, 255, 0));
 		}
@@ -1289,7 +1289,7 @@ void Synchronizer::SynchronizerThread() {
 			{
 				SharedLock lock(&m_shared_data);
 				FlushBuffers(lock.get());
-				if(m_sync_diagram != NULL) {
+				if(m_sync_diagram) {
 					double time_in = (double) hrt_time_micro() * 1.0e-6;
 					double time_out = (double) GetTotalTime(lock.get()) * 1.0e-6;
 					m_sync_diagram->SetCurrentTime(0, time_in);

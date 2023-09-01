@@ -37,7 +37,7 @@ class Monitor : public QObject
 {
     Q_OBJECT
 public:
-    explicit Monitor(QObject *parent = NULL);
+    explicit Monitor(QObject *parent = nullptr);
     ~Monitor();
     QProcess* startRecordWithDisplay(sessionInfo info);
 

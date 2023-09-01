@@ -21,14 +21,14 @@ along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "QueueBuffer.h"
 
-Logger *Logger::s_instance = NULL;
+Logger *Logger::s_instance = nullptr;
 
 static QString LogFormatTime() {
 	return QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
 }
 
 Logger::Logger() {
-	assert(s_instance == NULL);
+	assert(!s_instance);
 	qRegisterMetaType<enum_type>();
 	m_capture_pipe[0] = -1;
 	m_capture_pipe[1] = -1;
@@ -38,7 +38,7 @@ Logger::Logger() {
 
 Logger::~Logger() {
 	assert(s_instance == this);
-	s_instance = NULL;
+	s_instance = nullptr;
 	if(m_original_stderr != -1) {
 		dup2(m_original_stderr, 2); // restore stderr
 	}
@@ -77,7 +77,7 @@ void Logger::RedirectStderr() {
 }
 
 void Logger::LogInfo(const QString& str) {
-	assert(s_instance != NULL);
+	assert(s_instance);
 	std::lock_guard<std::mutex> lock(s_instance->m_mutex); Q_UNUSED(lock);
 	QByteArray buf = (str + "\n").toLocal8Bit();
 	ssize_t res = write((s_instance->m_original_stderr == -1)? 2 : s_instance->m_original_stderr, buf.constData(), buf.size());
@@ -88,7 +88,7 @@ void Logger::LogInfo(const QString& str) {
 }
 
 void Logger::LogWarning(const QString& str) {
-	assert(s_instance != NULL);
+	assert(s_instance);
 	std::lock_guard<std::mutex> lock(s_instance->m_mutex); Q_UNUSED(lock);
 	QByteArray buf = ("\033[1;33m" + str + "\033[0m\n").toLocal8Bit();
 	ssize_t res = write((s_instance->m_original_stderr == -1)? 2 : s_instance->m_original_stderr, buf.constData(), buf.size());
@@ -99,7 +99,7 @@ void Logger::LogWarning(const QString& str) {
 }
 
 void Logger::LogError(const QString& str) {
-	assert(s_instance != NULL);
+	assert(s_instance);
 	std::lock_guard<std::mutex> lock(s_instance->m_mutex); Q_UNUSED(lock);
 	QByteArray buf = ("\033[1;31m" + str + "\033[0m\n").toLocal8Bit();
 	ssize_t res = write((s_instance->m_original_stderr == -1)? 2 : s_instance->m_original_stderr, buf.constData(), buf.size());

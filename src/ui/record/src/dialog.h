@@ -46,7 +46,7 @@ private:
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
     QString m_dialogType;
-    QLineEdit *m_fileNameEditor = NULL;
+    QLineEdit *m_fileNameEditor = nullptr;
     QString m_fileName;
     QString m_oldName;
     QLabel *m_qrCodeLabel;

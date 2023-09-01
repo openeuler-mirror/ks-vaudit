@@ -95,12 +95,12 @@ private:
     bool m_bDrag = false;
     QPoint mouseStartPoint;
     QPoint windowTopLeftPoint;
-    QStandardItemModel *m_model = NULL;
-    QMenu *m_rightMenu = NULL;
+    QStandardItemModel *m_model = nullptr;
+    QMenu *m_rightMenu = nullptr;
     QStringList m_fpsList;
 
-    QAction *m_playAction = NULL;
-    QAction *m_folderAction = NULL;
+    QAction *m_playAction = nullptr;
+    QAction *m_folderAction = nullptr;
 
     QList<QFileInfo> m_fileList;
     QString m_regName = "";

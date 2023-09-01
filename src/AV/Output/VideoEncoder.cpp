@@ -99,7 +99,7 @@ unsigned int VideoEncoder::GetFrameRate() {
 
 bool VideoEncoder::AVCodecIsSupported(const QString& codec_name) {
 	AVCodec *codec = (AVCodec*)avcodec_find_encoder_by_name(codec_name.toUtf8().constData());
-	if(codec == NULL)
+	if(!codec)
 		return false;
 	if(!av_codec_is_encoder(codec))
 		return false;
@@ -153,7 +153,7 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 	for(unsigned int i = 0; i < codec_options.size(); ++i) {
 		const QString &key = codec_options[i].first, &value = codec_options[i].second;
 		// special process for nvenc
-		if (strstr(codec->name, "nvenc") != NULL && key == "preset") {
+		if (strstr(codec->name, "nvenc") && key == "preset") {
 			av_opt_set(codec_context->priv_data, "preset", value.toLatin1().data(), 0);
 		} else if(key == "threads") {
 			codec_context->thread_count = ParseCodecOptionInt(key, value, 1, 100);
@@ -206,11 +206,11 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 
 	Logger::LogInfo("[VideoEncoder::PrepareStream] " + Logger::tr("width: %1.").arg(width) + Logger::tr("height: %1.").arg(height));
 
-	if (strstr(codec->name, "vaapi") != NULL) {
+	if (strstr(codec->name, "vaapi")) {
 		codec_context->colorspace = AVCOL_SPC_BT709;
 		codec_context->pix_fmt = AV_PIX_FMT_VAAPI;
 		return;
-	} else if (strstr(codec->name, "qsv") != NULL) {
+	} else if (strstr(codec->name, "qsv")) {
 		codec_context->colorspace = AVCOL_SPC_BT709;
 		codec_context->pix_fmt = AV_PIX_FMT_QSV;
 		return;
@@ -225,12 +225,12 @@ void VideoEncoder::PrepareStream(AVStream* stream, AVCodecContext* codec_context
 
 bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
-	if (frame == NULL) {
-		Logger::LogError("ViderEncoder::EncodeFrame frame is NULL");
+	if (!frame) {
+		Logger::LogError("ViderEncoder::EncodeFrame frame is nullptr");
 		return false;
 	}
 
-	if(frame != NULL) {
+	if(frame) {
 #if SSR_USE_AVFRAME_WIDTH_HEIGHT
 		assert(frame->GetFrame()->width == GetCodecContext()->width);
 		assert(frame->GetFrame()->height == GetCodecContext()->height);
@@ -271,14 +271,14 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 	}
 	
 	// send a frame
-	AVFrame *avframe = (frame == NULL)? NULL : frame->Release();
+	AVFrame *avframe = (!frame) ? nullptr : frame->Release();
 
 	int ret = 0;
-	if (strstr(GetCodecContext()->codec->name, "vaapi") != NULL) {
-		if (m_avframe_gpu == NULL) {
+	if (strstr(GetCodecContext()->codec->name, "vaapi")) {
+		if (!m_avframe_gpu) {
 			m_avframe_gpu = av_frame_alloc();
-			assert(m_avframe_gpu != NULL);
-			assert(m_hw_frames_ctx_ref != NULL);
+			assert(m_avframe_gpu);
+			assert(m_hw_frames_ctx_ref);
 			ret = av_hwframe_get_buffer( m_hw_frames_ctx_ref, m_avframe_gpu, 0 );
 			assert(ret >= 0);
 		}
@@ -296,7 +296,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 	}
 
 	try {
-		if (strstr(GetCodecContext()->codec->name, "vaapi") != NULL) {
+		if (strstr(GetCodecContext()->codec->name, "vaapi")) {
 			if(avcodec_send_frame(GetCodecContext(), m_avframe_gpu) < 0) {
 				Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Sending of vaapi video frame failed!"));
 				throw LibavException();
@@ -347,7 +347,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 	// encode the frame
 	int got_packet;
-	if(avcodec_encode_video2(GetCodecContext(), packet->GetPacket(), (frame == NULL)? NULL : frame->GetFrame(), &got_packet) < 0) {
+	if(avcodec_encode_video2(GetCodecContext(), packet->GetPacket(), (!frame)? nullptr : frame->GetFrame(), &got_packet) < 0) {
 		Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Encoding of video frame failed!"));
 		throw LibavException();
 	}
@@ -367,7 +367,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 #else
 
 	// encode the frame
-	int bytes_encoded = avcodec_encode_video(GetCodecContext(), m_temp_buffer.data(), m_temp_buffer.size(), (frame == NULL)? NULL : frame->GetFrame());
+	int bytes_encoded = avcodec_encode_video(GetCodecContext(), m_temp_buffer.data(), m_temp_buffer.size(), (!frame)? nullptr : frame->GetFrame());
 	if(bytes_encoded < 0) {
 		Logger::LogError("[VideoEncoder::EncodeFrame] " + Logger::tr("Error: Encoding of video frame failed!"));
 		throw LibavException();
@@ -384,7 +384,7 @@ bool VideoEncoder::EncodeFrame(AVFrameWrapper* frame) {
 
 		// set the timestamp
 		// note: pts will be rescaled and stream_index will be set by Muxer
-		if(GetCodecContext()->coded_frame != NULL && GetCodecContext()->coded_frame->pts != (int64_t) AV_NOPTS_VALUE)
+		if(GetCodecContext()->coded_frame && GetCodecContext()->coded_frame->pts != (int64_t) AV_NOPTS_VALUE)
 			packet->GetPacket()->pts = GetCodecContext()->coded_frame->pts;
 
 		// set the keyframe flag

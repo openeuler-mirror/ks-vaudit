@@ -29,11 +29,11 @@ ActivatePage::~ActivatePage()
 {
     if (m_licenseCodeEdit){
         delete m_licenseCodeEdit;
-        m_licenseCodeEdit = NULL;
+        m_licenseCodeEdit = nullptr;
     }
     if (m_dateCodeEdit){
         delete m_dateCodeEdit;
-        m_dateCodeEdit = NULL;
+        m_dateCodeEdit = nullptr;
     }
 }
 

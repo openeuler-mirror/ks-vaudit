@@ -1,6 +1,6 @@
 Name:           ks-vaudit
 Version:        1.0.0
-Release:        5
+Release:        6
 Summary:        kylinsec vaudit
 
 License:        GPL
@@ -162,6 +162,14 @@ sed -i -e '/^export LIBVA_DRIVERS_PATH=/,+d' /etc/bashrc
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+%changelog
+* Sun Oct 28 2022 tangjie <tangjie@kylinsec.com.cn> - 1.0.0-6
+- KYOS-F: fix bugs of tests. (Related #62481)
+
+%changelog
+* Sun Oct 25 2022 tangjie <tangjie@kylinsec.com.cn> - 1.0.0-5
+- KYOS-F: fix bugs of tests. (Related #62327)
 
 %changelog
 * Sun Oct 10 2022 tangjie <tangjie@kylinsec.com.cn> - 1.0.0-4

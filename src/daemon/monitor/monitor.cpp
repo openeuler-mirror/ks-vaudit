@@ -127,8 +127,6 @@ void Monitor::receiveNotification(int pid, QString message)
                     bInsert = true;
                     it.value().bStart = true;
                 }
-
-                break;
             }
         }
     }

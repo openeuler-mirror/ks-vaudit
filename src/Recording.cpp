@@ -366,6 +366,20 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 		m_output_settings.video_width = m_video_in_width/2*2;
 		return ;
 	}
+
+	if(m_pause_state == true){
+		Logger::LogInfo("[Recording::record] in pause state, the resolution  changed");
+		m_separate_files = true;
+		std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
+		QRect rect = CombineScreenGeometries(screen_geometries);
+		m_video_in_width = rect.width();
+		m_video_in_height = rect.height();
+
+		m_output_settings.video_height = m_video_in_height/2*2;
+		m_output_settings.video_width = m_video_in_width/2*2;
+		return;
+	}
+
 	QList<QScreen *> screen_list = QApplication::screens();
 	for(QScreen *screen :  QApplication::screens()) { //绑定新添加的屏的geometryChanged 信号槽
 		connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
@@ -373,8 +387,7 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 
 	//拔掉或添加screen后,重新开始录制视频
 	m_separate_files = true;
-//	OnRecordSave();
-	OnRecordPause();
+	OnRecordSave();
 
 	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 	QRect rect = CombineScreenGeometries(screen_geometries); 
@@ -384,9 +397,7 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 	m_output_settings.video_height = m_video_in_height/2*2;
 	m_output_settings.video_width = m_video_in_width/2*2;
 
-	ReNameFile();
-	OnRecordStartPause();
-//	OnRecordStart();
+	OnRecordStart();
 }
 
 void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
@@ -447,8 +458,7 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 
 	//分辨率变化后的处理
 	m_separate_files = true;
-//	OnRecordSave();
-	OnRecordPause();
+	OnRecordSave();
 
 	std::vector<QRect> screen_geometries = GetScreenGeometries();//重新计算所有显示屏的宽、高
 	QRect rect = CombineScreenGeometries(screen_geometries); 
@@ -458,9 +468,7 @@ void Recording::ScreenChangedHandler(const QRect& hanged_screen_rect){
 	m_output_settings.video_height = m_video_in_height/2*2;
 	m_output_settings.video_width = m_video_in_width/2*2;
 
-	ReNameFile();
-	OnRecordStartPause();
-//	OnRecordStart();
+	OnRecordStart();
 }
 
 
@@ -884,6 +892,7 @@ void Recording::StopPage(bool save) {
 //			Logger::LogInfo("************** " + fileName + " | " + fileBaseName);
 		}
 
+
 	}
 
 #if SSR_USE_OPENGL_RECORDING
@@ -952,6 +961,7 @@ void Recording::StartOutput() {
 			//Logger::LogInfo("the m_output_settings.video_codec_avname  is --->" + m_output_settings.video_codec_avname);
 			m_output_manager.reset(new OutputManager(m_output_settings));
 			WatchFile();
+
 
 		} else {
 

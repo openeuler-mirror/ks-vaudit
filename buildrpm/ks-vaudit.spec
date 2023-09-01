@@ -21,6 +21,7 @@ BuildRequires: qt5-qtbase-devel
 BuildRequires: qt5-qtsvg-devel
 BuildRequires: qt5-qtx11extras-devel
 BuildRequires: qt5-qtmultimedia-devel
+BuildRequires: qt5-linguist
 BuildRequires: QtCipherSqlitePlugin
 BuildRequires: mesa-libGL-devel
 BuildRequires: libX11-devel

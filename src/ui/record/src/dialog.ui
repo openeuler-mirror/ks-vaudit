@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>提示</string>
+   <string>Notice</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../data/src.qrc">
@@ -89,7 +89,7 @@ border-radius:6px;
 }</string>
      </property>
      <property name="text">
-      <string>确定</string>
+      <string>Confirm</string>
      </property>
     </widget>
     <widget class="QPushButton" name="cancel">
@@ -130,7 +130,7 @@ border-radius:6px;
 }</string>
      </property>
      <property name="text">
-      <string>取消</string>
+      <string>Cancel</string>
      </property>
     </widget>
     <widget class="QLabel" name="label">
@@ -154,7 +154,7 @@ color:#fff;
 }</string>
      </property>
      <property name="text">
-      <string>关闭程序后将退出麒麟信安录屏软件，是否关闭程序？</string>
+      <string>Confirm to exit Vaudit Record?</string>
      </property>
      <property name="textFormat">
       <enum>Qt::AutoText</enum>
@@ -218,7 +218,7 @@ border-top-right-radius:6px;
       <string notr="true">color:#fff;</string>
      </property>
      <property name="text">
-      <string>提示</string>
+      <string>Notice</string>
      </property>
     </widget>
    </widget>

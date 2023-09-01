@@ -29,7 +29,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>麒麟信安录屏</string>
+   <string>Vaduit Recrod</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../data/src.qrc">
@@ -144,7 +144,7 @@ border-top-right-radius: 8px;
 </string>
       </property>
       <property name="text">
-       <string>麒麟信安录屏</string>
+       <string>Vaduit Recrod</string>
       </property>
      </widget>
      <widget class="QPushButton" name="minimize">
@@ -279,7 +279,7 @@ border-radius: 4px;
 </string>
       </property>
       <property name="text">
-       <string>屏幕</string>
+       <string>Screen</string>
       </property>
      </widget>
      <widget class="QComboBox" name="resolutionBox">
@@ -301,12 +301,12 @@ border-radius: 4px;
       </property>
       <item>
        <property name="text">
-        <string>不录制屏幕</string>
+        <string>Record without screen</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>全屏录制</string>
+        <string>Record full screen</string>
        </property>
       </item>
      </widget>
@@ -330,7 +330,7 @@ border-radius: 4px;
 </string>
       </property>
       <property name="text">
-       <string>音频</string>
+       <string>Audio</string>
       </property>
      </widget>
      <widget class="QComboBox" name="audioBox">
@@ -352,22 +352,22 @@ border-radius: 4px;
       </property>
       <item>
        <property name="text">
-        <string>录制麦克风和扬声器</string>
+        <string>Record microphone and speaker</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>仅录制扬声器</string>
+        <string>Only record speaker</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>仅录制麦克风</string>
+        <string>Only record microphone</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>不录制声音</string>
+        <string>Record without audio</string>
        </property>
       </item>
      </widget>
@@ -391,7 +391,7 @@ border-radius: 4px;
 </string>
       </property>
       <property name="text">
-       <string>文字水印</string>
+       <string>Waterprint</string>
       </property>
      </widget>
      <widget class="QCheckBox" name="waterprintCheck">
@@ -443,7 +443,7 @@ QCheckBox#waterprintCheck::indicator:unchecked{
 </string>
       </property>
       <property name="text">
-       <string>文字内容</string>
+       <string>Waterprint Text</string>
       </property>
      </widget>
      <widget class="QPushButton" name="waterprintConfirm">
@@ -467,7 +467,7 @@ QCheckBox#waterprintCheck::indicator:unchecked{
        <string notr="true"/>
       </property>
       <property name="text">
-       <string>修改</string>
+       <string>Modify</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="waterprintText">
@@ -491,7 +491,7 @@ QCheckBox#waterprintCheck::indicator:unchecked{
        <string/>
       </property>
       <property name="placeholderText">
-       <string>请输入0～20以内文字</string>
+       <string>Please enter text within 20 characters</string>
       </property>
      </widget>
     </widget>
@@ -575,7 +575,7 @@ border:none;
 </string>
       </property>
       <property name="text">
-       <string>0:00:00</string>
+       <string notr="true">0:00:00</string>
       </property>
      </widget>
      <widget class="QSlider" name="audioSlider">
@@ -701,7 +701,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string> 常规配置</string>
+       <string> Config</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -741,7 +741,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string> 录屏列表</string>
+       <string> List</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -779,7 +779,7 @@ padding-left:10px;
 </string>
       </property>
       <property name="text">
-       <string> 录屏设置</string>
+       <string> Settings</string>
       </property>
       <property name="icon">
        <iconset resource="../data/src.qrc">
@@ -894,7 +894,7 @@ border-radius: 4px;
        <string notr="true"/>
       </property>
       <property name="placeholderText">
-       <string>请输入视频名称搜索</string>
+       <string>Please enter video name to search</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_7">
@@ -953,7 +953,7 @@ font-size:12px;
 </string>
        </property>
        <property name="text">
-        <string>当前保存位置： </string>
+        <string>Current saving path: </string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::NoTextInteraction</set>
@@ -992,7 +992,7 @@ font:bold;
 }</string>
        </property>
        <property name="text">
-        <string>文件路径</string>
+        <string>File path</string>
        </property>
       </widget>
       <widget class="QLabel" name="pathLabel">
@@ -1010,7 +1010,7 @@ font:bold;
         </font>
        </property>
        <property name="toolTip">
-        <string>~/Videos</string>
+        <string notr="true">~/Videos</string>
        </property>
        <property name="styleSheet">
         <string notr="true">QLabel#pathLabel{
@@ -1019,7 +1019,7 @@ color:#fff;
 </string>
        </property>
        <property name="text">
-        <string>~/Videos</string>
+        <string notr="true">~/Videos</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::TextSelectableByMouse</set>
@@ -1067,7 +1067,7 @@ border-radius:4px;
        <string notr="true">color:#fff</string>
       </property>
       <property name="text">
-       <string>帧率</string>
+       <string>FPS</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_10">
@@ -1089,7 +1089,7 @@ border-radius:4px;
        <string notr="true">color:#fff</string>
       </property>
       <property name="text">
-       <string>清晰度</string>
+       <string>Quality</string>
       </property>
      </widget>
      <widget class="QComboBox" name="clarityBox">
@@ -1106,17 +1106,17 @@ border-radius:4px;
       </property>
       <item>
        <property name="text">
-        <string>流畅</string>
+        <string>Fluent</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>清晰</string>
+        <string>SD</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>高清</string>
+        <string>HD</string>
        </property>
       </item>
      </widget>
@@ -1134,12 +1134,12 @@ border-radius:4px;
       </property>
       <item>
        <property name="text">
-        <string>MKV</string>
+        <string notr="true">MKV</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>MP4</string>
+        <string notr="true">MP4</string>
        </property>
       </item>
      </widget>
@@ -1162,7 +1162,7 @@ border-radius:4px;
        <string notr="true">color:#fff</string>
       </property>
       <property name="text">
-       <string>视频格式</string>
+       <string>Video types</string>
       </property>
      </widget>
      <widget class="QComboBox" name="remainderBox">
@@ -1176,22 +1176,22 @@ border-radius:4px;
       </property>
       <item>
        <property name="text">
-        <string>不提醒</string>
+        <string>No remainder</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>每5分钟</string>
+        <string>per 5 minutes</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>每10分钟</string>
+        <string>per 10 minutes</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>每30分钟</string>
+        <string>per 30 minutes</string>
        </property>
       </item>
      </widget>
@@ -1214,7 +1214,7 @@ border-radius:4px;
        <string notr="true">color:#fff</string>
       </property>
       <property name="text">
-       <string>屏幕定时提示</string>
+       <string>Screen remainder</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_14">
@@ -1236,7 +1236,7 @@ border-radius:4px;
        <string notr="true">color:#fff</string>
       </property>
       <property name="text">
-       <string>提示：录制过程中，无法修改录屏设置！</string>
+       <string>Note: cannot change settings during recording!</string>
       </property>
      </widget>
      <widget class="QComboBox" name="fpsBox">
@@ -1251,39 +1251,42 @@ border-radius:4px;
       <property name="styleSheet">
        <string notr="true"/>
       </property>
+      <property name="currentText">
+       <string notr="true">5</string>
+      </property>
       <item>
        <property name="text">
-        <string>5</string>
+        <string notr="true">5</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>10</string>
+        <string notr="true">10</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>20</string>
+        <string notr="true">20</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>25</string>
+        <string notr="true">25</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>30</string>
+        <string notr="true">30</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>45</string>
+        <string notr="true">45</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>60</string>
+        <string notr="true">60</string>
        </property>
       </item>
      </widget>

@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QFile>
 #include <QDesktopWidget>
+#include <QTranslator>
 #include <sys/types.h>
 #include <unistd.h>
 #include "kiran-log/qt5-log-i.h"
@@ -16,6 +17,17 @@ int main(int argc, char *argv[])
         KLOG_DEBUG() << "init failed: " << ret;
     }else{
         KLOG_DEBUG() << "succeed";
+    }
+
+    // 加载翻译
+    QString systemTranslationsPath = QString("%1/%2").arg(RECORD_SYSTEM_DIR).arg("translations");
+    QTranslator translator_record;
+    if (translator_record.load(QLocale::system(), "ks-vaudit-record", ".", QCoreApplication::applicationDirPath(), ".qm")){
+        KLOG_DEBUG() << "Loaded compiled translations";
+        QApplication::installTranslator(&translator_record);
+    }else if (translator_record.load(QLocale::system(), "ks-vaudit-record", ".", systemTranslationsPath)){
+        KLOG_DEBUG() << "Loaded installed translations";
+        QApplication::installTranslator(&translator_record);
     }
 
     Widget w;

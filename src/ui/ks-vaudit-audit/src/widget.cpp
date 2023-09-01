@@ -766,7 +766,12 @@ QString Widget::getVideoDuration(QString absPath)
         mins %= 60;
         // KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
     }else{
-        KLOG_DEBUG() << absPath << "has no duration";
+        // #62390 没有时长的视频显示为 "未知"
+        if (pCtx != NULL){
+            avformat_close_input(&pCtx);
+            pCtx=NULL;
+        }
+        return QString("未知");
     }
 
     if (pCtx != NULL){

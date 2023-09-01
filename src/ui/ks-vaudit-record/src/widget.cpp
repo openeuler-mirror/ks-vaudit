@@ -376,7 +376,9 @@ void Widget::on_playBtn_clicked()
         m_activatePage->exec();
         return;
     }
-
+    if (m_heartBeat->isActive()){
+        m_heartBeat->stop();
+    }
     m_isRecording = !m_isRecording;
     if (m_isRecording){
         Widget::showMinimized();
@@ -394,6 +396,7 @@ void Widget::on_playBtn_clicked()
             sendSwitchControl(m_selfPID, m_recordPID, "start");
         }
         m_needRestart = false;
+        m_heartBeat->start(HEARTBEAT_MS);
         KLOG_DEBUG("Start record screen!");
     }else{
         sendSwitchControl(m_selfPID, m_recordPID, "pause");
@@ -406,9 +409,7 @@ void Widget::on_playBtn_clicked()
 
 void Widget::on_stopBtn_clicked()
 {
-    if (m_isRecording){
-        sendSwitchControl(m_selfPID, m_recordPID, "stop");
-    }
+    sendSwitchControl(m_selfPID, m_recordPID, "stop");
     ui->timeStamp->setText("0:00:00");
     m_isRecording = false;
     m_needRestart = false;
@@ -736,7 +737,12 @@ QString Widget::getVideoDuration(QString absPath)
         mins %= 60;
         // KLOG_DEBUG() << "hh:mm:ss: " << hours << ":" << mins << ":" << secs;
     }else{
-        KLOG_DEBUG() << absPath << "has no duration";
+        // #62390 没有时长的视频显示为 "未知"
+        if (pCtx != NULL){
+            avformat_close_input(&pCtx);
+            pCtx=NULL;
+        }
+        return QString("未知");
     }
 
     if (pCtx != NULL){
@@ -1027,8 +1033,8 @@ void Widget::callNotifyProcess(QString op, int minutes)
     if ("timing" == op && 0 == minutes)
         return;
 
-    // 仅开始、暂停、重启、停止、定时提醒需要提示
-    if (op == "start" || op == "pause" || op == "restart" || op == "stop" || op == "timing")
+    // 仅开始、暂停、重启、停止、定时、错误提醒需要提示
+    if (op == "start" || op == "pause" || op == "restart" || op == "stop" || op == "timing" || op == "error")
     {
         QProcess process;
         QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -1084,7 +1090,6 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         }
     } else if (to_pid == m_selfPID && op == "process") { //接收后台进程pid
         m_recordPID = from_pid;
-        sendSwitchControl(m_selfPID, from_pid, "process");
         KLOG_INFO() << "receive backend record pid:" << from_pid;
     } else if (to_pid == m_selfPID && op.endsWith("-done")) { //接收录屏进程操作结果
         KLOG_DEBUG() << "receive op done:" << op;
@@ -1093,13 +1098,6 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         {
             callNotifyProcess(list[0]);
         }
-    } else if (to_pid == m_selfPID && op == "daeth") {
-        KLOG_DEBUG() << "ks-vaudit dead and restart";
-        // 点击停止按钮
-        ui->stopBtn->click();
-        // 重新拉起后台
-        QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
-        sendSwitchControl(m_selfPID, 0, args);
     }
 }
 
@@ -1138,6 +1136,7 @@ void Widget::reconnectMonitor()
     // 重新拉起后台
     QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
     sendSwitchControl(m_selfPID, 0, args);
+    callNotifyProcess("error");
 }
 
 void Widget::openActivate()

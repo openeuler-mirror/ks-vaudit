@@ -48,6 +48,10 @@ void RecordNotify::sendNotify(QString op, uid_t uid, int timing)
 		QString tmp = QString("%1").arg(timing);
 		notify_message = _("<b>\t已录屏") + tmp + _("分钟</b>\n");
 	}
+	else if (op == "error")
+	{
+		notify_message = _("<b>\t录屏进程异常，请重新开始录屏</b>\n");
+	}
 	else
 	{
 		KLOG_INFO() << "param err" << op << timing;

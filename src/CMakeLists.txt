@@ -32,7 +32,7 @@ pkg_search_module(XET REQUIRED xext)
 pkg_search_module(XCB_SYNC REQUIRED xcb-sync)
 
 IF(HIGH_VERSION)
-    ADD_DEFINITIONS(-DHIGH_VERSION)
+	ADD_DEFINITIONS(-DHIGH_VERSION)
 ENDIF(HIGH_VERSION)
 
 set(sources
@@ -110,6 +110,7 @@ set(sources
 	common/ScreenScaling.cpp
 	common/ScreenScaling.h
 	common/TempBuffer.h
+	common/common-definition.h
 	kidletime.cpp
 	xsyncbasedpoller.cpp
 	fixx11h.h

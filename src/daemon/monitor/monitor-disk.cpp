@@ -1,6 +1,7 @@
 #include "monitor-disk.h"
 #include "ksvaudit-configure_global.h"
 #include "kiran-log/qt5-log-i.h"
+#include "common-definition.h"
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QtDBus>
 #include <QJsonDocument>
@@ -17,9 +18,14 @@ extern "C" {
 
 #define TIMEOUT_MS 5000
 
-MonitorDisk::MonitorDisk(QWidget *parent) : m_maxSaveDays(30), m_maxRecordPerUser(0), m_minFreeSpace(10737418240),
-                                            m_maxFileSize(2147483648), m_recordMinFreeSpace(1073741824),
-                                            m_filePath("/opt/ks-vaudit"), m_recordFilePath("~/videos/ks-vaudit")
+MonitorDisk::MonitorDisk(QWidget *parent)
+            : m_maxSaveDays(AUDIT_DEFAULT_CONFIG_MAX_SAVE_DAYS)
+            , m_maxRecordPerUser(AUDIT_DEFAULT_CONFIG_MAX_RECORD_PER_USER)
+            , m_minFreeSpace(AUDIT_DEFAULT_CONFIG_MIN_FREE_SPACE)
+            , m_maxFileSize(AUDIT_DEFAULT_CONFIG_MAX_FILE_SIZE)
+            , m_recordMinFreeSpace(RECORD_DEFAULT_CONFIG_MIN_FREE_SPACE)
+            , m_filePath(AUDIT_DEFAULT_CONFIG_FILEPATH)
+            , m_recordFilePath(RECORD_DEFAULT_CONFIG_FILEPATH)
 {
     m_dbusInterface = new  ConfigureInterface(KSVAUDIT_CONFIGURE_SERVICE_NAME, KSVAUDIT_CONFIGURE_PATH_NAME, QDBusConnection::systemBus(), this);
     if (!m_dbusInterface)
@@ -96,7 +102,7 @@ void MonitorDisk::parseConfigureInfo(QString value)
     for (auto key : jsonObj.keys())
     {
         // 只取需要的key，不需要考虑else
-        if ("FilePath" == key)
+        if (GENEARL_CONFIG_FILEPATH == key)
         {
             m_filePath = jsonObj[key].toString();
             if (m_filePath.contains('~'))
@@ -105,19 +111,19 @@ void MonitorDisk::parseConfigureInfo(QString value)
                 m_filePath.replace('~', getenv("HOME"));
             }
         }
-        else if ("MinFreeSpace" == key)
+        else if (GENEARL_CONFIG_MIN_FREE_SPACE == key)
         {
             m_minFreeSpace = jsonObj[key].toString().toULongLong();
         }
-        else if ("MaxSaveDays" == key)
+        else if (GENEARL_CONFIG_MAX_SAVE_DAYS == key)
         {
             m_maxSaveDays = jsonObj[key].toString().toInt();
         }
-        else if ("MaxRecordPerUser" == key)
+        else if (GENEARL_CONFIG_MAX_RECORD_PER_USER == key)
         {
             m_maxRecordPerUser = jsonObj[key].toString().toInt();
         }
-        else if ("MaxFileSize" == key)
+        else if (GENEARL_CONFIG_MAX_FILE_SIZE == key)
         {
             m_maxFileSize = jsonObj[key].toString().toULongLong();
         }
@@ -151,7 +157,7 @@ void MonitorDisk::checkFrontRecordFreeSpace(QString homeDir, QVector<int> pids)
            m_recordMinFreeSpace, (m_recordMinFreeSpace>>20), (m_recordMinFreeSpace>>30), availsize, (availsize>>20), (availsize>>30));
         for (auto pid : pids)
         {
-            sendSwitchControl(pid, "DiskSpace");
+            sendSwitchControl(pid, OPERATE_DISK_FRONT_NOTIFY);
         }
     }
 }
@@ -165,17 +171,17 @@ void MonitorDisk::parseRecordConfigureInfo(QString value)
     for (auto key : jsonObj.keys())
     {
         // 只取需要的key，不需要考虑else
-        if ("FilePath" == key)
+        if (GENEARL_CONFIG_FILEPATH == key)
         {
             m_recordFilePath = jsonObj[key].toString();
         }
-        else if ("MinFreeSpace" == key)
+        else if (GENEARL_CONFIG_MIN_FREE_SPACE == key)
         {
             m_recordMinFreeSpace = jsonObj[key].toString().toULongLong();
         }
     }
 
-    KLOG_INFO() << "FilePath:" << m_recordFilePath << "MinFreeSpace" << m_recordMinFreeSpace;
+    KLOG_INFO() << "FilePath:" << m_recordFilePath << "MinFreeSpace:" << m_recordMinFreeSpace;
 }
 
 bool MonitorDisk::parseJsonData(const QString &param,  QJsonObject &jsonObj)
@@ -289,13 +295,17 @@ bool MonitorDisk::checkMP4Broken(const QString &fileAbsPath)
 void MonitorDisk::UpdateConfigureData(QString key, QString value)
 {
     KLOG_INFO() << "type:" << key << "value:" << value;
-    if ("audit" == key)
+    if (GENEARL_CONFIG_AUDIT == key)
     {
         parseConfigureInfo(value);
     }
-    else if ("record" == key)
+    else if (GENEARL_CONFIG_RECORD == key)
     {
         parseRecordConfigureInfo(value);
+    }
+    else
+    {
+        KLOG_INFO() << "not support:" << key;
     }
 }
 
@@ -356,8 +366,8 @@ void MonitorDisk::fileSizeProcess(QMap<int, QString>& map)
         {
             KLOG_INFO() << it.key() << "file reaches maximum limit" << it.value();
             // 达到最大文件大小后发送退出并保存信号，monitor收到程序退出会再拉起
-            sendSwitchControl(it.key(), "stop");
-            sendSwitchControl(it.key(), "exit");
+            sendSwitchControl(it.key(), OPERATE_RECORD_STOP);
+            sendSwitchControl(it.key(), OPERATE_RECORD_EXIT);
             map.erase(it++);
             continue;
         }
@@ -375,7 +385,7 @@ void MonitorDisk::sendSwitchControl(int to_pid, const QString &operate)
 void MonitorDisk::sendProcessPid(int from_pid, int to_pid)
 {
     KLOG_INFO() << "from_pid:" << from_pid << "to_pid:" << to_pid;
-    m_dbusInterface->SwitchControl(from_pid, to_pid, "process");
+    m_dbusInterface->SwitchControl(from_pid, to_pid, OPERATE_FRONT_PROCESS);
 }
 
 void MonitorDisk::fixVidoes()

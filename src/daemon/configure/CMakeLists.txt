@@ -16,6 +16,7 @@ set(INCLUDE_DIRS "./include")
 set(TARGET_NAME ks-vaudit-configure)
 
 file(GLOB_RECURSE DAEMON_H_FILES ./*.h)
+file(COPY "${CMAKE_SOURCE_DIR}/src/common/common-definition.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(Qt5 COMPONENTS Core Gui DBus Sql Xml REQUIRED)
 

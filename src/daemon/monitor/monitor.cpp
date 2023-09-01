@@ -159,6 +159,11 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
 {
     // 根据前台发送的信息，启动后台进程
     KLOG_INFO() << "from_pid:" << from_pid << "displayName:" << displayName << "authFile:" << authFile << "userName:" << userName << "homeDir:" << homeDir;
+    if (authFile.isEmpty())
+    {
+        authFile = frontGetXAuth(userName, displayName);
+    }
+
     QProcess *process = new QProcess();
     process->setProcessChannelMode(QProcess::MergedChannels);
     QString logFile = m_filePath + "record-display" + displayName;
@@ -333,7 +338,6 @@ QVector<sessionInfo> Monitor::getXvncInfo()
         if (process.waitForFinished())
         {
             QByteArray data = process.readAll();
-
             QString str;
             QStringList strlist;
             for (int i = 0; i < data.size(); i++)
@@ -515,7 +519,10 @@ void Monitor::DealSession(bool isDiskOk)
                     auto &process = it.value().process;
                     KLOG_INFO() << "about 10s to start time:" << val.stTime << ", kill process" << process->pid() << ", displayName:" << val.displayName;
                     m_sessionInfos.erase(it++);
-                    clearProcess(process);
+                    process->kill();
+                    process->waitForFinished();
+                    process->deleteLater();
+                    KLOG_INFO() << "remove success";
                     continue;
                 }
             }
@@ -523,15 +530,25 @@ void Monitor::DealSession(bool isDiskOk)
             // 进程存在，但是没有录屏(以收到录屏文件为准)，发送开始录屏信息
             if (!val.bStart)
             {
-                KLOG_INFO() << "record not start and start, pid:" << val.process->processId() << "display:" << val.displayName << "ip:" << val.ip;
-                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "start");
+                KLOG_INFO() << "record not start and start, pid:" << val.process->pid() << "display:" << val.displayName << "ip:" << val.ip;
+
+                // 清除不存在进程信息
+                if (0 == val.process->pid())
+                {
+                    auto process = it.value().process;
+                    m_sessionInfos.erase(it++);
+                    clearProcess(process);
+                    continue;
+                }
+
+                MonitorDisk::instance().sendSwitchControl(val.process->pid(), "start");
             }
 
             // 关闭提示磁盘空间不足
             if (val.bNotify)
             {
-                KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << val.process->processId();
-                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "disk_notify_stop");
+                KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << val.process->pid();
+                MonitorDisk::instance().sendSwitchControl(val.process->pid(), "disk_notify_stop");
                 val.bNotify = false;
             }
         }
@@ -689,6 +706,58 @@ QString Monitor::getLocalActiveUser()
         resOut = process.readAllStandardOutput().toStdString().data();
     }
 
+    process.close();
+    return resOut;
+}
+
+// 获取前台会话XAUTHORITY
+QString Monitor::frontGetXAuth(QString userName, QString display)
+{
+    int displayIndex = display.indexOf(".") ;
+    QString displayName = displayIndex == -1 ? display.mid(0, display.size()) : display.mid(0, displayIndex);
+    KLOG_INFO() << "displayName" << displayName;
+
+    // 先在后台的数据里查
+    QList<sessionInfo> values = m_sessionInfos.values(userName);
+    for (auto value : values)
+    {
+        if (value.displayName == displayName)
+        {
+            KLOG_INFO() << "display" << displayName << "find m_sessionInfos get XAUTHORITY:" << value.authFile;
+            return value.authFile;
+        }
+    }
+
+    // 通过命令查找
+    QProcess process;
+    process.setProgram("sh");
+    QString arg = "pid=`ps aux | grep " + userName + " | grep -E 'Xorg | Xvnc' | grep "+ displayName + " | grep -v grep | awk '{print $2}'` &&  cat /proc/$pid/cmdline";
+    KLOG_INFO() << "arg:" << arg;
+    process.setArguments(QStringList() << "-c" << arg);
+    process.start();
+    QString resOut;
+    if (process.waitForFinished())
+    {
+        QByteArray data = process.readAll();
+        QString str;
+        QStringList strlist;
+        for (int i = 0; i < data.size(); i++)
+        {
+            if (data[i] == '\x00' || data[i] == ' ')
+            {
+                strlist.append(str);
+                str.clear();
+                continue;
+            }
+            str = str + data[i];
+        }
+
+        int index1 = strlist.indexOf(QRegularExpression("^-auth"));
+        int index = index1 == -1 ? strlist.indexOf(QRegularExpression("^-rfbauth")) : index1;
+        resOut = index == -1 ? resOut :  strlist[index+1];
+    }
+
+    KLOG_INFO() << "display" << displayName << "get XAUTHORITY:" << resOut;
     process.close();
     return resOut;
 }

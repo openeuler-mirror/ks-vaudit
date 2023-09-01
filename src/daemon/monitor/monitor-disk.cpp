@@ -332,7 +332,7 @@ void MonitorDisk::switchControlSlot(int from_pid, int to_pid, QString op)
         QString authFile = dataList[2].mid(authIndex, dataList[2].size());
         QString userName = dataList[3].mid(userIndex, dataList[3].size());
         QString homeDir = dataList[4].mid(homeIndex, dataList[4].size());
-        if (displayName.isEmpty() || authFile.isEmpty() || userName.isEmpty() || homeDir.isEmpty())
+        if (displayName.isEmpty() || userName.isEmpty() || homeDir.isEmpty())
         {
             KLOG_INFO() << "parse data err";
             return;
@@ -354,8 +354,9 @@ void MonitorDisk::fileSizeProcess(QMap<int, QString>& map)
         QFileInfo fileinfo(it.value());
         if (fileinfo.size() >= m_maxFileSize)
         {
-            KLOG_INFO() << "file reaches maximum limit" << it.value();
+            KLOG_INFO() << it.key() << "file reaches maximum limit" << it.value();
             // 达到最大文件大小后发送退出并保存信号，monitor收到程序退出会再拉起
+            sendSwitchControl(it.key(), "stop");
             sendSwitchControl(it.key(), "exit");
             map.erase(it++);
             continue;

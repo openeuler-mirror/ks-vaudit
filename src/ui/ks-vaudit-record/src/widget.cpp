@@ -28,6 +28,7 @@ extern "C" {
 }
 
 #define SLIDER_DELAY_MS 100
+#define HEARTBEAT_MS 3000
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
@@ -46,12 +47,16 @@ Widget::Widget(QWidget *parent) :
         m_activatePage->setFocus();
         m_activatePage->exec();
     }
+    // 音量调节定时器
     m_sendMData = new QTimer();
     m_sendSData = new QTimer();
     m_sendMData->setSingleShot(true);
     m_sendSData->setSingleShot(true);
     connect(m_sendMData,SIGNAL(timeout()),this,SLOT(sendMicToConfig()));
     connect(m_sendSData,SIGNAL(timeout()),this,SLOT(sendSpkToConfig()));
+    // 心跳检测定时器
+    m_heartBeat = new QTimer();
+    connect(m_heartBeat,SIGNAL(timeout()),this,SLOT(reconnectMonitor()));
     init_ui();
 }
 
@@ -75,6 +80,10 @@ Widget::~Widget()
     if (m_sendSData) {
         delete m_sendSData;
         m_sendSData = nullptr;
+    }
+    if (m_heartBeat) {
+        delete m_heartBeat;
+        m_heartBeat = nullptr;
     }
 }
 
@@ -397,7 +406,9 @@ void Widget::on_playBtn_clicked()
 
 void Widget::on_stopBtn_clicked()
 {
-    sendSwitchControl(m_selfPID, m_recordPID, "stop");
+    if (m_isRecording){
+        sendSwitchControl(m_selfPID, m_recordPID, "stop");
+    }
     ui->timeStamp->setText("0:00:00");
     m_isRecording = false;
     m_needRestart = false;
@@ -1050,6 +1061,7 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
     if (from_pid == m_recordPID && to_pid == m_selfPID && op.startsWith("totaltime")){
         QString timeText = op.split(" ")[1];
         ui->timeStamp->setText(timeText);
+        m_heartBeat->start(HEARTBEAT_MS);
         // 屏幕定时提示处理
         if (m_timing != 0)
         {
@@ -1114,6 +1126,18 @@ void Widget::sendSpkToConfig()
     // 滑块值变动，传递给配置中心
     int value = ui->volumnSlider->value();
     setConfig("SpeakerVolume", QString("%1").arg(value));
+}
+
+void Widget::reconnectMonitor()
+{
+    if (!m_isRecording){
+        return;
+    }
+    // 点击停止按钮
+    ui->stopBtn->click();
+    // 重新拉起后台
+    QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
+    sendSwitchControl(m_selfPID, 0, args);
 }
 
 void Widget::openActivate()

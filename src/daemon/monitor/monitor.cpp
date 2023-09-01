@@ -1,7 +1,7 @@
 #include "kiran-log/qt5-log-i.h"
 #include "monitor.h"
 #include "monitor-disk.h"
-#include <kylin-license/license-i.h>
+#include "common-definition.h"
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -19,10 +19,9 @@
 //dbus-send --system --print-reply --type=method_call --dest=org.gnome.DisplayManager /org/gnome/DisplayManager/Display2 org.gnome.DisplayManager.Display.GetX11DisplayName
 //张三_192.168.1.1_20220621_153620.mp4
 
-#define TIMEOUT_MS 5000
-
 Monitor::Monitor(QObject *parent)
 {
+    creatLicenseObjectName();
     m_isActive = isLicenseActive();
     KLOG_DEBUG() << "Current thread ID: " << QThread::currentThreadId() << "m_isActive:" << m_isActive;
     QDir dir;
@@ -112,13 +111,13 @@ void Monitor::receiveNotification(int pid, QString message)
             map.insert(process->pid(), 0);
             if (process->pid() == pid)
             {
-                if (message == "disk_notify")
+                if (OPERATE_DISK_NOTIFY == message)
                 {
                     it.value().bNotify = true;
                     KLOG_INFO() << "audit receive disk space notify";
                     return;
                 }
-                else if (message == "is_active")
+                if (VAUDIT_ACTIVE == message)
                 {
                     KLOG_INFO() << "audit send is_active";
                     it.value().bActive = true;
@@ -182,8 +181,18 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
     KLOG_INFO() << "backend pid:" << process->pid() << process->arguments();
     MonitorDisk::instance().sendProcessPid(process->pid(), from_pid);
     MonitorDisk::instance().sendProcessPid(from_pid, process->pid());
+    // 规避前台录屏进程起多个，关掉旧的进程
+    auto iter = m_frontRecordInfo.find(from_pid);
+    if (iter != m_frontRecordInfo.end())
+    {
+        auto &pp = iter.value();
+        KLOG_INFO() << "clear the vaudit process corresponding to process: " << iter.key();
+        clearProcess(pp);
+    }
+    // 记录前后台进程信息
     m_frontRecordInfo.insert(from_pid, process);
 
+    // 记录前台录屏目录信息：将同一存储目录的进程记录到一起
     QVector<int> vec;
     auto it = m_frontHomeInfo.find(homeDir);
     if (it != m_frontHomeInfo.end())
@@ -195,6 +204,7 @@ void Monitor::receiveFrontBackend(int from_pid, QString displayName, QString aut
     m_frontHomeInfo.insert(homeDir, vec);
 }
 
+// 获取本地会话的tty和用户名
 QMap<QString, QString> Monitor::getXorgLoginName()
 {
     QMap<QString, QString> map;
@@ -224,6 +234,7 @@ QMap<QString, QString> Monitor::getXorgLoginName()
     return map;
 }
 
+// 获取远程会话的进程ID，vnc和rdp
 QStringList Monitor::getVncProcessId()
 {
     QStringList strlist;
@@ -244,6 +255,7 @@ QStringList Monitor::getVncProcessId()
     return strlist;
 }
 
+// 获取本地会话信息，并根据tty获取对应会话的用户名
 QVector<sessionInfo> Monitor::getXorgInfo()
 {
     QVector<sessionInfo> vecInfo;
@@ -278,7 +290,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
             if (it == map.end())
                 continue;
 
-            struct sessionInfo info = {it.value(), "127.0.0.1", arr[index1+1], arr[index2 + 1], nullptr, false, false, time(NULL), true, false};
+            struct sessionInfo info = {it.value(), VAUDIT_LOCAL_IP, arr[index1+1], arr[index2 + 1], nullptr, false, false, time(nullptr), true, false};
             vecInfo.push_back(info);
         }
     }
@@ -287,6 +299,7 @@ QVector<sessionInfo> Monitor::getXorgInfo()
     return vecInfo;
 }
 
+// 获取远程会话对应IP，rdp第一次取到的IP为127.0.0.1，需要继续取
 QString Monitor::getRemotIP(const QString &pid)
 {
     QProcess process;
@@ -318,6 +331,7 @@ QString Monitor::getRemotIP(const QString &pid)
     return "";
 }
 
+// 获取远程会话信息
 QVector<sessionInfo> Monitor::getXvncInfo()
 {
     QVector<sessionInfo> vecInfo;
@@ -354,12 +368,14 @@ QVector<sessionInfo> Monitor::getXvncInfo()
                 str = str + data[i];
             }
 
+            // vnc: -auth, rdp: -rfbauth
             int index = strlist.indexOf(QRegularExpression(".*Xvnc$"));
-            int index1 = strlist.indexOf(QRegularExpression("^-rfbauth"));
-            if (index == -1 || index1 == -1)
+            int index1 = strlist.indexOf(QRegularExpression("^-auth"));
+            int index2 = index1 == -1 ? strlist.indexOf(QRegularExpression("^-rfbauth")) : index1;
+            if (index == -1 || index2 == -1)
                 continue;
 
-            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index1+1], nullptr, false, false, time(NULL), false, false};
+            struct sessionInfo info = {user, ip, strlist[index+1], strlist[index2+1], nullptr, false, false, time(nullptr), false, false};
             vecInfo.push_back(info);
         }
         process.close();
@@ -382,6 +398,7 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
     QStringList arg;
     arg << (QString("--audit ") + info.userName + QString(" ") + info.ip + QString(" ") + info.displayName);
 
+    // 进程异常退出，重新拉起
     connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
         KLOG_WARNING() << "receive finshed signal: pid:" << process->pid() << "arg:" << process->arguments()  << "exit, exitcode:" << exitCode << exitStatus;
         QSharedPointer<sessionInfo> ptrTmp(new sessionInfo(info));
@@ -408,18 +425,18 @@ QProcess* Monitor::startRecordWithDisplay(sessionInfo info)
                 pp = nullptr;
             }
 
-        #if 0
-            QString loginUser = getLocalActiveUser();
-            // 本地未激活用户不启进程
-            if (info.userName != loginUser && info.bLocal)
+        #if 1
+            QString displayName = getCurrentSessionDisplay();
+            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
+            if (info.bLocal && !displayName.isEmpty() && value.displayName != displayName)
             {
-                KLOG_INFO() << value.userName << value.displayName << "is not active user";
+                KLOG_INFO() << value.userName << value.displayName << "is not active user" << "cur display:" << displayName;
                 m_sessionInfos.erase(it);
                 return;
             }
         #endif
 
-            value.stTime = time(NULL);
+            value.stTime = time(nullptr);
             value.bStart = false;
             value.bActive = false;
             value.bNotify = false;
@@ -478,7 +495,7 @@ void Monitor::DealSession(bool isDiskOk)
     }
 
     // 拉起新启的会话的录屏进程
-    QString loginUser;
+    QString loginDisplay;
     for (sessionInfo info : infos)
     {
         if (!m_sessionInfos.contains(info.userName, info))
@@ -490,15 +507,14 @@ void Monitor::DealSession(bool isDiskOk)
                 continue;
             }
 
-        #if 0
+        #if 1
             // 获取激活的会话，对于本对只会有一个会话正在使用，一次循环内仅需获取一次
-            if (loginUser.isEmpty())
+            if (loginDisplay.isEmpty())
             {
-                loginUser = getLocalActiveUser();
+                loginDisplay = getCurrentSessionDisplay();
             }
-
-            // 本地未激活用户不启进程
-            if (info.userName != loginUser && info.bLocal)
+            // 本地未激活用户不启进程，没有获取到未激活用户当正常情况处理
+            if (info.bLocal && !loginDisplay.isEmpty() && info.displayName != loginDisplay)
                 continue;
         #endif
 
@@ -516,7 +532,7 @@ void Monitor::DealSession(bool isDiskOk)
         {
             if (!val.bActive)
             {
-                if (time(NULL) - val.stTime > 10)
+                if (time(nullptr) - val.stTime > 10)
                 {
                     // 约10s没收到子进程的已激活信息，认为子进程卡住，杀掉子进程并清除信息
                     auto &process = it.value().process;
@@ -544,14 +560,14 @@ void Monitor::DealSession(bool isDiskOk)
                     continue;
                 }
 
-                MonitorDisk::instance().sendSwitchControl(val.process->pid(), "start");
+                MonitorDisk::instance().sendSwitchControl(val.process->pid(), OPERATE_RECORD_START);
             }
 
             // 关闭提示磁盘空间不足
             if (val.bNotify)
             {
                 KLOG_INFO() << "disk space returned to normal, stop notify, pid:" << val.process->pid();
-                MonitorDisk::instance().sendSwitchControl(val.process->pid(), "disk_notify_stop");
+                MonitorDisk::instance().sendSwitchControl(val.process->pid(), OPERATE_DISK_NOTIFY_STOP);
                 val.bNotify = false;
             }
         }
@@ -561,8 +577,8 @@ void Monitor::DealSession(bool isDiskOk)
             if (!val.bNotify)
             {
                 KLOG_INFO() << "insufficient disk space, stop record and notify pid:" << val.process->processId();
-                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "stop");
-                MonitorDisk::instance().sendSwitchControl(val.process->processId(), "disk_notify");
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), OPERATE_RECORD_STOP);
+                MonitorDisk::instance().sendSwitchControl(val.process->processId(), OPERATE_DISK_NOTIFY);
                 val.bStart = false;
             }
         }
@@ -573,11 +589,11 @@ void Monitor::DealSession(bool isDiskOk)
 
 bool Monitor::isLicenseActive()
 {
-    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(LICENSE_MANAGER_DBUS_NAME,
-                                                                QString(LICENSE_OBJECT_OBJECT_PATH) + "/KSVAUDITRECORD",
-                                                                 "com.kylinsec.Kiran.LicenseObject",
-                                                                "GetLicense");
-    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, TIMEOUT_MS);
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
+                                                                DBUS_LICENSE_VAUDIT_PATH,
+                                                                DBUS_LICENSE_INTERFACE,
+                                                                DBUS_LICENSE_METHOD_GETLICENSE);
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
     //KLOG_DEBUG() << "msgReply " << msgReply;
     QString errorMsg;
 
@@ -596,13 +612,10 @@ bool Monitor::isLicenseActive()
             }
 
             QJsonObject jsonObj = doc.object();
-            for (auto key : jsonObj.keys())
+            auto iter = jsonObj.find(DBUS_LICENSE_ACTIVATION_STATUS);
+            if (iter != jsonObj.end())
             {
-                if ("activation_status" == key)
-                {
-                    int activation_status = jsonObj[key].toDouble();
-                    return activation_status != LicenseActivationStatus::LAS_ACTIVATED ? false : true;
-                }
+                return iter.value().toDouble() == 1 ? true : false;
             }
 
             return false;
@@ -612,6 +625,7 @@ bool Monitor::isLicenseActive()
     return false;
 }
 
+// 清除后台所有会话信息
 void Monitor::clearSessionInfos()
 {
     for (auto it = m_sessionInfos.begin(); it != m_sessionInfos.end();)
@@ -624,12 +638,13 @@ void Monitor::clearSessionInfos()
     KLOG_INFO() << "remove all end";
 }
 
+// 退出后台进程
 void Monitor::clearProcess(QProcess *process)
 {
     if (process)
     {
         KLOG_INFO() << "call exit signal, remove "<< process->processId();
-        MonitorDisk::instance().sendSwitchControl(process->processId(), "exit");
+        MonitorDisk::instance().sendSwitchControl(process->processId(), OPERATE_RECORD_EXIT);
         if (process->waitForFinished())
         {
             process->close();
@@ -645,72 +660,43 @@ void Monitor::clearFrontRecordInfos()
     // 查询前台进程是否还存在，不存在关闭后台录屏进程，清除信息
     for (auto it = m_frontRecordInfo.begin(); it != m_frontRecordInfo.end();)
     {
-        QProcess process;
-        process.setProcessChannelMode(QProcess::MergedChannels);
-        process.setProgram("sh");
-        QString arg = "kill -0 " + QString::number(it.key()) + " >/dev/null 2>&1; echo $?";
-        process.setArguments(QStringList() << "-c" << arg);
-        process.start();
-        if (process.waitForFinished())
+        bool bExist = processExist(it.key());
+        if (!bExist)
         {
-            QByteArray data = process.readAll();
-            QString str(data.toStdString().data());
-            QStringList strlist = str.split("\n");
-            strlist.removeAll("");
-            if (strlist.size() != 1)
+            KLOG_INFO() << "front pid:" << it.key() << "is not exist";
+            // 清除文件存储路径信息, pid是唯一的
+            for (auto iter = m_frontHomeInfo.begin(); iter != m_frontHomeInfo.end(); ++iter)
             {
-                ++it;
-                continue;
-            }
-
-            if (strlist[0].toInt() != 0)
-            {
-                KLOG_INFO() << "front pid:" << it.key() << "is not exist";
-
-                // 清除文件存储路径信息, pid是唯一的
-                for (auto iter = m_frontHomeInfo.begin(); iter != m_frontHomeInfo.end(); ++iter)
+                QVector<int> &vec = iter.value();
+                int index = vec.indexOf(it.key());
+                // 查找到，清除信息，没找到继续
+                if (index != -1)
                 {
-                    QVector<int> &vec = iter.value();
-                    int index = vec.indexOf(it.key());
-                    // 查找到，清除信息，没找到继续
-                    if (index != -1)
+                    vec.remove(index);
+                    // 没有存放到对应home的进程
+                    if (vec.size() == 0)
                     {
-                        vec.remove(index);
-                        // 没有存放到对应home的进程
-                        if (vec.size() == 0)
-                        {
-                            m_frontHomeInfo.erase(iter++);
-                        }
-                        break;
+                        m_frontHomeInfo.erase(iter++);
                     }
+                    break;
                 }
+<<<<<<< HEAD
 
                 auto &pp = it.value();
                 m_frontRecordInfo.erase(it++);
                 clearProcess(pp);
                 continue;
+=======
+>>>>>>> master
             }
+
+            auto &pp = it.value();
+            m_frontRecordInfo.erase(it++);
+            clearProcess(pp);
+            continue;
         }
         ++it;
-        process.close();
     }
-}
-
-QString Monitor::getLocalActiveUser()
-{
-    QProcess process;
-    process.setProgram("sh");
-    QString arg = "cat /var/log/secure | grep 'pam: gdm-password:' | grep 'session opened for user' | tail -n 1 | awk '{t=$0; gsub(/.*for user | by.*/,\"\",t);print t}' | tr -d '\n'";
-    process.setArguments(QStringList() << "-c" << arg);
-    process.start();
-    QString resOut;
-    if (process.waitForFinished())
-    {
-        resOut = process.readAllStandardOutput().toStdString().data();
-    }
-
-    process.close();
-    return resOut;
 }
 
 // 获取前台会话XAUTHORITY
@@ -734,7 +720,7 @@ QString Monitor::frontGetXAuth(QString userName, QString display)
     // 通过命令查找
     QProcess process;
     process.setProgram("sh");
-    QString arg = "pid=`ps aux | grep " + userName + " | grep -E 'Xorg | Xvnc' | grep "+ displayName + " | grep -v grep | awk '{print $2}'` &&  cat /proc/$pid/cmdline";
+    QString arg = "pid=`ps aux | grep " + userName + " | grep -E 'Xorg " + displayName + "|Xvnc " + displayName + "' | grep -v grep | awk '{print $2}'` &&  cat /proc/$pid/cmdline";
     KLOG_INFO() << "arg:" << arg;
     process.setArguments(QStringList() << "-c" << arg);
     process.start();
@@ -754,7 +740,6 @@ QString Monitor::frontGetXAuth(QString userName, QString display)
             }
             str = str + data[i];
         }
-
         int index1 = strlist.indexOf(QRegularExpression("^-auth"));
         int index = index1 == -1 ? strlist.indexOf(QRegularExpression("^-rfbauth")) : index1;
         resOut = index == -1 ? resOut :  strlist[index+1];
@@ -763,4 +748,98 @@ QString Monitor::frontGetXAuth(QString userName, QString display)
     KLOG_INFO() << "display" << displayName << "get XAUTHORITY:" << resOut;
     process.close();
     return resOut;
+}
+
+// 判断进程是否存在
+bool Monitor::processExist(int pid)
+{
+    QProcess process;
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    process.setProgram("sh");
+    QString arg = "ps -p " + QString::number(pid) + " >/dev/null 2>&1; echo $?";
+    process.setArguments(QStringList() << "-c" << arg);
+    process.start();
+    bool bExist{};
+    if (process.waitForFinished())
+    {
+        QByteArray data = process.readAll();
+        QString str(data.toStdString().data());
+        QStringList strlist = str.split("\n");
+        strlist.removeAll("");
+        if (strlist.size() == 1 &&  strlist[0].toInt() == 0)
+        {
+            bExist = true;
+        }
+    }
+    process.close();
+    return bExist;
+}
+
+// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Seat1 org.freedesktop.ConsoleKit.Seat.GetActiveSession
+// dbus-send --system --print-reply --type=method_call --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Session2 org.freedesktop.ConsoleKit.Session.GetX11Display
+QString Monitor::getCurrentSessionDisplay()
+{
+    QString displayName;
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
+                                                                "/org/freedesktop/ConsoleKit/Seat1",
+                                                                "org.freedesktop.ConsoleKit.Seat",
+                                                                "GetActiveSession");
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
+    KLOG_DEBUG() << "msgReply " << msgReply;
+    QString session;
+    if (msgReply.type() != QDBusMessage::ReplyMessage)
+        return displayName;
+
+    QList<QVariant> args = msgReply.arguments();
+    if (args.size() < 1)
+        return displayName;
+
+    QVariant firstArg = args.takeFirst();
+    if (firstArg.canConvert<QDBusObjectPath>())
+    {
+        QDBusObjectPath arg = firstArg.value<QDBusObjectPath>();
+        session = arg.path();
+    }
+
+    if (session.isEmpty())
+        return displayName;
+
+
+    QDBusMessage msgMethodCall1 = QDBusMessage::createMethodCall("org.freedesktop.ConsoleKit",
+                                                                session,
+                                                                "org.freedesktop.ConsoleKit.Session",
+                                                                "GetX11Display");
+    QDBusMessage msgReply1 = QDBusConnection::systemBus().call(msgMethodCall1, QDBus::Block, DBUS_TIMEOUT_MS);
+    KLOG_DEBUG() << session << "GetX11AuthorityFile msgReply" << msgReply1;
+
+    if (msgReply1.type() != QDBusMessage::ReplyMessage)
+        return displayName;
+
+    QList<QVariant> args1 = msgReply1.arguments();
+    if (args1.size() < 1)
+        return displayName;
+
+    displayName = args1.takeFirst().toString();
+    KLOG_DEBUG() << "current session " << session << "displayName:" << displayName;
+    return displayName;
+}
+
+bool Monitor::creatLicenseObjectName()
+{
+    QDBusMessage msgMethodCall = QDBusMessage::createMethodCall(DBUS_LICENSE_DESTIONATION,
+                                                                DBUS_LICENSE_OBJECT_PATH,
+                                                                DBUS_LICENSE_DESTIONATION,
+                                                                DBUS_LICENSE_METHOD_OBJECK);
+    msgMethodCall << DBUS_LICENSE_OBJECT_VAUDIT_NAME;
+
+    QDBusMessage msgReply = QDBusConnection::systemBus().call(msgMethodCall, QDBus::Block, DBUS_TIMEOUT_MS);
+    KLOG_INFO() << "msgReply:" << msgReply;
+    if (msgReply.type() != QDBusMessage::ReplyMessage)
+        return false;
+
+    QList<QVariant> args = msgReply.arguments();
+    if (args.size() < 1)
+        return false;
+
+    return true;
 }

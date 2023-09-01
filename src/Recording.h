@@ -176,6 +176,7 @@ private:
 	bool m_auditDiskEnough;
 	quint64 m_lastMinFreeSpace;
 	QProcess *m_pNotifyProcess;
+	quint64 m_maxFileSize;
 
 	//音频格式
 	QString m_lastAlsaInput;
@@ -217,7 +218,6 @@ private:
 	void operateCatchResume(bool bStartCatch = false, bool bRestartRecord = false);
 	void callNotifyProcess();
 	void clearNotify();
-	QString getDbusSession();
 
 signals:
 

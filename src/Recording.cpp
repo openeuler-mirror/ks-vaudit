@@ -287,7 +287,7 @@ void Recording::OnRecordTimer() {
 	const QString &fileName = m_output_settings.file;
 	if (!fileName.isEmpty()){
 		bool ret = QFileInfo::exists(fileName);
-		if (!ret) {
+		if (!ret && m_output_started) {
 			KLOG_ERROR() << fileName << "was deleted, restart record";
 			OnRecordSave();  // 结束视频录制
 			OnRecordStart(); // 开始新视频

@@ -104,6 +104,8 @@ void Widget::init_ui()
     connect(m_folderAction, SIGNAL(triggered()), this, SLOT(openDir()));
     connect(m_deleteAction, SIGNAL(triggered()), this, SLOT(deleteVideo()));
     connect(m_dbusInterface, SIGNAL(SignalSwitchControl(int,int,QString)), this, SLOT(refreshTime(int, int, QString)));
+    connect(m_dbusInterface, SIGNAL(SignalNotification(int, QString)), this, SLOT(receiveNotification(int, QString)));
+
     readConfig();
     // 构建模型表头
     m_model = new QStandardItemModel();
@@ -1054,8 +1056,24 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
     }
 }
 
+void Widget::receiveNotification(int pid, QString message)
+{
+    if (pid == m_recordPID && message == "is_active")
+    {
+        // 在后台发送is_active信号后，再设置窗口位置，显示窗口，以防发送录屏信号后台没收到
+        KLOG_INFO() << "receive backend record active info, and call show";
+        this->move(m_toWidth, m_toHeight);
+        this->show();
+    }
+}
+
 void Widget::openActivate()
 {
     m_activatePage->setFocus();
     m_activatePage->exec();
+}
+
+void Widget::setToCenter(int w, int h) {
+    m_toWidth = w;
+    m_toHeight = h;
 }

@@ -15,6 +15,7 @@
 #include <QDBusConnection>
 #include "kiran-log/qt5-log-i.h"
 #include "ksvaudit-configure_global.h"
+#include "common-definition.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -232,7 +233,7 @@ void Widget::on_exit_clicked()
 
 void Widget::on_ListBtn_clicked()
 {
-    if (m_currentUserInfo["user"].toString() != "audadm"){
+    if (m_currentUserInfo["user"].toString() != UI_AUDADM_USERNAME){
         Dialog *d = new Dialog(this,"noprivilege");
         d->exec();
         return;
@@ -285,7 +286,7 @@ void Widget::on_ListBtn_clicked()
 
 void Widget::on_ConfigBtn_clicked()
 {
-    if (m_currentUserInfo["user"].toString() != "sysadm"){
+    if (m_currentUserInfo["user"].toString() != UI_SYSADM_USERNAME){
         Dialog *d = new Dialog(this,"noprivilege");
         d->exec();
         return;
@@ -447,7 +448,7 @@ void Widget::on_pushButton_clicked()
         ui->pathLabel->setText(dirPath);
         ui->pathLabel->setToolTip(dirPath);
         QJsonObject obj;
-        obj["FilePath"] = dirPath;
+        obj[GENEARL_CONFIG_FILEPATH] = dirPath;
         QJsonDocument doc(obj);
         QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
         m_dbusInterface->SetAuditItemValue(a);
@@ -483,7 +484,7 @@ void Widget::on_minimize_clicked()
 
 void Widget::on_fpsBox_currentIndexChanged(int index)
 {
-    testConfig("Fps", m_fpsList.at(index));
+    testConfig(GENEARL_CONFIG_FPS, m_fpsList.at(index));
 }
 
 void Widget::on_searchBar_returnPressed()
@@ -497,78 +498,78 @@ void Widget::on_searchBar_returnPressed()
 
 void Widget::on_clarityBox_currentIndexChanged(int index)
 {
-    testConfig("Quality", QString("%1").arg(index));
+    testConfig(GENEARL_CONFIG_QUALITY, QString("%1").arg(index));
 }
 
 void Widget::on_pauseBox_currentIndexChanged(int index)
 {
-    int setValue = 0;
-    if (index == 0){
-        setValue = 0;
-    }else if (index == 1){
-        setValue = 5;
-    }else if (index == 2){
-        setValue = 10;
-    }else if (index == 3){
-        setValue = 15;
+    int setValue = TIMING_PAUSE_LEVEL_0;
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = TIMING_PAUSE_LEVEL_0;
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = TIMING_PAUSE_LEVEL_1;
+    }else if (UI_INDEX_LEVEL_2 == index){
+        setValue = TIMING_PAUSE_LEVEL_2;
+    }else if (UI_INDEX_LEVEL_3 == index){
+        setValue = TIMING_PAUSE_LEVEL_3;
     }
-    testConfig(QString("TimingPause"), QString("%1").arg(setValue));
+    testConfig(QString(GENEARL_CONFIG_TIMING_PAUSE), QString("%1").arg(setValue));
 }
 
 void Widget::on_typeBox_currentIndexChanged(int index)
 {
-    QString setValue = QString("MKV");
-    if (index == 0){
-        setValue = QString("MKV");
-    }else if (index == 1) {
-        setValue = QString("MP4");
+    QString setValue = QString(UI_FILETYPE_MKV);
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = QString(UI_FILETYPE_MKV);
+    }else if (UI_INDEX_LEVEL_1 == index) {
+        setValue = QString(UI_FILETYPE_MP4);
     }
-    testConfig(QString("FileType"), setValue);
+    testConfig(QString(GENEARL_CONFIG_FILETYPE), setValue);
 }
 
 void Widget::on_freeSpaceBox_currentIndexChanged(int index)
 {
-    unsigned long long setValue = 1073741824;
-    if (index == 0){
-        setValue *= 5;
-    }else if (index == 1){
-        setValue *= 10;
-    }else if (index == 2){
-        setValue *= 15;
-    }else if (index == 3){
-        setValue *= 20;
+    unsigned long long setValue = AUDIT_DISK_LEVEL_1;
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = AUDIT_DISK_LEVEL_0;
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = AUDIT_DISK_LEVEL_1;
+    }else if (UI_INDEX_LEVEL_2 == index){
+        setValue = AUDIT_DISK_LEVEL_2;
+    }else if (UI_INDEX_LEVEL_3 == index){
+        setValue = AUDIT_DISK_LEVEL_3;
     }
-    testConfig(QString("MinFreeSpace"), QString("%1").arg(setValue));
+    testConfig(QString(GENEARL_CONFIG_MIN_FREE_SPACE), QString("%1").arg(setValue));
 }
 
 void Widget::on_keepTimeBox_currentIndexChanged(int index)
 {
-    int setValue = 3;
-    if (index == 0){
-        setValue = 3;
-    }else if (index == 1){
-        setValue = 7;
-    }else if (index == 2){
-        setValue = 15;
-    }else if (index == 3){
-        setValue = 30;
+    int setValue = SAVE_MAX_DAYS_LEVEL_0;
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = SAVE_MAX_DAYS_LEVEL_0;
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = SAVE_MAX_DAYS_LEVEL_1;
+    }else if (UI_INDEX_LEVEL_2 == index){
+        setValue = SAVE_MAX_DAYS_LEVEL_2;
+    }else if (UI_INDEX_LEVEL_3 == index){
+        setValue = SAVE_MAX_DAYS_LEVEL_3;
     }
-    testConfig(QString("MaxSaveDays"), QString("%1").arg(setValue));
+    testConfig(QString(GENEARL_CONFIG_MAX_SAVE_DAYS), QString("%1").arg(setValue));
 }
 
 void Widget::on_maxRecordBox_currentIndexChanged(int index)
 {
-    int setValue = 0;
-    if (index == 0){
-        setValue = 0;
-    }else if (index == 1){
-        setValue = 1;
-    }else if (index == 2){
-        setValue = 3;
-    }else if (index == 3){
-        setValue = 5;
+    int setValue = MAX_RECORD_PER_USER_LEVEL_0;
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = MAX_RECORD_PER_USER_LEVEL_0;
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = MAX_RECORD_PER_USER_LEVEL_1;
+    }else if (UI_INDEX_LEVEL_2 == index){
+        setValue = MAX_RECORD_PER_USER_LEVEL_2;
+    }else if (UI_INDEX_LEVEL_3 == index){
+        setValue = MAX_RECORD_PER_USER_LEVEL_3;
     }
-    testConfig(QString("MaxRecordPerUser"), QString("%1").arg(setValue));
+    testConfig(QString(GENEARL_CONFIG_MAX_RECORD_PER_USER), QString("%1").arg(setValue));
 }
 
 void Widget::on_editPasswordBtn_clicked()
@@ -943,83 +944,83 @@ void Widget::setConfigtoUi()
     // 从配置中心拿来的配置更新到ui
     for (auto k : m_configure.keys())
     {
-        if (k == "FilePath"){
+        if (GENEARL_CONFIG_FILEPATH == k){
             QString filePath = m_configure[k].toString();
             QString homePath = QDir::homePath();
             if (filePath.startsWith("~")){
                 filePath.replace(0,1,homePath);
             }
             ui->pathLabel->setText(filePath);
-        }else if(k == "FileType"){
-            int setValue = 0;
-            if (m_configure[k].toString() == QString("MP4")){
-                setValue = 1;
+        }else if(GENEARL_CONFIG_FILETYPE == k){
+            int setValue = UI_INDEX_LEVEL_0;
+            if (QString(UI_FILETYPE_MP4) == m_configure[k].toString()){
+                setValue = UI_INDEX_LEVEL_1;
             }
             ui->typeBox->setCurrentIndex(setValue);
-        }else if(k == "Fps"){
+        }else if(GENEARL_CONFIG_FPS == k){
             int ind = m_fpsList.indexOf(m_configure[k].toString());
             if (ind == -1) {
                 // 手动改配置文件fps列表没有的话 设回默认值25
                 ind = 3;
                 QJsonObject obj;
-                obj["Fps"] = m_fpsList.at(ind);
+                obj[GENEARL_CONFIG_FPS] = m_fpsList.at(ind);
                 QJsonDocument doc(obj);
                 QString a = QString::fromUtf8(doc.toJson(QJsonDocument::Compact).constData());
                 m_dbusInterface->SetAuditItemValue(a);
             }
             ui->fpsBox->setCurrentIndex(ind);
-        }else if(k == "Quality"){
+        }else if(GENEARL_CONFIG_QUALITY == k){
             ui->clarityBox->setCurrentIndex(m_configure[k].toString().toInt());
-        }else if(k == "TimingPause"){
+        }else if(GENEARL_CONFIG_TIMING_PAUSE == k){
             // 无操作暂停录屏
-            int setIndex = 0;
-            if (m_configure[k].toString().toInt() == 0){
-                setIndex = 0;
-            }else if (m_configure[k].toString().toInt() == 5){
-                setIndex = 1;
-            }else if (m_configure[k].toString().toInt() == 10){
-                setIndex = 2;
-            }else if (m_configure[k].toString().toInt() == 15){
-                setIndex = 3;
+            int setIndex = UI_INDEX_LEVEL_0;
+            if (TIMING_PAUSE_LEVEL_0 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_0;
+            }else if (TIMING_PAUSE_LEVEL_1 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_1;
+            }else if (TIMING_PAUSE_LEVEL_2 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_2;
+            }else if (TIMING_PAUSE_LEVEL_3 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_3;
             }
             ui->pauseBox->setCurrentIndex(setIndex);
-        }else if (k == "MinFreeSpace"){
+        }else if (GENEARL_CONFIG_MIN_FREE_SPACE == k){
             // 磁盘监控
-            int setIndex = 3;
-            if (m_configure[k].toString().toULongLong() >= 21474836480){
-                setIndex = 3;
-            }else if (m_configure[k].toString().toULongLong() >= 16106127360){
-                setIndex = 2;
-            }else if (m_configure[k].toString().toULongLong() >= 10737418240){
-                setIndex = 1;
-            }else if (m_configure[k].toString().toULongLong() >= 5368709120){
-                setIndex = 0;
+            int setIndex = UI_INDEX_LEVEL_3;
+            if (m_configure[k].toString().toULongLong() >= AUDIT_DISK_LEVEL_3){
+                setIndex = UI_INDEX_LEVEL_3;
+            }else if (m_configure[k].toString().toULongLong() >= AUDIT_DISK_LEVEL_2){
+                setIndex = UI_INDEX_LEVEL_2;
+            }else if (m_configure[k].toString().toULongLong() >= AUDIT_DISK_LEVEL_1){
+                setIndex = UI_INDEX_LEVEL_1;
+            }else if (m_configure[k].toString().toULongLong() >= AUDIT_DISK_LEVEL_0){
+                setIndex = UI_INDEX_LEVEL_0;
             }
             ui->freeSpaceBox->setCurrentIndex(setIndex);
-        }else if (k == "MaxSaveDays"){
+        }else if (GENEARL_CONFIG_MAX_SAVE_DAYS == k){
             // 保存时长
-            int setIndex = 0;
-            if (m_configure[k].toString().toInt() == 3){
-                setIndex = 0;
-            }else if (m_configure[k].toString().toInt() == 7){
-                setIndex = 1;
-            }else if (m_configure[k].toString().toInt() == 15){
-                setIndex = 2;
-            }else if (m_configure[k].toString().toInt() == 30){
-                setIndex = 3;
+            int setIndex = UI_INDEX_LEVEL_0;
+            if (SAVE_MAX_DAYS_LEVEL_0 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_0;
+            }else if (SAVE_MAX_DAYS_LEVEL_1 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_1;
+            }else if (SAVE_MAX_DAYS_LEVEL_2 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_2;
+            }else if (SAVE_MAX_DAYS_LEVEL_3 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_3;
             }
             ui->keepTimeBox->setCurrentIndex(setIndex);
-        }else if (k == "MaxRecordPerUser"){
+        }else if (GENEARL_CONFIG_MAX_RECORD_PER_USER == k){
             // 单个用户最大录屏数量
-            int setIndex = 0;
-            if (m_configure[k].toString().toInt() == 0){
-                setIndex = 0;
-            }else if (m_configure[k].toString().toInt() == 1){
-                setIndex = 1;
-            }else if (m_configure[k].toString().toInt() == 3){
-                setIndex = 2;
-            }else if (m_configure[k].toString().toInt() == 5){
-                setIndex = 3;
+            int setIndex = UI_INDEX_LEVEL_0;
+            if (MAX_RECORD_PER_USER_LEVEL_0 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_0;
+            }else if (MAX_RECORD_PER_USER_LEVEL_1 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_1;
+            }else if (MAX_RECORD_PER_USER_LEVEL_2 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_2;
+            }else if (MAX_RECORD_PER_USER_LEVEL_3 == m_configure[k].toString().toInt()){
+                setIndex = UI_INDEX_LEVEL_3;
             }
             ui->maxRecordBox->setCurrentIndex(setIndex);
         }
@@ -1084,13 +1085,13 @@ void Widget::show_widget_page(QJsonObject arg)
     QString currentUserName = m_currentUserInfo["user"].toString();
     // 审计管理员界面需要先展示界面再刷新列表，不然会阻塞界面
     this->show();
-    if (currentUserName == "audadm"){
+    if (UI_AUDADM_USERNAME == currentUserName){
         initAudadmUi();
         ui->userLevelEdit->setText("审计管理员");
-    }else if(currentUserName == "sysadm"){
+    }else if(UI_SYSADM_USERNAME == currentUserName){
         initSysadmUi();
         ui->userLevelEdit->setText("系统管理员");
-    }else if(currentUserName == "secadm"){
+    }else if(UI_SECADM_USERNAME == currentUserName){
         initSecadmUi();
         ui->userLevelEdit->setText("安全管理员");
     }

@@ -10,6 +10,7 @@ FILE(GLOB_RECURSE KS_AUDIT_UI_SRC_LIST_QSS "../data/*.qss")
 
 file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/data/com.kylinsec.Kiran.VauditConfigure.xml" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY "${CMAKE_SOURCE_DIR}/src/daemon/configure/include/ksvaudit-configure_global.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY "${CMAKE_SOURCE_DIR}/src/common/common-definition.h" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 set(DBUS_XML_SRC ${CMAKE_CURRENT_BINARY_DIR}/com.kylinsec.Kiran.VauditConfigure.xml)
 set_source_files_properties(${DBUS_XML_SRC}

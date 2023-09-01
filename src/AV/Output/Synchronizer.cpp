@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with SimpleScreenRecorder.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "common-definition.h"
 #include "Synchronizer.h"
 
 #include "Logger.h"
@@ -241,11 +242,11 @@ void Synchronizer::InitNvenc(VideoLock &videolock) {
 	}
 
 	unsigned int nvenc_kbit_rate = 0;
-	if (m_output_settings->encode_quality == "0") {
+	if (QUALITY_FLUENT_VALUE == m_output_settings->encode_quality) {
 		nvenc_kbit_rate = 100;
-	} else if (m_output_settings->encode_quality == "1") {
+	} else if (QUALITY_SD_VALUE == m_output_settings->encode_quality) {
 		nvenc_kbit_rate = 200;
-	} else if (m_output_settings->encode_quality == "2") {
+	} else if (QUALITY_HD_VALUE == m_output_settings->encode_quality) {
 		nvenc_kbit_rate = 300;
 	}
 
@@ -574,7 +575,7 @@ void Synchronizer::ReadVideoPing(int64_t timestamp) {
 
 void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp, QString &type) {
 	assert(m_output_format->m_audio_enabled);
-	assert(type == "mic" || type == "speaker");
+	assert(CONFIG_RECORD_AUDIO_MIC == type || CONFIG_RECORD_AUDIO_SPEAKER == type);
 
 	// sanity check
 	if(sample_count == 0)
@@ -585,7 +586,7 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 		m_sync_diagram->AddBlock(1, (double) timestamp * 1.0e-6, (double) timestamp * 1.0e-6 + (double) sample_count / (double) sample_rate, QColor(0, 255, 0));
 
 	MutexDataPair<AudioData> * audio_data = NULL;
-	if (type == "mic") {
+	if (CONFIG_RECORD_AUDIO_MIC == type) {
 		audio_data = &m_audio_data_input;
 	} else {
 		audio_data = &m_audio_data_output;
@@ -736,13 +737,13 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 	SharedLock lock(&m_shared_data);
 
 	// avoid memory problems by limiting the audio buffer size
-	if((type == "mic" && lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)
-	|| (type == "speaker" && lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)) {
+	if((CONFIG_RECORD_AUDIO_MIC == type && lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)
+	|| (CONFIG_RECORD_AUDIO_SPEAKER == type && lock->m_audio_buffer_output.GetSize() / m_output_format->m_audio_channels >= MAX_AUDIO_SAMPLES_BUFFERED)) {
 		if(lock->m_segment_video_started) {
 			Logger::LogWarning("[Synchronizer::ReadAudioSamples] " + Logger::tr("Warning: Audio buffer overflow, starting new segment to keep the audio in sync with the video "
 																				"(some video and/or audio may be lost). The video input seems to be too slow."));
 			NewSegment(lock.get());
-		} else if (type == "mic") {
+		} else if (CONFIG_RECORD_AUDIO_MIC == type) {
 			// If the video hasn't started yet, it makes more sense to drop the oldest samples.
 			// Shifting the start time like this isn't completely accurate, but this shouldn't happen often anyway.
 			// The number of samples dropped is calculated so that the buffer will be 90% full after this.
@@ -758,18 +759,18 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 	}
 
 	// start audio
-	if(type == "mic" && !lock->m_segment_audio_started_input) {
+	if(CONFIG_RECORD_AUDIO_MIC == type && !lock->m_segment_audio_started_input) {
 		lock->m_segment_audio_started_input = true;
 		lock->m_segment_audio_start_time_input = timestamp;
 		lock->m_segment_audio_stop_time_input = timestamp;
 	}
-	if(type == "speaker" && !lock->m_segment_audio_started_output) {
+	if(CONFIG_RECORD_AUDIO_SPEAKER == type && !lock->m_segment_audio_started_output) {
 		lock->m_segment_audio_started_output = true;
 		lock->m_segment_audio_start_time_output = timestamp;
 		lock->m_segment_audio_stop_time_output = timestamp;
 	}
 
-	if (type == "mic") {
+	if (CONFIG_RECORD_AUDIO_MIC == type) {
 		lock->m_audio_buffer_input.Push(audiolock->m_temp_output_buffer.GetData(), sample_count_out * m_output_format->m_audio_channels);
 		double new_sample_length = (double) (lock->m_segment_audio_samples_read + lock->m_audio_buffer_input.GetSize() / m_output_format->m_audio_channels) / (double) m_output_format->m_audio_sample_rate;
 		lock->m_segment_audio_stop_time_input = lock->m_segment_audio_start_time_input + (int64_t) round(new_sample_length * 1.0e6);
@@ -786,10 +787,10 @@ void Synchronizer::ReadAudioSamplesReal(unsigned int channels, unsigned int samp
 
 void Synchronizer::ReadAudioHoleReal(QString &type) {
 	assert(m_output_format->m_audio_enabled);
-	assert(type == "mic" || type == "speaker");
+	assert(CONFIG_RECORD_AUDIO_MIC == type || CONFIG_RECORD_AUDIO_SPEAKER == type);
 
 	MutexDataPair<AudioData> *audio_data = NULL;
-	if (type == "mic") {
+	if (CONFIG_RECORD_AUDIO_MIC == type) {
 		audio_data = &m_audio_data_input;
 	} else {
 		audio_data = &m_audio_data_output;
@@ -808,22 +809,22 @@ void Synchronizer::ReadAudioHoleReal(QString &type) {
 }
 
 void Synchronizer::ReadAudioSamples(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
-	QString type = "speaker";
+	QString type = CONFIG_RECORD_AUDIO_SPEAKER;
 	ReadAudioSamplesReal(channels, sample_rate, format, sample_count, data, timestamp, type);
 }
 
 void Synchronizer::ReadAudioHole() {
-	QString type = "speaker";
+	QString type = CONFIG_RECORD_AUDIO_SPEAKER;
 	ReadAudioHoleReal(type);
 }
 
 void Synchronizer::ReadAudioSamplesInput(unsigned int channels, unsigned int sample_rate, AVSampleFormat format, unsigned int sample_count, const uint8_t* data, int64_t timestamp) {
-	QString type = QString("mic");
+	QString type = QString(CONFIG_RECORD_AUDIO_MIC);
 	ReadAudioSamplesReal(channels, sample_rate, format, sample_count, data, timestamp, type);
 }
 
 void Synchronizer::ReadAudioHoleInput() {
-	QString type = "mic";
+	QString type = CONFIG_RECORD_AUDIO_MIC;
 	ReadAudioHoleReal(type);
 }
 

@@ -17,6 +17,7 @@
 #include <QJsonObject>
 #include "ksvaudit-configure_global.h"
 #include "license-entry.h"
+#include "common-definition.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -63,7 +64,7 @@ Widget::Widget(QWidget *parent) :
 Widget::~Widget()
 {
     delete ui;
-    sendSwitchControl(m_selfPID, m_recordPID, "exit");
+    sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_EXIT);
     if (m_dbusInterface){
         delete m_dbusInterface;
         m_dbusInterface = NULL;
@@ -274,7 +275,7 @@ void Widget::on_pushButton_clicked()
         if (dirPath.startsWith("~")){
             dirPath = dirPath.replace(0,1,QDir::homePath());
         }
-        setConfig("FilePath", dirPath);
+        setConfig(GENEARL_CONFIG_FILEPATH, dirPath);
         refreshList(m_regName);
     }else{
         KLOG_DEBUG("Invalid path, abort!");
@@ -304,13 +305,13 @@ void Widget::onTableBtnClicked()
 void Widget::on_waterprintCheck_stateChanged(int arg1)
 {
     QString ret;
-    if (arg1 == 0){
+    if (UI_INDEX_LEVEL_0 == arg1){
         ret = QString("%1").arg(arg1);
         KLOG_DEBUG("hide waterprint");
         ui->waterprintText->hide();
         ui->waterprintConfirm->hide();
         ui->label_6->hide();
-    }else if (arg1 == 2){
+    }else if (UI_INDEX_LEVEL_2 == arg1){
         // QT的checkbox勾选是2，半勾选是1。
         // 所以这里2需要改成1传到配置中心去
         ret = QString("%1").arg(1);
@@ -319,26 +320,26 @@ void Widget::on_waterprintCheck_stateChanged(int arg1)
         ui->waterprintConfirm->show();
         ui->label_6->show();
     }
-    setConfig(QString("WaterPrint"), ret);
+    setConfig(QString(GENEARL_CONFIG_WATER_PRINT), ret);
 }
 
 void Widget::on_volumnBtn_clicked()
 {
-    if(ui->volumnSlider->value() > 0){
-        ui->volumnSlider->setValue(0);
+    if(ui->volumnSlider->value() > VOLUME_MIN_VALUE){
+        ui->volumnSlider->setValue(VOLUME_MIN_VALUE);
         ui->volumnBtn->setStyleSheet("image:url(:/images/v0.svg);border:none;");
-    }else if (ui->volumnSlider->value() == 0){
-        ui->volumnSlider->setValue(100);
+    }else if (ui->volumnSlider->value() == VOLUME_MIN_VALUE){
+        ui->volumnSlider->setValue(VOLUME_MAX_VALUE);
     }
 }
 
 void Widget::on_volumnSlider_valueChanged(int value)
 {
-    if (value == 0){
+    if (value == VOLUME_MIN_VALUE){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v0.svg);border:none;");
-    }else if (value < 50){
+    }else if (value < VOLUME_MID_VALUE){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v2.svg);border:none;");
-    }else if (value >=50){
+    }else if (value >= VOLUME_MID_VALUE){
         ui->volumnBtn->setStyleSheet("image:url(:/images/v1.svg);border:none;");
     }
     if (m_sendSData){
@@ -348,19 +349,19 @@ void Widget::on_volumnSlider_valueChanged(int value)
 
 void Widget::on_audioBtn_clicked()
 {
-    if(ui->audioSlider->value() > 0){
-        ui->audioSlider->setValue(0);
+    if(ui->audioSlider->value() > VOLUME_MIN_VALUE){
+        ui->audioSlider->setValue(VOLUME_MIN_VALUE);
         ui->audioBtn->setStyleSheet("image:url(:/images/m0.svg);border:none;");
-    }else if (ui->audioSlider->value() == 0){
-        ui->audioSlider->setValue(100);
+    }else if (ui->audioSlider->value() == VOLUME_MIN_VALUE){
+        ui->audioSlider->setValue(VOLUME_MAX_VALUE);
     }
 }
 
 void Widget::on_audioSlider_valueChanged(int value)
 {
-    if (value == 0){
+    if (value == VOLUME_MIN_VALUE){
         ui->audioBtn->setStyleSheet("image:url(:/images/m0.svg);border:none;");
-    }else if (value > 0){
+    }else if (value > VOLUME_MIN_VALUE){
         ui->audioBtn->setStyleSheet("image:url(:/images/m1.svg);border:none;");
     }
     if (m_sendMData){
@@ -391,15 +392,15 @@ void Widget::on_playBtn_clicked()
         ui->typeBox->setDisabled(true);
         ui->pushButton->setDisabled(true);
         if (m_needRestart){
-            sendSwitchControl(m_selfPID, m_recordPID, "restart");
+            sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_RESTART);
         }else{
-            sendSwitchControl(m_selfPID, m_recordPID, "start");
+            sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_START);
         }
         m_needRestart = false;
         m_heartBeat->start(HEARTBEAT_MS);
         KLOG_DEBUG("Start record screen!");
     }else{
-        sendSwitchControl(m_selfPID, m_recordPID, "pause");
+        sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_PAUSE);
         m_needRestart = true;
         ui->playBtn->setStyleSheet("image:url(:/images/record.svg);border:none;");
         KLOG_DEBUG("Pause record screen!");
@@ -409,7 +410,7 @@ void Widget::on_playBtn_clicked()
 
 void Widget::on_stopBtn_clicked()
 {
-    sendSwitchControl(m_selfPID, m_recordPID, "stop");
+    sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_STOP);
     ui->timeStamp->setText("0:00:00");
     m_isRecording = false;
     m_needRestart = false;
@@ -466,7 +467,7 @@ void Widget::on_minimize_clicked()
 
 void Widget::on_fpsBox_currentIndexChanged(int index)
 {
-    setConfig(QString("Fps"), m_fpsList.at(index));
+    setConfig(QString(GENEARL_CONFIG_FPS), m_fpsList.at(index));
 }
 
 void Widget::on_waterprintText_returnPressed()
@@ -496,8 +497,8 @@ void Widget::on_waterprintConfirm_clicked()
         ui->waterprintText->setDisabled(true);
         ui->waterprintConfirm->setText(tr("Modify"));
         m_waterText = ui->waterprintText->text();
-        setConfig(QString("WaterPrint"), QString("%1").arg(ui->waterprintCheck->isChecked()));
-        setConfig(QString("WaterPrintText"), ui->waterprintText->text());
+        setConfig(QString(GENEARL_CONFIG_WATER_PRINT), QString("%1").arg(ui->waterprintCheck->isChecked()));
+        setConfig(QString(GENEARL_CONFIG_WATER_PRINT_TEXT), ui->waterprintText->text());
         KLOG_DEBUG() << __func__ << "waterprintText Confirmed ...";
     }
 
@@ -519,58 +520,58 @@ void Widget::on_resolutionBox_currentIndexChanged(int index)
         v.setValue(0);
     }
     ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
-    setConfig(QString("RecordVideo"), QString("%1").arg(index));
+    setConfig(QString(GENEARL_CONFIG_RECORD_VIDIO), QString("%1").arg(index));
 }
 
 void Widget::on_audioBox_currentIndexChanged(int index)
 {
     QVariant v(1|32);
-    QString setValue = QString("all");
-    if (index == 0){
-        setValue = QString("all");
-    }else if(index == 1){
-        setValue = QString("speaker");
-    }else if(index == 2){
-        setValue = QString("mic");
-    }else if(index == 3){
-        setValue = QString("none");
+    QString setValue = QString(CONFIG_RECORD_AUDIO_ALL);
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = QString(CONFIG_RECORD_AUDIO_ALL);
+    }else if(UI_INDEX_LEVEL_1 == index){
+        setValue = QString(CONFIG_RECORD_AUDIO_SPEAKER);
+    }else if(UI_INDEX_LEVEL_2 == index){
+        setValue = QString(CONFIG_RECORD_AUDIO_MIC);
+    }else if(UI_INDEX_LEVEL_3 == index){
+        setValue = QString(CONFIG_RECORD_AUDIO_NONE);
         v.setValue(0);
     }
     ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
-    setConfig(QString("RecordAudio"), setValue);
+    setConfig(QString(GENEARL_CONFIG_RECORD_AUDIO), setValue);
 }
 
 void Widget::on_clarityBox_currentIndexChanged(int index)
 {
-    setConfig(QString("Quality"), QString("%1").arg(index));
+    setConfig(QString(GENEARL_CONFIG_QUALITY), QString("%1").arg(index));
 }
 
 void Widget::on_remainderBox_currentIndexChanged(int index)
 {
-    int setValue = 0;
-    if (index == 0){
-        setValue = 0;
-    }else if (index == 1){
-        setValue = 5;
-    }else if (index == 2){
-        setValue = 10;
-    }else if (index == 3){
-        setValue = 30;
+    int setValue = TIMING_REMINDER_LEVEL_0;
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = TIMING_REMINDER_LEVEL_0;
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = TIMING_REMINDER_LEVEL_1;
+    }else if (UI_INDEX_LEVEL_2 == index){
+        setValue = TIMING_REMINDER_LEVEL_2;
+    }else if (UI_INDEX_LEVEL_3 == index){
+        setValue = TIMING_REMINDER_LEVEL_3;
     }
 
     m_timing = setValue;
-    setConfig(QString("TimingReminder"), QString("%1").arg(setValue));
+    setConfig(QString(GENEARL_CONFIG_TIMING_REMINDER), QString("%1").arg(setValue));
 }
 
 void Widget::on_typeBox_currentIndexChanged(int index)
 {
-    QString setValue = QString("MKV");
-    if (index == 0){
-        setValue = QString("MKV");
-    }else if (index == 1){
-        setValue = QString("MP4");
+    QString setValue = QString(UI_FILETYPE_MKV);
+    if (UI_INDEX_LEVEL_0 == index){
+        setValue = QString(UI_FILETYPE_MKV);
+    }else if (UI_INDEX_LEVEL_1 == index){
+        setValue = QString(UI_FILETYPE_MP4);
     }
-    setConfig(QString("FileType"), setValue);
+    setConfig(QString(GENEARL_CONFIG_FILETYPE), setValue);
 }
 
 
@@ -877,7 +878,7 @@ void Widget::readConfig()
         for (auto k : jsonObj.keys())
         {
 //            qWarning() << __func__ << "GetRecordInfo" << k << jsonObj[k].toString();
-            if (k == "FilePath"){
+            if (GENEARL_CONFIG_FILEPATH == k){
                 QString filePath = jsonObj[k].toString();
                 QString homeDir = QDir::homePath();
                 // 以~开头的路径，在目录不存在时exists返回true
@@ -898,40 +899,40 @@ void Widget::readConfig()
                     filePath.replace(0,homeDir.size(), "~");
                 }
                 ui->pathLabel->setText(filePath);
-            }else if(k == "FileType"){
+            }else if(GENEARL_CONFIG_FILETYPE == k){
                 int setValue = 0;
-                if (jsonObj[k].toString() == QString("MP4")){
+                if (QString(UI_FILETYPE_MP4) == jsonObj[k].toString()){
                     setValue = 1;
                 }
                 ui->typeBox->setCurrentIndex(setValue);
-            }else if(k == "Fps"){
+            }else if(GENEARL_CONFIG_FPS == k){
                 int ind = m_fpsList.indexOf(jsonObj[k].toString());
                 if (ind == -1) {
                     // 手动改配置文件fps列表没有的话 设回默认值25
                     ind = 3;
-                    setConfig("Fps", m_fpsList.at(ind));
+                    setConfig(GENEARL_CONFIG_FPS, m_fpsList.at(ind));
                 }
                 ui->fpsBox->setCurrentIndex(ind);
-            }else if(k == "Quality"){
+            }else if(GENEARL_CONFIG_QUALITY == k){
                 ui->clarityBox->setCurrentIndex(jsonObj[k].toString().toInt());
-            }else if(k == "RecordAudio"){
-                int setIndex = 0;
+            }else if(GENEARL_CONFIG_RECORD_AUDIO == k){
+                int setIndex = UI_INDEX_LEVEL_0;
                 QVariant v(1|32);
                 QString auditType = jsonObj[k].toString();
-                if (auditType == QString("all")){
-                    setIndex = 0;
-                }else if(auditType == QString("speaker")){
-                    setIndex = 1;
-                }else if(auditType == QString("mic")){
-                    setIndex = 2;
-                }else if(auditType == QString("none")){
-                    setIndex = 3;
+                if (QString(CONFIG_RECORD_AUDIO_ALL) == auditType){
+                    setIndex = UI_INDEX_LEVEL_0;
+                }else if(QString(CONFIG_RECORD_AUDIO_SPEAKER) == auditType){
+                    setIndex = UI_INDEX_LEVEL_1;
+                }else if(QString(CONFIG_RECORD_AUDIO_MIC) == auditType){
+                    setIndex = UI_INDEX_LEVEL_2;
+                }else if(QString(CONFIG_RECORD_AUDIO_NONE) == auditType){
+                    setIndex = UI_INDEX_LEVEL_3;
                     v.setValue(0);
                 }
 
                 ui->resolutionBox->setItemData(0, v, Qt::UserRole -1 );
                 ui->audioBox->setCurrentIndex(setIndex);
-            }else if(k == "RecordVideo"){
+            }else if(GENEARL_CONFIG_RECORD_VIDIO == k){
                 int index = jsonObj[k].toString().toInt();
                 ui->resolutionBox->setCurrentIndex(index);
                 QVariant v(1|32);
@@ -939,27 +940,27 @@ void Widget::readConfig()
                     v.setValue(0);
                 }
                 ui->audioBox->setItemData(3, v, Qt::UserRole -1 );
-            }else if(k == "TimingReminder"){
-                int setIndex = 0;
-                if (jsonObj[k].toString().toInt() == 0){
-                    setIndex = 0;
-                }else if (jsonObj[k].toString().toInt() == 5){
-                    setIndex = 1;
-                }else if (jsonObj[k].toString().toInt() == 10){
-                    setIndex = 2;
-                }else if (jsonObj[k].toString().toInt() == 30){
-                    setIndex = 3;
+            }else if(GENEARL_CONFIG_TIMING_REMINDER == k){
+                int setIndex = UI_INDEX_LEVEL_0;
+                if (TIMING_REMINDER_LEVEL_0 == jsonObj[k].toString().toInt()){
+                    setIndex = UI_INDEX_LEVEL_0;
+                }else if (TIMING_REMINDER_LEVEL_1 == jsonObj[k].toString().toInt()){
+                    setIndex = UI_INDEX_LEVEL_1;
+                }else if (TIMING_REMINDER_LEVEL_2 == jsonObj[k].toString().toInt()){
+                    setIndex = UI_INDEX_LEVEL_2;
+                }else if (TIMING_REMINDER_LEVEL_3 == jsonObj[k].toString().toInt()){
+                    setIndex = UI_INDEX_LEVEL_3;
                 }
                 ui->remainderBox->setCurrentIndex(setIndex);
                 m_timing = jsonObj[k].toString().toInt();
-            }else if(k == "WaterPrint"){
+            }else if(GENEARL_CONFIG_WATER_PRINT == k){
                 ui->waterprintCheck->setChecked((bool)jsonObj[k].toString().toInt());
-            }else if(k == "WaterPrintText"){
+            }else if(GENEARL_CONFIG_WATER_PRINT_TEXT == k){
                 ui->waterprintText->setText(jsonObj[k].toString());
                 m_waterText = jsonObj[k].toString();
-            }else if(k == "MicVolume"){
+            }else if(GENEARL_CONFIG_MIC_VOLUME == k){
                 ui->audioSlider->setValue(jsonObj[k].toString().toInt());
-            }else if(k == "SpeakerVolume"){
+            }else if(GENEARL_CONFIG_SPEAKER_VOLUME == k){
                 ui->volumnSlider->setValue(jsonObj[k].toString().toInt());
             }
         }
@@ -1030,11 +1031,12 @@ bool Widget::parseJsonData(const QString &param,  QJsonObject &jsonObj)
 void Widget::callNotifyProcess(QString op, int minutes)
 {
     // 防止提示已录屏0分钟
-    if ("timing" == op && 0 == minutes)
+    if (OPERATE_NOTIFY_TIMING == op && 0 == minutes)
         return;
 
     // 仅开始、暂停、重启、停止、定时、错误提醒需要提示
-    if (op == "start" || op == "pause" || op == "restart" || op == "stop" || op == "timing" || op == "error")
+    if (OPERATE_RECORD_START == op || OPERATE_RECORD_PAUSE == op || OPERATE_RECORD_RESTART == op
+        || OPERATE_RECORD_STOP == op || OPERATE_NOTIFY_TIMING == op  || OPERATE_NOTIFY_ERROR == op)
     {
         QProcess process;
         QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -1055,7 +1057,7 @@ void Widget::callNotifyProcess(QString op, int minutes)
 void Widget::realClose()
 {
     // 给后端发送exit信号
-    sendSwitchControl(m_selfPID, m_recordPID, "exit");
+    sendSwitchControl(m_selfPID, m_recordPID, OPERATE_RECORD_EXIT);
     this->hide();
     m_pConfirm->hide();
     m_pConfirm->close();
@@ -1073,22 +1075,22 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
         {
             QStringList list = timeText.split(":");
             int minute = list[0].toInt() * 60 + list[1].toInt();
-            if ((m_lastMinutes != minute) && (minute % m_timing == 0))
+            if ((m_lastMinutes != minute) && ((minute % m_timing) == 0))
             {
-                callNotifyProcess("timing", minute);
+                callNotifyProcess(OPERATE_NOTIFY_TIMING, minute);
                 m_lastMinutes = minute;
             }
         }
-    } else if (to_pid == m_selfPID && op == "DiskSpace"){ //磁盘空间不足
+    } else if (to_pid == m_selfPID && OPERATE_DISK_FRONT_NOTIFY == op){ //磁盘空间不足
         if (m_isRecording)
         {
             KLOG_INFO() << "receive DiskSpace from" << from_pid;
             // TODO: stop record op here
-            Dialog *prompt = new Dialog(this, "DiskSpace");
+            Dialog *prompt = new Dialog(this, OPERATE_DISK_FRONT_NOTIFY);
             on_stopBtn_clicked();
             prompt->exec();
         }
-    } else if (to_pid == m_selfPID && op == "process") { //接收后台进程pid
+    } else if (to_pid == m_selfPID && OPERATE_FRONT_PROCESS == op) { //接收后台进程pid
         m_recordPID = from_pid;
         KLOG_INFO() << "receive backend record pid:" << from_pid;
     } else if (to_pid == m_selfPID && op.endsWith("-done")) { //接收录屏进程操作结果
@@ -1103,7 +1105,7 @@ void Widget::refreshTime(int from_pid, int to_pid, QString op)
 
 void Widget::receiveNotification(int pid, QString message)
 {
-    if (pid == m_recordPID && message == "is_active")
+    if (pid == m_recordPID && VAUDIT_ACTIVE == message)
     {
         // 在后台发送is_active信号后，再设置窗口位置，显示窗口，以防发送录屏信号后台没收到
         KLOG_INFO() << "receive backend record active info, and call show";
@@ -1116,14 +1118,14 @@ void Widget::sendMicToConfig()
 {
     // 滑块值变动，传递给配置中心
     int value = ui->audioSlider->value();
-    setConfig("MicVolume", QString("%1").arg(value));
+    setConfig(GENEARL_CONFIG_MIC_VOLUME, QString("%1").arg(value));
 }
 
 void Widget::sendSpkToConfig()
 {
     // 滑块值变动，传递给配置中心
     int value = ui->volumnSlider->value();
-    setConfig("SpeakerVolume", QString("%1").arg(value));
+    setConfig(GENEARL_CONFIG_SPEAKER_VOLUME, QString("%1").arg(value));
 }
 
 void Widget::reconnectMonitor()
@@ -1136,7 +1138,7 @@ void Widget::reconnectMonitor()
     // 重新拉起后台
     QString args = QString("process=%1;DISPLAY=%2;XAUTHORITY=%3;USER=%4;HOME=%5").arg(m_selfPID).arg(getenv("DISPLAY")).arg(getenv("XAUTHORITY")).arg(getenv("USER")).arg(getenv("HOME"));
     sendSwitchControl(m_selfPID, 0, args);
-    callNotifyProcess("error");
+    callNotifyProcess(OPERATE_NOTIFY_ERROR);
 }
 
 void Widget::openActivate()

@@ -375,6 +375,11 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 	if (!m_settings->value("input/video_enabled").toInt())
 		return;
 
+	QList<QScreen *> screen_list = QApplication::screens();
+	for(QScreen *screen :  QApplication::screens()) { //绑定新添加的屏的geometryChanged 信号槽
+		connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
+	}
+
 	//没有开始录屏但screen被拔掉的情况
 	if(!m_page_started){
 		Logger::LogInfo("the screen geometry changed \n");
@@ -407,10 +412,6 @@ void Recording::ScreenAddedOrRemovedHandler(QScreen* screen){
 		return;
 	}
 
-	QList<QScreen *> screen_list = QApplication::screens();
-	for(QScreen *screen :  QApplication::screens()) { //绑定新添加的屏的geometryChanged 信号槽
-		connect(screen, SIGNAL(geometryChanged(const QRect&)), this, SLOT(ScreenChangedHandler(const QRect&)), Qt::UniqueConnection);
-	}
 
 	//拔掉或添加screen后,重新开始录制视频
 	m_separate_files = true;

@@ -54,6 +54,7 @@ private:
     void clearFrontRecordInfos();
     QString getLocalActiveUser();
     QString frontGetXAuth(QString userName, QString display);
+    bool processExist(int pid);
 
 private slots:
     void monitorProcess();
